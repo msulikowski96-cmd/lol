@@ -1,15 +1,16 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: LoL Stats Checker API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: summoner
+    description: Summoner and stats operations
 paths:
   /healthz:
     get:
@@ -24,6 +25,149 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /summoner/search:
+    get:
+      operationId: searchSummoner
+      tags: [summoner]
+      summary: Search for a summoner by Riot ID
+      parameters:
+        - name: gameName
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: tagLine
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: region
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Summoner found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SummonerProfile"
+        "404":
+          description: Summoner not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /summoner/{puuid}/ranked:
+    get:
+      operationId: getSummonerRanked
+      tags: [summoner]
+      summary: Get ranked stats for a summoner
+      parameters:
+        - name: puuid
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: region
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Ranked stats
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RankedEntry"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /summoner/{puuid}/matches:
+    get:
+      operationId: getSummonerMatches
+      tags: [summoner]
+      summary: Get recent match history for a summoner
+      parameters:
+        - name: puuid
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: region
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Match history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MatchSummary"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /summoner/{puuid}/mastery:
+    get:
+      operationId: getSummonerMastery
+      tags: [summoner]
+      summary: Get champion mastery for a summoner
+      parameters:
+        - name: puuid
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: region
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Champion mastery list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChampionMastery"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +177,159 @@ components:
           type: string
       required:
         - status
-
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required:
+        - error
+        - message
+    SummonerProfile:
+      type: object
+      properties:
+        puuid:
+          type: string
+        gameName:
+          type: string
+        tagLine:
+          type: string
+        summonerId:
+          type: string
+        summonerLevel:
+          type: number
+        profileIconId:
+          type: number
+        region:
+          type: string
+      required:
+        - puuid
+        - gameName
+        - tagLine
+        - summonerId
+        - summonerLevel
+        - profileIconId
+        - region
+    RankedEntry:
+      type: object
+      properties:
+        queueType:
+          type: string
+        tier:
+          type: string
+        rank:
+          type: string
+        leaguePoints:
+          type: number
+        wins:
+          type: number
+        losses:
+          type: number
+        hotStreak:
+          type: boolean
+        veteran:
+          type: boolean
+        freshBlood:
+          type: boolean
+        inactive:
+          type: boolean
+      required:
+        - queueType
+        - tier
+        - rank
+        - leaguePoints
+        - wins
+        - losses
+        - hotStreak
+        - veteran
+        - freshBlood
+        - inactive
+    MatchSummary:
+      type: object
+      properties:
+        matchId:
+          type: string
+        gameMode:
+          type: string
+        gameDuration:
+          type: number
+        gameEndTimestamp:
+          type: number
+        win:
+          type: boolean
+        championName:
+          type: string
+        championId:
+          type: number
+        kills:
+          type: number
+        deaths:
+          type: number
+        assists:
+          type: number
+        totalDamageDealt:
+          type: number
+        goldEarned:
+          type: number
+        cs:
+          type: number
+        visionScore:
+          type: number
+        items:
+          type: array
+          items:
+            type: number
+        summoner1Id:
+          type: number
+        summoner2Id:
+          type: number
+        perks:
+          type: object
+          properties:
+            primaryStyleId:
+              type: number
+            subStyleId:
+              type: number
+          required:
+            - primaryStyleId
+            - subStyleId
+      required:
+        - matchId
+        - gameMode
+        - gameDuration
+        - gameEndTimestamp
+        - win
+        - championName
+        - championId
+        - kills
+        - deaths
+        - assists
+        - totalDamageDealt
+        - goldEarned
+        - cs
+        - visionScore
+        - items
+        - summoner1Id
+        - summoner2Id
+        - perks
+    ChampionMastery:
+      type: object
+      properties:
+        championId:
+          type: number
+        championName:
+          type: string
+        championLevel:
+          type: number
+        championPoints:
+          type: number
+        lastPlayTime:
+          type: number
+      required:
+        - championId
+        - championName
+        - championLevel
+        - championPoints
+        - lastPlayTime
