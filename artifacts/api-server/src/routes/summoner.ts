@@ -68,25 +68,37 @@ router.get("/search", async (req, res) => {
     const accountRes = await riotFetch(accountUrl, req);
     const account = (await accountRes.json()) as { puuid: string; gameName: string; tagLine: string };
 
-    // Step 2: Get summoner by PUUID
-    const summonerUrl = `https://${regionLower}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${account.puuid}`;
-    const summonerRes = await riotFetch(summonerUrl, req);
-    const summoner = (await summonerRes.json()) as {
-      id: string;
-      accountId: string;
-      puuid: string;
-      profileIconId: number;
-      revisionDate: number;
-      summonerLevel: number;
-    };
+    // Step 2: Get summoner by PUUID (optional — Riot is phasing this out)
+    let summonerId = "";
+    let summonerLevel = 0;
+    let profileIconId = 29; // default icon
+
+    try {
+      const summonerUrl = `https://${regionLower}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${account.puuid}`;
+      const summonerRes = await fetch(summonerUrl, {
+        headers: { "X-Riot-Token": RIOT_API_KEY },
+      });
+      if (summonerRes.ok) {
+        const summoner = (await summonerRes.json()) as {
+          id: string;
+          profileIconId: number;
+          summonerLevel: number;
+        };
+        summonerId = summoner.id ?? "";
+        summonerLevel = summoner.summonerLevel ?? 0;
+        profileIconId = summoner.profileIconId ?? 29;
+      }
+    } catch {
+      // summoner v4 lookup failed — continue with defaults
+    }
 
     const profile = SearchSummonerResponse.parse({
       puuid: account.puuid,
       gameName: account.gameName,
       tagLine: account.tagLine,
-      summonerId: summoner.id,
-      summonerLevel: summoner.summonerLevel,
-      profileIconId: summoner.profileIconId,
+      summonerId,
+      summonerLevel,
+      profileIconId,
       region: region.toUpperCase(),
     });
 
