@@ -58,7 +58,8 @@ React + Vite frontend for "Nexus Sight" — a League of Legends player stats che
 - Uses `@workspace/api-client-react` hooks for all API calls
 - Dark gaming aesthetic with glass-panel styling, framer-motion animations
 - Data Dragon 14.24.1 for champion/item images
-- Profile page includes: player header, ranked stats, match history, champion mastery, deep performance analysis
+- Profile page: professional dashboard layout (9/3 grid), compact header with rank inline, sidebar (rank cards, champion mastery, match history), main area (deep analysis with sparkline charts, coaching tips, champion recommendations, damage/game-length breakdowns, live game banner)
+- All UI text in Polish (date-fns/locale/pl for relative times)
 
 ### `artifacts/api-server` (`@workspace/api-server`)
 
@@ -68,7 +69,8 @@ Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` 
 - App setup: `src/app.ts` — mounts CORS, JSON/urlencoded parsing, routes at `/api`
 - Routes: `src/routes/index.ts` mounts sub-routers; `src/routes/health.ts` exposes `GET /health` (full path: `/api/health`)
 - Riot Games API routes: `src/routes/summoner.ts` (search, ranked, matches, mastery), `src/routes/analysis.ts` (deep player analysis)
-- Analysis engine: computes KDA, CS efficiency, vision control, damage output, gold efficiency, survival, consistency, carry potential, champion breakdown, form trend, strengths/weaknesses from match data
+- Analysis engine: role detection, current streak tracking, best/worst game scoring, performance by game length (3 brackets), damage type breakdown (physical/magic/true), 10+ personalized coaching tips in Polish, 8 archetype × 3 champion recommendations, playstyle analysis, strengths/weaknesses
+- Live game endpoint: `/summoner/{puuid}/live` (Riot Spectator API v5 via summonerId)
 - Uses `RIOT_API_KEY` env secret for Riot API access
 - Depends on: `@workspace/db`, `@workspace/api-zod`
 - `pnpm --filter @workspace/api-server run dev` — run the dev server

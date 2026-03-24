@@ -5,11 +5,11 @@ import { pl } from "date-fns/locale";
 import {
   ChevronLeft, Trophy, Target, Shield, AlertCircle,
   TrendingUp, TrendingDown, Minus, Flame, Snowflake,
-  BarChart3, Swords, Eye, Coins, Activity, Award,
+  BarChart3, Swords, Eye, Award,
   ChevronUp, ChevronDown, Check, AlertTriangle,
-  UserRound, Brain, Zap, BookOpen, XCircle,
+  Brain, Zap, BookOpen, XCircle,
   Wifi, Clock, Star, GraduationCap, Timer,
-  Crosshair, BarChart2, Layers
+  Layers, ArrowUpRight, ArrowDownRight
 } from "lucide-react";
 import {
   useSearchSummoner,
@@ -21,453 +21,318 @@ import {
 } from "@workspace/api-client-react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
-// ─── Sparkline Chart ───
+const ROLE_EMOJI: Record<string, string> = { Top: "⚔️", Jungler: "🌿", Mid: "✨", ADC: "🏹", Support: "🛡️", Nieznana: "❓" };
+const DD = "https://ddragon.leagueoflegends.com/cdn/14.24.1/img";
+const FALLBACK_ICON = "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png";
+
 function SparklineChart({ matches }: { matches: any[] }) {
   if (!matches || matches.length < 3) return null;
-  const reversed = [...matches].reverse();
-  const kdas = reversed.map((m: any) => m.deaths === 0 ? Math.min(m.kills + m.assists, 12) : Math.min((m.kills + m.assists) / m.deaths, 12));
-  const wins = reversed.map((m: any) => m.win);
-  const maxKda = Math.max(...kdas, 4);
-  const w = 300; const h = 55; const padX = 8; const padY = 6;
-  const innerW = w - padX * 2; const innerH = h - padY * 2;
-  const pts = kdas.map((kda, i) => ({
-    x: padX + (i / Math.max(kdas.length - 1, 1)) * innerW,
-    y: padY + (1 - kda / maxKda) * innerH,
-    win: wins[i],
-  }));
-  const pathD = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+  const rev = [...matches].reverse();
+  const kdas = rev.map((m: any) => Math.min(m.deaths === 0 ? m.kills + m.assists : (m.kills + m.assists) / m.deaths, 12));
+  const max = Math.max(...kdas, 4);
+  const w = 280, h = 44, px = 6, py = 4;
+  const iw = w - px * 2, ih = h - py * 2;
+  const pts = kdas.map((k, i) => ({ x: px + (i / Math.max(kdas.length - 1, 1)) * iw, y: py + (1 - k / max) * ih, win: rev[i].win }));
+  const d = pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+  const gradientId = "sparkGrad";
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-full">
-      <path d={pathD} fill="none" stroke="rgba(139,92,246,0.3)" strokeWidth="1.5" />
-      {pts.map((p, i) => (
-        <circle key={i} cx={p.x} cy={p.y} r="3.5" fill={p.win ? '#22c55e' : '#ef4444'} opacity="0.9" />
-      ))}
+    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-full" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="rgba(139,92,246,0.15)" />
+          <stop offset="100%" stopColor="rgba(139,92,246,0)" />
+        </linearGradient>
+      </defs>
+      <path d={`${d} L ${pts[pts.length - 1].x} ${h} L ${pts[0].x} ${h} Z`} fill={`url(#${gradientId})`} />
+      <path d={d} fill="none" stroke="rgba(139,92,246,0.5)" strokeWidth="1.5" />
+      {pts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="2.5" fill={p.win ? "#22c55e" : "#ef4444"} />)}
     </svg>
   );
 }
 
-// ─── Live Game Banner ───
 function LiveGameBanner({ data }: { data: any }) {
   if (!data) return null;
-  const team1 = data.participants?.filter((p: any) => p.teamId === 100) ?? [];
-  const team2 = data.participants?.filter((p: any) => p.teamId === 200) ?? [];
+  const t1 = data.participants?.filter((p: any) => p.teamId === 100) ?? [];
+  const t2 = data.participants?.filter((p: any) => p.teamId === 200) ?? [];
   const mins = Math.floor((data.gameLength ?? 0) / 60);
   const secs = (data.gameLength ?? 0) % 60;
   return (
-    <motion.div
-      initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="glass-panel border border-green-500/40 bg-green-950/20 rounded-2xl p-5 mb-6"
-    >
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
-          <h3 className="font-display text-lg text-green-400 font-bold">LIVE — Aktualnie w meczu</h3>
+    <div className="glass-panel bg-green-950/10 border-green-500/20 p-4 mb-5">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+          <span className="text-sm font-bold text-green-400 uppercase tracking-wider">W meczu</span>
         </div>
-        <div className="flex items-center gap-2 text-muted-foreground text-sm">
-          <Clock className="w-4 h-4" />
-          <span>{mins}:{secs.toString().padStart(2, '0')}</span>
-          <span className="text-xs bg-muted/50 px-2 py-0.5 rounded ml-1">{data.gameMode}</span>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Clock className="w-3 h-3" />{mins}:{secs.toString().padStart(2, "0")}
+          <span className="bg-muted/40 px-1.5 py-0.5 rounded text-[10px]">{data.gameMode}</span>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        {[{ label: "Drużyna Niebieska", participants: team1, color: "blue" }, { label: "Drużyna Czerwona", participants: team2, color: "red" }].map((team) => (
-          <div key={team.color}>
-            <p className={`text-xs uppercase tracking-wider font-bold mb-2 ${team.color === 'blue' ? 'text-blue-400' : 'text-red-400'}`}>{team.label}</p>
-            <div className="space-y-1.5">
-              {team.participants.map((p: any, i: number) => (
-                <div key={i} className="flex items-center gap-2">
-                  <img
-                    src={`https://ddragon.leagueoflegends.com/cdn/14.24.1/img/champion/${p.championName}.png`}
-                    alt={p.championName}
-                    className="w-7 h-7 rounded-full border border-border"
-                    onError={(e) => { e.currentTarget.style.display = 'none' }}
-                  />
-                  <span className="text-sm text-foreground/80 truncate">{p.summonerName}</span>
-                  <span className="text-xs text-muted-foreground ml-auto">{p.championName}</span>
-                </div>
-              ))}
-            </div>
+      <div className="grid grid-cols-2 gap-3">
+        {[{ p: t1, c: "blue" }, { p: t2, c: "red" }].map(({ p, c }) => (
+          <div key={c} className="space-y-1">
+            <p className={`text-[10px] uppercase tracking-widest font-bold ${c === "blue" ? "text-blue-400" : "text-red-400"} mb-1`}>
+              {c === "blue" ? "Niebiescy" : "Czerwoni"}
+            </p>
+            {p.map((pl: any, i: number) => (
+              <div key={i} className="flex items-center gap-1.5 text-xs">
+                <img src={`${DD}/champion/${pl.championName}.png`} alt="" className="w-5 h-5 rounded-full" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                <span className="text-foreground/70 truncate flex-1">{pl.summonerName}</span>
+                <span className="text-muted-foreground text-[10px]">{pl.championName}</span>
+              </div>
+            ))}
           </div>
         ))}
       </div>
-    </motion.div>
+    </div>
   );
 }
 
-// ─── Match Row ───
 function MatchRow({ match, index }: { match: any; index: number }) {
-  const isWin = match.win;
-  const kda = match.deaths === 0 ? "Perfekcyjny" : ((match.kills + match.assists) / match.deaths).toFixed(2);
+  const w = match.win;
+  const kda = match.deaths === 0 ? "Perfect" : ((match.kills + match.assists) / match.deaths).toFixed(1);
+  const dur = `${Math.floor(match.gameDuration / 60)}:${(match.gameDuration % 60).toString().padStart(2, "0")}`;
   const timeAgo = formatDistanceToNow(new Date(match.gameEndTimestamp), { addSuffix: true, locale: pl });
-  const durationMins = Math.floor(match.gameDuration / 60);
-  const durationSecs = match.gameDuration % 60;
   return (
-    <motion.div
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.05 }}
-      className={`relative overflow-hidden rounded-xl border ${isWin ? 'border-[var(--color-win-bg)] bg-[var(--color-win-bg)]/20' : 'border-[var(--color-loss-bg)] bg-[var(--color-loss-bg)]/20'} p-4 flex items-center gap-4 hover:bg-card/60 transition-colors`}
-    >
-      <div className={`absolute left-0 top-0 bottom-0 w-1 ${isWin ? 'bg-win' : 'bg-loss'}`} />
-      <div className="flex flex-col w-24 text-center">
-        <span className={`font-bold ${isWin ? 'text-win' : 'text-loss'}`}>{isWin ? 'WYGRANA' : 'PRZEGRANA'}</span>
-        <span className="text-xs text-muted-foreground">{match.gameMode}</span>
-        <span className="text-xs text-muted-foreground mt-1">{durationMins}:{durationSecs.toString().padStart(2, '0')}</span>
-      </div>
-      <div className="relative">
-        <img
-          src={`https://ddragon.leagueoflegends.com/cdn/14.24.1/img/champion/${match.championName}.png`}
-          alt={match.championName}
-          className="w-14 h-14 rounded-full border-2 border-card-border"
-          onError={(e) => { e.currentTarget.src = 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png' }}
-        />
-      </div>
-      <div className="flex flex-col items-center px-4 w-32">
-        <div className="font-mono text-lg font-bold tracking-tight">
-          <span>{match.kills}</span><span className="text-muted-foreground mx-1">/</span>
-          <span className="text-destructive">{match.deaths}</span><span className="text-muted-foreground mx-1">/</span>
-          <span>{match.assists}</span>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: index * 0.03 }}
+      title={timeAgo}
+      className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg border-l-2 ${w ? "border-l-win bg-win-bg/30" : "border-l-loss bg-loss-bg/30"} hover:bg-muted/20 transition-colors`}>
+      <img src={`${DD}/champion/${match.championName}.png`} alt={match.championName} className="w-8 h-8 rounded-lg border border-border flex-shrink-0"
+        onError={(e) => { e.currentTarget.src = FALLBACK_ICON; }} />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5">
+          <span className={`text-[10px] font-bold ${w ? "text-win" : "text-loss"}`}>{w ? "W" : "L"}</span>
+          <span className="font-mono text-xs font-semibold">
+            {match.kills}<span className="text-muted-foreground/50">/</span><span className="text-loss">{match.deaths}</span><span className="text-muted-foreground/50">/</span>{match.assists}
+          </span>
+          <span className="text-[10px] text-muted-foreground">{kda}</span>
         </div>
-        <span className="text-xs text-muted-foreground font-mono mt-1">{kda} KDA</span>
+        <div className="text-[10px] text-muted-foreground">{match.cs} CS · {dur} · <span className="text-muted-foreground/50">{timeAgo}</span></div>
       </div>
-      <div className="flex flex-col items-center px-2 border-l border-border/50">
-        <span className="text-sm font-semibold">{match.cs} CS</span>
-        <span className="text-xs text-muted-foreground">Wizja: {match.visionScore}</span>
-      </div>
-      <div className="flex gap-1 ml-auto">
-        {match.items.slice(0, 6).map((item: number, i: number) => (
-          <div key={i} className="w-8 h-8 rounded bg-muted overflow-hidden border border-border/50">
-            {item !== 0 && <img src={`https://ddragon.leagueoflegends.com/cdn/14.24.1/img/item/${item}.png`} alt="item" className="w-full h-full object-cover" />}
-          </div>
-        ))}
-      </div>
-      <div className="absolute top-2 right-4 text-[10px] text-muted-foreground/60 uppercase">{timeAgo}</div>
     </motion.div>
   );
 }
 
-// ─── Ranked Badge ───
-function RankedBadge({ entry }: { entry: any }) {
-  const isUnranked = !entry;
-  const tier = isUnranked ? 'UNRANKED' : entry.tier;
-  const winrate = isUnranked ? 0 : Math.round((entry.wins / (entry.wins + entry.losses)) * 100);
+function RankedCard({ entry }: { entry: any }) {
+  const tier = entry?.tier ?? "UNRANKED";
+  const wr = entry ? Math.round((entry.wins / (entry.wins + entry.losses)) * 100) : 0;
   return (
-    <div className="glass-panel p-6 rounded-2xl flex items-center gap-6">
-      <div className="w-24 h-24 flex-shrink-0 flex items-center justify-center">
-        <img
-          src={`https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-shared-components/global/default/${tier.toLowerCase()}.png`}
-          alt={tier}
-          className="w-full h-full object-contain filter drop-shadow-lg"
-          onError={(e) => { e.currentTarget.style.display = 'none' }}
-        />
-      </div>
-      <div className="flex flex-col flex-1">
-        <span className="text-xs text-muted-foreground uppercase tracking-widest mb-1">
-          {entry?.queueType === 'RANKED_SOLO_5x5' ? 'Solo / Duo' : entry?.queueType === 'RANKED_FLEX_SR' ? 'Flex' : 'Rankingowe'}
-        </span>
-        <h3 className="font-display text-2xl text-gradient-gold">{tier} {entry?.rank}</h3>
-        {!isUnranked ? (
-          <>
-            <span className="text-lg font-bold text-foreground mt-1">{entry.leaguePoints} LP</span>
-            <div className="flex items-center gap-3 mt-2 text-sm">
-              <span className="text-muted-foreground">{entry.wins}W {entry.losses}L</span>
-              <span className={`font-semibold ${winrate >= 50 ? 'text-win' : 'text-loss'}`}>{winrate}% WR</span>
-            </div>
-          </>
-        ) : (
-          <span className="text-muted-foreground mt-2">Brak rozegranych meczy</span>
+    <div className="stat-card flex items-center gap-3">
+      <img src={`https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-shared-components/global/default/${tier.toLowerCase()}.png`}
+        alt={tier} className="w-14 h-14 object-contain flex-shrink-0" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+      <div className="flex-1 min-w-0">
+        <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
+          {entry?.queueType === "RANKED_SOLO_5x5" ? "Solo/Duo" : entry?.queueType === "RANKED_FLEX_SR" ? "Flex" : "Rankingowe"}
+        </p>
+        <p className="font-display text-base text-gradient-gold">{tier} {entry?.rank}</p>
+        {entry && (
+          <div className="flex items-center gap-2 text-xs mt-0.5">
+            <span className="text-foreground font-semibold">{entry.leaguePoints} LP</span>
+            <span className="text-muted-foreground">{entry.wins}W {entry.losses}L</span>
+            <span className={`font-semibold ${wr >= 50 ? "text-win" : "text-loss"}`}>{wr}%</span>
+          </div>
         )}
       </div>
     </div>
   );
 }
 
-// ─── Player Analysis Section ───
-function PlayerAnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoading: boolean; recentMatches?: any[] }) {
-  if (isLoading) {
-    return (
-      <div className="glass-panel rounded-2xl p-8 mb-8 animate-pulse">
-        <div className="h-64 flex items-center justify-center">
-          <LoadingSpinner text="Analizowanie danych gracza..." />
-        </div>
-      </div>
-    );
-  }
-  if (!data || data.totalGamesAnalyzed === 0) {
-    return (
-      <div className="glass-panel rounded-2xl p-8 mb-8 text-center">
-        <AlertTriangle className="w-12 h-12 mx-auto text-yellow-500 mb-4" />
-        <h3 className="font-display text-2xl mb-2 text-white">Za mało danych meczowych do analizy</h3>
-        <p className="text-muted-foreground">Zagraj więcej meczy rankingowych, aby wygenerować analizę wyników.</p>
-      </div>
-    );
-  }
+function AnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoading: boolean; recentMatches?: any[] }) {
+  if (isLoading) return <div className="glass-panel p-8 flex items-center justify-center min-h-[200px]"><LoadingSpinner text="Analizowanie wyników..." /></div>;
+  if (!data || data.totalGamesAnalyzed === 0) return (
+    <div className="glass-panel p-6 text-center">
+      <AlertTriangle className="w-8 h-8 mx-auto text-yellow-500 mb-2" />
+      <p className="text-sm text-muted-foreground">Za mało danych do analizy. Zagraj więcej meczy.</p>
+    </div>
+  );
 
-  const {
-    overallScore, overallRating, totalGamesAnalyzed, winRate,
-    metrics, championBreakdown, formTrend, strengths, weaknesses,
-    playstyleArchetype, playstyleDescription, criticalMistakes, gameplayPatterns,
-    primaryRole, roleDistribution, currentStreak,
-    bestGame, worstGame, coachingTips, championRecommendations,
-    performanceByGameLength, damageTypeBreakdown,
-  } = data;
+  const { overallScore, overallRating, totalGamesAnalyzed, winRate, metrics, championBreakdown, formTrend, strengths, weaknesses,
+    playstyleArchetype, playstyleDescription, criticalMistakes, gameplayPatterns, primaryRole, roleDistribution, currentStreak,
+    bestGame, worstGame, coachingTips, championRecommendations, performanceByGameLength, damageTypeBreakdown } = data;
 
-  const scoreColor = overallScore >= 70 ? 'text-green-500' : overallScore >= 50 ? 'text-yellow-500' : 'text-red-500';
-  const scoreRingColor = overallScore >= 70 ? 'stroke-green-500' : overallScore >= 50 ? 'stroke-yellow-500' : 'stroke-red-500';
-
-  const getTrendIcon = (trend: string) => {
-    switch (trend?.toLowerCase()) {
-      case 'hot': return <Flame className="w-6 h-6 text-orange-500" />;
-      case 'improving': return <TrendingUp className="w-6 h-6 text-green-500" />;
-      case 'declining': return <TrendingDown className="w-6 h-6 text-red-500" />;
-      case 'cold': return <Snowflake className="w-6 h-6 text-blue-300" />;
-      default: return <Minus className="w-6 h-6 text-muted-foreground" />;
-    }
+  const sc = overallScore >= 70 ? "text-green-400" : overallScore >= 50 ? "text-yellow-400" : "text-red-400";
+  const sr = overallScore >= 70 ? "stroke-green-400" : overallScore >= 50 ? "stroke-yellow-400" : "stroke-red-400";
+  const trendIcon = (t: string) => {
+    if (t === "hot") return <Flame className="w-4 h-4 text-orange-400" />;
+    if (t === "improving") return <ArrowUpRight className="w-4 h-4 text-green-400" />;
+    if (t === "declining") return <ArrowDownRight className="w-4 h-4 text-red-400" />;
+    if (t === "cold") return <Snowflake className="w-4 h-4 text-blue-300" />;
+    return <Minus className="w-4 h-4 text-muted-foreground" />;
   };
 
-  const streakColor = currentStreak?.type === 'win' ? 'text-green-400 border-green-500/30 bg-green-950/20' : 'text-red-400 border-red-500/30 bg-red-950/20';
-
-  const roleIcon: Record<string, string> = { Top: '⚔️', Jungler: '🌿', Mid: '✨', ADC: '🏹', Support: '🛡️', Nieznana: '❓' };
-
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="space-y-6 mb-8 w-full">
+    <div className="space-y-4">
 
-      {/* ROW 0: Sparkline + Streak + Role + Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <div className="md:col-span-2 glass-panel p-5 rounded-2xl">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-display text-lg text-white flex items-center gap-2">
-              <BarChart2 className="w-4 h-4 text-primary" /> Trend KDA — ostatnie mecze
-            </h3>
-            <div className="flex gap-3 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500 inline-block" /> Wygrana</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> Porażka</span>
-            </div>
-          </div>
-          <div className="h-14">
-            <SparklineChart matches={recentMatches ?? []} />
-          </div>
-          <p className="text-xs text-muted-foreground mt-2">Każdy punkt = jeden mecz (od najstarszego do najnowszego)</p>
-        </div>
-
-        <div className="flex flex-col gap-3">
-          {/* Streak */}
-          <div className={`glass-panel p-4 rounded-2xl border flex items-center gap-3 ${streakColor}`}>
-            <Flame className={`w-6 h-6 flex-shrink-0 ${currentStreak?.type === 'win' ? 'text-green-400' : 'text-red-400'}`} />
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">Aktualny streak</p>
-              <p className="font-bold text-lg">{currentStreak?.count}× {currentStreak?.type === 'win' ? 'WYGRANA' : 'PRZEGRANA'}</p>
-            </div>
-          </div>
-          {/* Primary Role */}
-          <div className="glass-panel p-4 rounded-2xl flex items-center gap-3">
-            <span className="text-2xl">{roleIcon[primaryRole] ?? '❓'}</span>
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">Główna rola</p>
-              <p className="font-bold text-lg text-white">{primaryRole}</p>
-              <p className="text-xs text-muted-foreground">
-                {Object.entries(roleDistribution ?? {}).sort((a: any, b: any) => b[1] - a[1]).slice(0, 2).map(([role, pct]) => `${role} ${pct}%`).join(' · ')}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ROW 1: Overall Score | Form Trend | Strengths & Weaknesses */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <div className="glass-panel p-6 rounded-2xl flex flex-col items-center justify-center">
-          <h3 className="font-display text-xl text-white mb-5">Ogólne wyniki</h3>
-          <div className="relative w-32 h-32 flex items-center justify-center mb-4">
-            <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="45" className="stroke-muted/30 stroke-[8px] fill-transparent" />
-              <circle cx="50" cy="50" r="45" className={`${scoreRingColor} stroke-[8px] fill-transparent`} strokeDasharray={`${overallScore * 2.827} 282.7`} strokeLinecap="round" />
+      {/* Overview Strip */}
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+        <div className="stat-card flex items-center gap-3 col-span-1">
+          <div className="relative w-12 h-12 flex-shrink-0">
+            <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+              <circle cx="18" cy="18" r="15" className="stroke-muted/30" strokeWidth="3" fill="transparent" />
+              <circle cx="18" cy="18" r="15" className={sr} strokeWidth="3" fill="transparent" strokeDasharray={`${overallScore * 0.942} 94.2`} strokeLinecap="round" />
             </svg>
-            <div className="text-center">
-              <span className={`text-4xl font-bold font-display ${scoreColor}`}>{overallRating}</span>
-              <span className="block text-xs text-muted-foreground">{overallScore}/100</span>
-            </div>
+            <span className={`absolute inset-0 flex items-center justify-center text-xs font-bold ${sc}`}>{overallRating}</span>
           </div>
-          <div className="flex gap-6 text-center w-full justify-center">
-            <div><span className="block text-xl font-bold text-white">{totalGamesAnalyzed}</span><span className="text-xs text-muted-foreground uppercase tracking-wider">Mecze</span></div>
-            <div><span className={`block text-xl font-bold ${winRate >= 50 ? 'text-win' : 'text-loss'}`}>{winRate}%</span><span className="text-xs text-muted-foreground uppercase tracking-wider">% Wygranych</span></div>
+          <div>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Wynik</p>
+            <p className={`text-lg font-bold ${sc}`}>{overallScore}</p>
           </div>
         </div>
 
-        <div className="glass-panel p-6 rounded-2xl flex flex-col">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-display text-xl text-white">Forma</h3>
-            {getTrendIcon(formTrend?.trend)}
-          </div>
-          <p className="text-sm text-muted-foreground mb-4">{formTrend?.trendDescription}</p>
-          <div className="grid grid-cols-2 gap-3 mt-auto">
-            <div className="bg-background/50 p-3 rounded-xl border border-border/50 text-center">
-              <span className="text-xs text-muted-foreground block mb-1">Ostatnie % wygranych</span>
-              <div className="flex items-center justify-center gap-1">
-                <span className={`text-lg font-bold ${formTrend?.recentWinRate >= formTrend?.overallWinRate ? 'text-green-500' : 'text-red-500'}`}>{formTrend?.recentWinRate}%</span>
-                {formTrend?.recentWinRate > formTrend?.overallWinRate ? <ChevronUp className="w-4 h-4 text-green-500" /> : formTrend?.recentWinRate < formTrend?.overallWinRate ? <ChevronDown className="w-4 h-4 text-red-500" /> : <Minus className="w-4 h-4 text-muted-foreground" />}
-              </div>
-            </div>
-            <div className="bg-background/50 p-3 rounded-xl border border-border/50 text-center">
-              <span className="text-xs text-muted-foreground block mb-1">Ostatnie KDA</span>
-              <div className="flex items-center justify-center gap-1">
-                <span className={`text-lg font-bold ${formTrend?.recentKda >= formTrend?.overallKda ? 'text-green-500' : 'text-red-500'}`}>{formTrend?.recentKda?.toFixed(2)}</span>
-                {formTrend?.recentKda > formTrend?.overallKda ? <ChevronUp className="w-4 h-4 text-green-500" /> : formTrend?.recentKda < formTrend?.overallKda ? <ChevronDown className="w-4 h-4 text-red-500" /> : <Minus className="w-4 h-4 text-muted-foreground" />}
-              </div>
-            </div>
-          </div>
+        <div className="stat-card">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-widest">% wygranych</p>
+          <p className={`text-lg font-bold ${winRate >= 50 ? "text-win" : "text-loss"}`}>{winRate}%</p>
+          <p className="text-[10px] text-muted-foreground">{totalGamesAnalyzed} meczy</p>
         </div>
 
-        <div className="glass-panel rounded-2xl flex flex-col overflow-hidden">
-          <div className="flex-1 p-4 border-b border-border/50 bg-green-950/10">
-            <h4 className="flex items-center text-green-500 font-bold mb-3 text-sm uppercase tracking-wider"><Check className="w-4 h-4 mr-2" /> Mocne strony</h4>
-            <ul className="space-y-1.5">
-              {strengths?.map((str: string, i: number) => <li key={i} className="text-sm text-foreground/80 flex items-start"><span className="text-green-500 mr-2 mt-0.5 flex-shrink-0">•</span>{str}</li>)}
-            </ul>
+        <div className="stat-card">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Rola</p>
+          <p className="text-lg font-bold text-foreground flex items-center gap-1.5">{ROLE_EMOJI[primaryRole] ?? "❓"} {primaryRole}</p>
+          <p className="text-[10px] text-muted-foreground">
+            {Object.entries(roleDistribution ?? {}).sort((a: any, b: any) => b[1] - a[1]).slice(0, 2).map(([r, p]) => `${r} ${p}%`).join(" · ")}
+          </p>
+        </div>
+
+        <div className="stat-card">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Streak</p>
+          <p className={`text-lg font-bold flex items-center gap-1 ${currentStreak?.type === "win" ? "text-win" : "text-loss"}`}>
+            {currentStreak?.type === "win" ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+            {currentStreak?.count}×{currentStreak?.type === "win" ? "W" : "L"}
+          </p>
+        </div>
+
+        <div className="stat-card">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Forma</p>
+            {trendIcon(formTrend?.trend)}
           </div>
-          <div className="flex-1 p-4 bg-red-950/10">
-            <h4 className="flex items-center text-red-500 font-bold mb-3 text-sm uppercase tracking-wider"><AlertTriangle className="w-4 h-4 mr-2" /> Słabe strony</h4>
-            <ul className="space-y-1.5">
-              {weaknesses?.map((wk: string, i: number) => <li key={i} className="text-sm text-foreground/80 flex items-start"><span className="text-red-500 mr-2 mt-0.5 flex-shrink-0">•</span>{wk}</li>)}
-            </ul>
-          </div>
+          <p className="text-xs text-foreground mt-1">{formTrend?.trendDescription}</p>
+        </div>
+
+        <div className="stat-card">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Trend KDA</p>
+          <div className="h-8"><SparklineChart matches={recentMatches ?? []} /></div>
         </div>
       </div>
 
-      {/* ROW 2: Playstyle Profile + Critical Mistakes */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <div className="md:col-span-2 glass-panel p-6 rounded-2xl">
-          <h3 className="font-display text-xl text-white mb-4 flex items-center"><UserRound className="w-5 h-5 mr-2 text-primary" /> Profil gracza</h3>
-          <div className="flex items-start gap-4">
-            <div className="flex-shrink-0 w-14 h-14 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center">
-              <Brain className="w-7 h-7 text-primary" />
+      {/* Playstyle + Strengths/Weaknesses */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 glass-panel p-4">
+          <div className="flex items-start gap-3 mb-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
+              <Brain className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h4 className="text-xl font-bold text-white mb-1">{playstyleArchetype}</h4>
-              <p className="text-sm text-muted-foreground leading-relaxed">{playstyleDescription}</p>
+              <h4 className="font-display text-base text-white">{playstyleArchetype}</h4>
+              <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">{playstyleDescription}</p>
             </div>
           </div>
           {gameplayPatterns?.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-border/50">
-              <h5 className="text-xs uppercase tracking-widest text-muted-foreground mb-3 flex items-center"><BookOpen className="w-3.5 h-3.5 mr-1.5" /> Wykryte wzorce gry</h5>
-              <ul className="space-y-1.5">
-                {gameplayPatterns.map((p: string, i: number) => <li key={i} className="text-sm text-foreground/80 flex items-start"><Zap className="w-3.5 h-3.5 text-primary mr-2 mt-0.5 flex-shrink-0" />{p}</li>)}
-              </ul>
+            <div className="border-t border-border/50 pt-3 mt-3">
+              <p className="section-title text-[10px]"><BookOpen className="w-3 h-3" /> Wzorce gry</p>
+              <div className="space-y-1">
+                {gameplayPatterns.map((p: string, i: number) => (
+                  <div key={i} className="flex items-start gap-2 text-xs text-foreground/75"><Zap className="w-3 h-3 text-primary mt-0.5 flex-shrink-0" />{p}</div>
+                ))}
+              </div>
             </div>
           )}
         </div>
-        <div className="glass-panel p-6 rounded-2xl bg-red-950/5 border border-red-900/20">
-          <h3 className="font-display text-xl text-white mb-4 flex items-center"><XCircle className="w-5 h-5 mr-2 text-red-500" /> Krytyczne błędy</h3>
-          {(!criticalMistakes || criticalMistakes.length === 0) ? (
-            <div className="flex flex-col items-center justify-center h-24 text-center">
-              <Check className="w-8 h-8 text-green-500 mb-2" />
-              <p className="text-sm text-muted-foreground">Brak wykrytych krytycznych błędów</p>
-            </div>
-          ) : (
-            <ul className="space-y-2">
-              {criticalMistakes.map((m: string, i: number) => (
-                <motion.li key={i} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.07 }}
-                  className="text-sm text-foreground/85 flex items-start bg-red-950/20 rounded-lg p-2.5 border border-red-900/20">
-                  <AlertTriangle className="w-4 h-4 text-red-400 mr-2 mt-0.5 flex-shrink-0" />{m}
-                </motion.li>
-              ))}
+
+        <div className="glass-panel overflow-hidden">
+          <div className="p-3 border-b border-border/30">
+            <p className="text-[10px] uppercase tracking-widest font-bold text-green-500 flex items-center gap-1"><Check className="w-3 h-3" /> Mocne strony</p>
+            <ul className="mt-2 space-y-1">
+              {strengths?.slice(0, 4).map((s: string, i: number) => <li key={i} className="text-xs text-foreground/75 flex items-start gap-1.5"><span className="text-green-500 mt-0.5">•</span>{s}</li>)}
             </ul>
-          )}
+          </div>
+          <div className="p-3">
+            <p className="text-[10px] uppercase tracking-widest font-bold text-red-400 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Słabe strony</p>
+            <ul className="mt-2 space-y-1">
+              {weaknesses?.slice(0, 4).map((w: string, i: number) => <li key={i} className="text-xs text-foreground/75 flex items-start gap-1.5"><span className="text-red-400 mt-0.5">•</span>{w}</li>)}
+            </ul>
+          </div>
         </div>
       </div>
 
-      {/* ROW 3: Coaching Tips */}
+      {/* Coaching Tips */}
       {coachingTips?.length > 0 && (
-        <div className="glass-panel p-6 rounded-2xl bg-primary/5 border border-primary/20">
-          <h3 className="font-display text-xl text-white mb-4 flex items-center"><GraduationCap className="w-5 h-5 mr-2 text-primary" /> Plan poprawy — spersonalizowane wskazówki</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="glass-panel p-4">
+          <p className="section-title"><GraduationCap className="w-3.5 h-3.5 text-primary" /> Plan poprawy</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {coachingTips.map((tip: string, i: number) => (
-              <motion.div key={i} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}
-                className="flex items-start gap-3 bg-background/40 rounded-xl p-3 border border-border/50">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center">{i + 1}</span>
-                <p className="text-sm text-foreground/85 leading-relaxed">{tip}</p>
-              </motion.div>
+              <div key={i} className="flex items-start gap-2.5 stat-card">
+                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/15 text-primary text-[10px] font-bold flex items-center justify-center">{i + 1}</span>
+                <p className="text-xs text-foreground/80 leading-relaxed">{tip}</p>
+              </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* ROW 4: Champion Recommendations */}
+      {/* Champion Recommendations */}
       {championRecommendations?.length > 0 && (
-        <div className="glass-panel p-6 rounded-2xl">
-          <h3 className="font-display text-xl text-white mb-4 flex items-center"><Star className="w-5 h-5 mr-2 text-yellow-400" /> Rekomendowane postacie dla Twojego stylu gry</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="glass-panel p-4">
+          <p className="section-title"><Star className="w-3.5 h-3.5 text-yellow-400" /> Rekomendowane postacie</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {championRecommendations.map((rec: any, i: number) => (
-              <motion.div key={i} initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.1 }}
-                className="flex items-start gap-3 bg-background/40 rounded-xl p-4 border border-border/50 hover:border-primary/30 transition-colors">
-                <img
-                  src={`https://ddragon.leagueoflegends.com/cdn/14.24.1/img/champion/${rec.championName}.png`}
-                  alt={rec.championName}
-                  className="w-14 h-14 rounded-xl border border-border flex-shrink-0"
-                  onError={(e) => { e.currentTarget.style.display = 'none' }}
-                />
-                <div>
-                  <h4 className="font-bold text-white">{rec.championName}</h4>
-                  <p className="text-xs text-primary mt-0.5">{rec.playstyleMatch}</p>
-                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{rec.reason}</p>
+              <div key={i} className="stat-card flex items-start gap-3">
+                <img src={`${DD}/champion/${rec.championName}.png`} alt={rec.championName}
+                  className="w-11 h-11 rounded-lg border border-border flex-shrink-0"
+                  onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-white">{rec.championName}</p>
+                  <p className="text-[10px] text-primary leading-snug">{rec.playstyleMatch}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">{rec.reason}</p>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* ROW 5: Key Metrics */}
-      <div className="glass-panel p-6 rounded-2xl">
-        <h3 className="font-display text-xl text-white mb-5 flex items-center"><BarChart3 className="w-5 h-5 mr-2 text-primary" /> Kluczowe wskaźniki</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {metrics?.map((metric: any, i: number) => {
-            const pct = Math.min(100, (metric.value / metric.maxValue) * 100);
-            const barColor = pct >= 70 ? 'bg-green-500' : pct >= 40 ? 'bg-yellow-500' : 'bg-red-500';
-            const badgeColor = pct >= 70 ? 'text-green-500 bg-green-500/10 border-green-500/20' : pct >= 40 ? 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20' : 'text-red-500 bg-red-500/10 border-red-500/20';
+      {/* Metrics Grid */}
+      <div className="glass-panel p-4">
+        <p className="section-title"><BarChart3 className="w-3.5 h-3.5 text-primary" /> Wskaźniki wydajności</p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+          {metrics?.map((m: any, i: number) => {
+            const pct = Math.min(100, (m.value / m.maxValue) * 100);
+            const c = pct >= 70 ? "bg-green-500" : pct >= 40 ? "bg-yellow-500" : "bg-red-500";
+            const tc = pct >= 70 ? "text-green-400 bg-green-500/10" : pct >= 40 ? "text-yellow-400 bg-yellow-500/10" : "text-red-400 bg-red-500/10";
             return (
-              <motion.div key={i} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.04 }}
-                className="bg-background/40 border border-border/50 rounded-xl p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex-1 pr-2">
-                    <h4 className="font-bold text-sm text-white">{metric.name}</h4>
-                    <span className="text-xs text-muted-foreground">{metric.description}</span>
-                  </div>
-                  <span className={`text-xs px-2 py-1 rounded border font-bold flex-shrink-0 ${badgeColor}`}>{metric.rating}</span>
+              <div key={i} className="stat-card">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-xs font-medium text-white truncate">{m.name}</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${tc}`}>{m.rating}</span>
                 </div>
-                <div className="mt-3">
-                  <div className="flex justify-between text-sm font-mono mb-1">
-                    <span>{metric.value}</span><span className="text-muted-foreground">{metric.maxValue}</span>
-                  </div>
-                  <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                    <div className={`h-full ${barColor} rounded-full transition-all duration-700`} style={{ width: `${pct}%` }} />
-                  </div>
+                <p className="text-[10px] text-muted-foreground leading-snug mb-2 line-clamp-1">{m.description}</p>
+                <div className="flex items-center gap-2">
+                  <div className="metric-bar flex-1"><div className={`h-full ${c} rounded-full`} style={{ width: `${pct}%` }} /></div>
+                  <span className="text-[10px] font-mono text-muted-foreground w-6 text-right">{m.value}</span>
                 </div>
-              </motion.div>
+              </div>
             );
           })}
         </div>
       </div>
 
-      {/* ROW 6: Performance by Game Length + Damage Type + Best/Worst Game */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        {/* Performance by Game Length */}
-        <div className="glass-panel p-5 rounded-2xl">
-          <h3 className="font-display text-lg text-white mb-4 flex items-center"><Timer className="w-4 h-4 mr-2 text-primary" /> Wyniki wg długości meczu</h3>
-          <div className="space-y-3">
+      {/* Bottom Row: Game Length + Damage + Best/Worst */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="glass-panel p-4">
+          <p className="section-title"><Timer className="w-3.5 h-3.5 text-primary" /> Długość meczu</p>
+          <div className="space-y-2">
             {[performanceByGameLength?.short, performanceByGameLength?.medium, performanceByGameLength?.long].map((gl: any, i: number) => {
-              if (!gl) return null;
-              const wrColor = gl.winRate >= 55 ? 'text-green-400' : gl.winRate >= 45 ? 'text-yellow-400' : 'text-red-400';
+              if (!gl || gl.gamesPlayed === 0) return null;
+              const wc = gl.winRate >= 55 ? "text-win" : gl.winRate >= 45 ? "text-yellow-400" : "text-loss";
               return (
-                <div key={i} className="bg-background/40 rounded-xl p-3 border border-border/50">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm font-bold text-white">{gl.label}</span>
-                    <span className="text-xs text-muted-foreground">{gl.gamesPlayed} meczy</span>
+                <div key={i} className="stat-card flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold text-white">{gl.label}</p>
+                    <p className="text-[10px] text-muted-foreground">{gl.gamesPlayed} meczy</p>
                   </div>
-                  <div className="flex gap-4 text-sm">
-                    <span className={`font-bold ${wrColor}`}>{gl.winRate}% WR</span>
-                    <span className="text-muted-foreground">KDA: {gl.avgKda}</span>
-                    <span className="text-muted-foreground">{gl.avgCsPerMin} CS/min</span>
+                  <div className="text-right">
+                    <p className={`text-xs font-bold ${wc}`}>{gl.winRate}% WR</p>
+                    <p className="text-[10px] text-muted-foreground">{gl.avgKda} KDA · {gl.avgCsPerMin} CS</p>
                   </div>
                 </div>
               );
@@ -475,142 +340,136 @@ function PlayerAnalysisSection({ data, isLoading, recentMatches }: { data: any; 
           </div>
         </div>
 
-        {/* Damage Type Breakdown */}
-        <div className="glass-panel p-5 rounded-2xl">
-          <h3 className="font-display text-lg text-white mb-4 flex items-center"><Layers className="w-4 h-4 mr-2 text-primary" /> Rodzaj obrażeń</h3>
+        <div className="glass-panel p-4">
+          <p className="section-title"><Layers className="w-3.5 h-3.5 text-primary" /> Typ obrażeń</p>
           {damageTypeBreakdown && (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {[
-                { label: "Fizyczne", pct: damageTypeBreakdown.physicalPct, color: "bg-orange-500", textColor: "text-orange-400" },
-                { label: "Magiczne", pct: damageTypeBreakdown.magicPct, color: "bg-blue-500", textColor: "text-blue-400" },
-                { label: "Prawdziwe", pct: damageTypeBreakdown.truePct, color: "bg-gray-300", textColor: "text-gray-300" },
-              ].map((dt) => (
-                <div key={dt.label}>
+                { l: "Fizyczne", p: damageTypeBreakdown.physicalPct, c: "bg-orange-500", t: "text-orange-400" },
+                { l: "Magiczne", p: damageTypeBreakdown.magicPct, c: "bg-blue-500", t: "text-blue-400" },
+                { l: "Prawdziwe", p: damageTypeBreakdown.truePct, c: "bg-gray-400", t: "text-gray-300" },
+              ].map((d) => (
+                <div key={d.l}>
                   <div className="flex justify-between mb-1">
-                    <span className="text-sm text-muted-foreground">{dt.label}</span>
-                    <span className={`text-sm font-bold ${dt.textColor}`}>{dt.pct}%</span>
+                    <span className="text-xs text-muted-foreground">{d.l}</span>
+                    <span className={`text-xs font-bold ${d.t}`}>{d.p}%</span>
                   </div>
-                  <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
-                    <div className={`h-full ${dt.color} rounded-full`} style={{ width: `${dt.pct}%` }} />
-                  </div>
+                  <div className="metric-bar"><div className={`h-full ${d.c} rounded-full`} style={{ width: `${d.p}%` }} /></div>
                 </div>
               ))}
-              <div className="flex mt-2 rounded-xl overflow-hidden h-5">
-                <div className="bg-orange-500 h-full" style={{ width: `${damageTypeBreakdown.physicalPct}%` }} title={`Fizyczne ${damageTypeBreakdown.physicalPct}%`} />
-                <div className="bg-blue-500 h-full" style={{ width: `${damageTypeBreakdown.magicPct}%` }} title={`Magiczne ${damageTypeBreakdown.magicPct}%`} />
-                <div className="bg-gray-300 h-full" style={{ width: `${damageTypeBreakdown.truePct}%` }} title={`Prawdziwe ${damageTypeBreakdown.truePct}%`} />
+              <div className="flex rounded-lg overflow-hidden h-3 mt-1">
+                <div className="bg-orange-500" style={{ width: `${damageTypeBreakdown.physicalPct}%` }} />
+                <div className="bg-blue-500" style={{ width: `${damageTypeBreakdown.magicPct}%` }} />
+                <div className="bg-gray-400" style={{ width: `${damageTypeBreakdown.truePct}%` }} />
               </div>
             </div>
           )}
         </div>
 
-        {/* Best & Worst Game */}
-        <div className="flex flex-col gap-3">
+        <div className="space-y-3">
           {bestGame && (
-            <div className="glass-panel p-4 rounded-2xl border border-green-900/30 bg-green-950/10 flex-1">
-              <h4 className="text-xs uppercase tracking-wider text-green-400 font-bold mb-3 flex items-center gap-1.5">
-                <Award className="w-3.5 h-3.5" /> Najlepszy mecz
-              </h4>
-              <div className="flex items-center gap-3">
-                <img
-                  src={`https://ddragon.leagueoflegends.com/cdn/14.24.1/img/champion/${bestGame.championName}.png`}
-                  alt={bestGame.championName}
-                  className="w-12 h-12 rounded-xl border border-border"
-                  onError={(e) => { e.currentTarget.style.display = 'none' }}
-                />
+            <div className="stat-card border-green-900/30 bg-green-950/10">
+              <p className="text-[10px] uppercase tracking-widest text-green-400 font-bold flex items-center gap-1 mb-2"><Award className="w-3 h-3" /> Najlepszy mecz</p>
+              <div className="flex items-center gap-2.5">
+                <img src={`${DD}/champion/${bestGame.championName}.png`} alt="" className="w-10 h-10 rounded-lg border border-border"
+                  onError={(e) => { e.currentTarget.style.display = "none"; }} />
                 <div>
-                  <p className="font-bold text-white">{bestGame.championName}</p>
-                  <p className="text-sm font-mono text-green-400">{bestGame.kills}/{bestGame.deaths}/{bestGame.assists}</p>
-                  <p className="text-xs text-muted-foreground">{bestGame.kda} KDA · Wynik {bestGame.performanceScore}</p>
+                  <p className="text-sm font-semibold text-white">{bestGame.championName}</p>
+                  <p className="text-xs font-mono text-green-400">{bestGame.kills}/{bestGame.deaths}/{bestGame.assists} <span className="text-muted-foreground">({bestGame.kda} KDA)</span></p>
                 </div>
+                <span className="ml-auto text-xs font-bold text-green-400">{bestGame.performanceScore}</span>
               </div>
             </div>
           )}
           {worstGame && (
-            <div className="glass-panel p-4 rounded-2xl border border-red-900/30 bg-red-950/10 flex-1">
-              <h4 className="text-xs uppercase tracking-wider text-red-400 font-bold mb-3 flex items-center gap-1.5">
-                <AlertTriangle className="w-3.5 h-3.5" /> Najgorszy mecz
-              </h4>
-              <div className="flex items-center gap-3">
-                <img
-                  src={`https://ddragon.leagueoflegends.com/cdn/14.24.1/img/champion/${worstGame.championName}.png`}
-                  alt={worstGame.championName}
-                  className="w-12 h-12 rounded-xl border border-border"
-                  onError={(e) => { e.currentTarget.style.display = 'none' }}
-                />
+            <div className="stat-card border-red-900/30 bg-red-950/10">
+              <p className="text-[10px] uppercase tracking-widest text-red-400 font-bold flex items-center gap-1 mb-2"><AlertTriangle className="w-3 h-3" /> Najgorszy mecz</p>
+              <div className="flex items-center gap-2.5">
+                <img src={`${DD}/champion/${worstGame.championName}.png`} alt="" className="w-10 h-10 rounded-lg border border-border"
+                  onError={(e) => { e.currentTarget.style.display = "none"; }} />
                 <div>
-                  <p className="font-bold text-white">{worstGame.championName}</p>
-                  <p className="text-sm font-mono text-red-400">{worstGame.kills}/{worstGame.deaths}/{worstGame.assists}</p>
-                  <p className="text-xs text-muted-foreground">{worstGame.kda} KDA · Wynik {worstGame.performanceScore}</p>
+                  <p className="text-sm font-semibold text-white">{worstGame.championName}</p>
+                  <p className="text-xs font-mono text-red-400">{worstGame.kills}/{worstGame.deaths}/{worstGame.assists} <span className="text-muted-foreground">({worstGame.kda} KDA)</span></p>
                 </div>
+                <span className="ml-auto text-xs font-bold text-red-400">{worstGame.performanceScore}</span>
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* ROW 7: Champion Performance Table */}
-      <div className="glass-panel p-6 rounded-2xl overflow-hidden">
-        <h3 className="font-display text-xl text-white mb-5 flex items-center"><Swords className="w-5 h-5 mr-2 text-primary" /> Wyniki na bohaterach</h3>
+      {/* Critical Mistakes */}
+      {criticalMistakes?.length > 0 && (
+        <div className="glass-panel p-4 border-red-900/15">
+          <p className="section-title"><XCircle className="w-3.5 h-3.5 text-red-400" /> Krytyczne błędy</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {criticalMistakes.map((m: string, i: number) => (
+              <div key={i} className="flex items-start gap-2 text-xs text-foreground/80 stat-card bg-red-950/10 border-red-900/20">
+                <AlertTriangle className="w-3.5 h-3.5 text-red-400 mt-0.5 flex-shrink-0" />{m}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Champion Breakdown Table */}
+      <div className="glass-panel p-4 overflow-hidden">
+        <p className="section-title"><Swords className="w-3.5 h-3.5 text-primary" /> Wyniki na bohaterach</p>
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[750px]">
+          <table className="w-full text-left min-w-[700px]">
             <thead>
-              <tr className="border-b border-border text-xs uppercase tracking-wider text-muted-foreground">
-                <th className="pb-3 font-semibold px-2">Bohater</th>
-                <th className="pb-3 font-semibold px-2 text-center">Mecze</th>
-                <th className="pb-3 font-semibold px-2 text-center">% Wyg.</th>
-                <th className="pb-3 font-semibold px-2 text-center">KDA</th>
-                <th className="pb-3 font-semibold px-2 text-center">KP%</th>
-                <th className="pb-3 font-semibold px-2 text-center">CS/min</th>
-                <th className="pb-3 font-semibold px-2 text-center">Udz. obrażeń</th>
-                <th className="pb-3 font-semibold px-2 text-center">Wynik</th>
+              <tr className="border-b border-border/50 text-[10px] uppercase tracking-wider text-muted-foreground">
+                <th className="pb-2 px-2 font-medium">Bohater</th>
+                <th className="pb-2 px-2 text-center font-medium">Mecze</th>
+                <th className="pb-2 px-2 text-center font-medium">WR</th>
+                <th className="pb-2 px-2 text-center font-medium">KDA</th>
+                <th className="pb-2 px-2 text-center font-medium">KP%</th>
+                <th className="pb-2 px-2 text-center font-medium">CS/min</th>
+                <th className="pb-2 px-2 text-center font-medium">Dmg%</th>
+                <th className="pb-2 px-2 text-center font-medium">Wynik</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border/50">
-              {championBreakdown?.map((champ: any, i: number) => {
-                const perfColor = champ.performanceScore >= 70 ? 'bg-green-500' : champ.performanceScore >= 50 ? 'bg-yellow-500' : 'bg-red-500';
+            <tbody className="divide-y divide-border/30">
+              {championBreakdown?.sort((a: any, b: any) => b.gamesPlayed - a.gamesPlayed).map((ch: any, i: number) => {
+                const pc = ch.performanceScore >= 70 ? "bg-green-500" : ch.performanceScore >= 50 ? "bg-yellow-500" : "bg-red-500";
                 return (
-                  <tr key={i} className="hover:bg-muted/30 transition-colors">
-                    <td className="py-3 px-2">
+                  <tr key={i} className="hover:bg-muted/15 transition-colors">
+                    <td className="py-2 px-2">
                       <div className="flex items-center gap-2">
-                        <img
-                          src={`https://ddragon.leagueoflegends.com/cdn/14.24.1/img/champion/${champ.championName}.png`}
-                          alt={champ.championName}
-                          className="w-8 h-8 rounded-full border border-border"
-                          onError={(e) => { e.currentTarget.src = 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png' }}
-                        />
-                        <span className="font-bold text-sm text-white">{champ.championName}</span>
+                        <img src={`${DD}/champion/${ch.championName}.png`} alt="" className="w-6 h-6 rounded-full border border-border"
+                          onError={(e) => { e.currentTarget.src = FALLBACK_ICON; }} />
+                        <span className="text-xs font-semibold text-white">{ch.championName}</span>
                       </div>
                     </td>
-                    <td className="py-3 px-2 text-center font-mono text-sm">{champ.gamesPlayed}</td>
-                    <td className={`py-3 px-2 text-center font-mono text-sm font-semibold ${champ.winRate >= 50 ? 'text-win' : 'text-loss'}`}>{champ.winRate}%</td>
-                    <td className="py-3 px-2 text-center font-mono text-sm">{champ.kda.toFixed(2)}</td>
-                    <td className="py-3 px-2 text-center font-mono text-sm"><span className={`${(champ.killParticipation ?? 0) >= 60 ? 'text-green-400' : (champ.killParticipation ?? 0) >= 40 ? 'text-yellow-400' : 'text-red-400'}`}>{(champ.killParticipation ?? 0).toFixed(0)}%</span></td>
-                    <td className="py-3 px-2 text-center font-mono text-sm">{champ.avgCsPerMin.toFixed(1)}</td>
-                    <td className="py-3 px-2 text-center font-mono text-sm"><span className={`${(champ.damageShare ?? 0) >= 25 ? 'text-orange-400' : (champ.damageShare ?? 0) >= 15 ? 'text-foreground' : 'text-muted-foreground'}`}>{(champ.damageShare ?? 0).toFixed(0)}%</span></td>
-                    <td className="py-3 px-2">
-                      <div className="flex items-center gap-2 justify-center">
-                        <span className="font-mono text-xs text-muted-foreground w-6 text-right">{champ.performanceScore}</span>
-                        <div className="w-14 h-1.5 bg-muted rounded-full overflow-hidden">
-                          <div className={`h-full ${perfColor}`} style={{ width: `${champ.performanceScore}%` }} />
-                        </div>
+                    <td className="py-2 px-2 text-center text-xs font-mono">{ch.gamesPlayed}</td>
+                    <td className={`py-2 px-2 text-center text-xs font-mono font-semibold ${ch.winRate >= 50 ? "text-win" : "text-loss"}`}>{ch.winRate}%</td>
+                    <td className="py-2 px-2 text-center text-xs font-mono">{ch.kda.toFixed(2)}</td>
+                    <td className="py-2 px-2 text-center text-xs font-mono">
+                      <span className={ch.killParticipation >= 60 ? "text-green-400" : ch.killParticipation >= 40 ? "text-yellow-400" : "text-red-400"}>
+                        {(ch.killParticipation ?? 0).toFixed(0)}%
+                      </span>
+                    </td>
+                    <td className="py-2 px-2 text-center text-xs font-mono">{ch.avgCsPerMin.toFixed(1)}</td>
+                    <td className="py-2 px-2 text-center text-xs font-mono">
+                      <span className={(ch.damageShare ?? 0) >= 25 ? "text-orange-400" : "text-muted-foreground"}>{(ch.damageShare ?? 0).toFixed(0)}%</span>
+                    </td>
+                    <td className="py-2 px-2">
+                      <div className="flex items-center gap-1.5 justify-center">
+                        <span className="text-[10px] font-mono text-muted-foreground w-5 text-right">{ch.performanceScore}</span>
+                        <div className="w-12 h-1 bg-muted/60 rounded-full overflow-hidden"><div className={`h-full ${pc}`} style={{ width: `${ch.performanceScore}%` }} /></div>
                       </div>
                     </td>
                   </tr>
                 );
               })}
-              {(!championBreakdown || championBreakdown.length === 0) && (
-                <tr><td colSpan={8} className="text-center py-4 text-muted-foreground">Brak danych o bohaterach</td></tr>
-              )}
             </tbody>
           </table>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
-// ─── Main Profile Page ───
 export default function Profile() {
   const params = useParams();
   const region = params.region as string;
@@ -627,107 +486,114 @@ export default function Profile() {
   const { data: analysis, isLoading: isLoadingAnalysis } = useGetSummonerAnalysis(puuid, { region, count: 20 }, { query: { enabled: !!puuid } });
   const { data: liveGame } = useGetLiveGame(puuid, { region, summonerId }, { query: { enabled: !!puuid, retry: false } });
 
-  if (profileError) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4">
-        <AlertCircle className="w-16 h-16 text-destructive mb-4" />
-        <h2 className="font-display text-3xl mb-2">Nie znaleziono gracza</h2>
-        <p className="text-muted-foreground mb-8">Nie znaleźliśmy {gameName}#{tagLine} w regionie {region}.</p>
-        <Link href="/"><a className="px-6 py-3 rounded-lg bg-card border border-border hover:bg-muted transition flex items-center"><ChevronLeft className="w-4 h-4 mr-2" /> Wróć do wyszukiwania</a></Link>
-      </div>
-    );
-  }
+  if (profileError) return (
+    <div className="min-h-screen flex flex-col items-center justify-center p-4">
+      <AlertCircle className="w-12 h-12 text-destructive mb-3" />
+      <h2 className="font-display text-2xl mb-1">Nie znaleziono gracza</h2>
+      <p className="text-sm text-muted-foreground mb-6">{gameName}#{tagLine} nie istnieje w regionie {region}.</p>
+      <Link href="/" className="px-4 py-2 rounded-lg bg-card border border-border hover:bg-muted transition text-sm flex items-center gap-1">
+        <ChevronLeft className="w-4 h-4" /> Wróć
+      </Link>
+    </div>
+  );
 
   if (isLoadingProfile) return <LoadingSpinner text="Wyszukiwanie gracza..." />;
 
-  const soloQ = rankedStats?.find((r: any) => r.queueType === 'RANKED_SOLO_5x5');
-  const flexQ = rankedStats?.find((r: any) => r.queueType === 'RANKED_FLEX_SR');
+  const soloQ = rankedStats?.find((r: any) => r.queueType === "RANKED_SOLO_5x5");
+  const flexQ = rankedStats?.find((r: any) => r.queueType === "RANKED_FLEX_SR");
 
   return (
-    <div className="min-h-screen pb-20">
-      <header className="relative pt-24 pb-12 overflow-hidden border-b border-border/50 bg-card/30">
-        <div className="absolute inset-0 z-0 opacity-20 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/40 via-background to-background" />
-        <div className="max-w-6xl mx-auto px-4 relative z-10 flex flex-col md:flex-row items-center md:items-end gap-6">
-          <Link href="/"><a className="absolute top-0 left-4 text-muted-foreground hover:text-primary transition flex items-center text-sm uppercase tracking-wider font-semibold py-4"><ChevronLeft className="w-4 h-4 mr-1" /> Szukaj</a></Link>
-          <div className="relative">
-            <div className="absolute inset-0 rounded-full bg-primary/20 blur-xl hextech-glow animate-pulse" />
-            <img
-              src={`https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/${profile?.profileIconId}.png`}
-              alt="Profile Icon"
-              className="relative w-32 h-32 rounded-full border-4 border-primary/50 shadow-2xl object-cover"
-            />
-            <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-card border border-primary/50 px-3 py-1 rounded-full text-sm font-bold shadow-lg">
-              {profile?.summonerLevel}
-            </div>
+    <div className="min-h-screen pb-16">
+      {/* Header */}
+      <header className="border-b border-border/50 bg-card/20">
+        <div className="max-w-7xl mx-auto px-4 py-5 flex items-center gap-5">
+          <Link href="/" className="text-muted-foreground hover:text-primary transition mr-1">
+            <ChevronLeft className="w-5 h-5" />
+          </Link>
+          <div className="relative flex-shrink-0">
+            <img src={`${DD}/profileicon/${profile?.profileIconId}.png`} alt=""
+              className="w-16 h-16 rounded-xl border-2 border-primary/30 object-cover" />
+            <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 bg-card border border-border px-2 py-0.5 rounded text-[10px] font-bold">{profile?.summonerLevel}</span>
           </div>
-          <div className="text-center md:text-left mb-2">
-            <h1 className="text-4xl md:text-5xl font-bold font-display tracking-tight text-white flex items-baseline gap-2 justify-center md:justify-start">
-              {profile?.gameName}<span className="text-xl text-muted-foreground font-sans font-medium">#{profile?.tagLine}</span>
-            </h1>
-            <div className="flex items-center gap-2 mt-2 justify-center md:justify-start">
-              <div className="inline-flex items-center px-3 py-1 rounded bg-primary/10 text-primary border border-primary/20 text-xs font-bold tracking-widest uppercase">{region}</div>
-              {liveGame && <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-green-500/10 text-green-400 border border-green-500/30 text-xs font-bold animate-pulse"><Wifi className="w-3 h-3" /> LIVE</div>}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <h1 className="text-2xl font-bold text-white tracking-tight">{profile?.gameName}</h1>
+              <span className="text-sm text-muted-foreground font-sans font-normal">#{profile?.tagLine}</span>
+              <span className="text-[10px] bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded font-bold tracking-widest uppercase">{region}</span>
+              {liveGame && (
+                <span className="text-[10px] bg-green-500/10 text-green-400 border border-green-500/20 px-2 py-0.5 rounded font-bold tracking-wider flex items-center gap-1 animate-pulse">
+                  <Wifi className="w-2.5 h-2.5" /> LIVE
+                </span>
+              )}
             </div>
+            {!isLoadingRanked && (
+              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                {soloQ && <span>Solo/Duo: <span className="text-foreground font-semibold">{soloQ.tier} {soloQ.rank} {soloQ.leaguePoints} LP</span></span>}
+                {flexQ && <span>Flex: <span className="text-foreground font-semibold">{flexQ.tier} {flexQ.rank} {flexQ.leaguePoints} LP</span></span>}
+                {!soloQ && !flexQ && <span>Unranked</span>}
+              </div>
+            )}
           </div>
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-4 mt-8">
+      <div className="max-w-7xl mx-auto px-4 mt-5">
         {liveGame && <LiveGameBanner data={liveGame} />}
-        <PlayerAnalysisSection data={analysis} isLoading={isLoadingAnalysis} recentMatches={matches} />
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          {/* Main Content */}
+          <div className="lg:col-span-9">
+            <AnalysisSection data={analysis} isLoading={isLoadingAnalysis} recentMatches={matches} />
+          </div>
+
+          {/* Sidebar */}
+          <aside className="lg:col-span-3 space-y-4">
+            <div>
+              <p className="section-title"><Trophy className="w-3.5 h-3.5 text-primary" /> Rang</p>
+              <div className="space-y-2">
+                {isLoadingRanked ? <div className="stat-card h-20 animate-pulse" /> : (<><RankedCard entry={soloQ} />{flexQ && <RankedCard entry={flexQ} />}</>)}
+              </div>
+            </div>
+
+            <div>
+              <p className="section-title"><Target className="w-3.5 h-3.5 text-primary" /> Mistrzostwo</p>
+              <div className="glass-panel p-2 space-y-0.5">
+                {isLoadingMastery ? (
+                  Array(3).fill(0).map((_, i) => <div key={i} className="h-10 bg-muted/30 rounded animate-pulse" />)
+                ) : mastery?.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-3">Brak danych</p>
+                ) : (
+                  mastery?.map((ch: any, i: number) => (
+                    <div key={i} className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/20 transition-colors">
+                      <span className="text-[10px] text-muted-foreground font-mono w-3">{i + 1}</span>
+                      <img src={`${DD}/champion/${ch.championName}.png`} alt="" className="w-8 h-8 rounded-lg border border-border"
+                        onError={(e) => { e.currentTarget.src = FALLBACK_ICON; }} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-white truncate">{ch.championName}</p>
+                        <p className="text-[10px] text-muted-foreground">Lv. {ch.championLevel}</p>
+                      </div>
+                      <span className="text-[10px] font-mono text-primary">{(ch.championPoints / 1000).toFixed(0)}K</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div>
+              <p className="section-title"><Shield className="w-3.5 h-3.5 text-primary" /> Ostatnie mecze</p>
+              <div className="space-y-1.5">
+                {isLoadingMatches ? (
+                  Array(5).fill(0).map((_, i) => <div key={i} className="h-14 bg-muted/20 rounded-lg animate-pulse" />)
+                ) : matches?.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-3">Brak historii</p>
+                ) : (
+                  matches?.map((m: any, i: number) => <MatchRow key={m.matchId} match={m} index={i} />)
+                )}
+              </div>
+            </div>
+          </aside>
+        </div>
       </div>
-
-      <main className="max-w-6xl mx-auto px-4 mt-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-4 space-y-8">
-          <section>
-            <h2 className="text-xl font-display text-white mb-4 flex items-center border-b border-border pb-2"><Trophy className="w-5 h-5 mr-2 text-primary" /> Rankingowe</h2>
-            <div className="space-y-4">
-              {isLoadingRanked ? <div className="h-32 glass-panel rounded-2xl animate-pulse" /> : (<><RankedBadge entry={soloQ} />{flexQ && <RankedBadge entry={flexQ} />}</>)}
-            </div>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-display text-white mb-4 flex items-center border-b border-border pb-2"><Target className="w-5 h-5 mr-2 text-primary" /> Najlepsi bohaterowie</h2>
-            <div className="glass-panel rounded-2xl p-4 space-y-3">
-              {isLoadingMastery ? (
-                Array(3).fill(0).map((_, i) => <div key={i} className="h-16 bg-muted/50 rounded-lg animate-pulse" />)
-              ) : mastery?.length === 0 ? (
-                <p className="text-muted-foreground text-center py-4">Brak danych o mistrzostwie</p>
-              ) : (
-                mastery?.map((champ: any, i: number) => (
-                  <div key={i} className="flex items-center gap-4 p-3 rounded-xl hover:bg-muted/30 transition-colors">
-                    <span className="text-muted-foreground font-bold w-4 text-center text-sm">{i + 1}</span>
-                    <img
-                      src={`https://ddragon.leagueoflegends.com/cdn/14.24.1/img/champion/${champ.championName}.png`}
-                      alt={champ.championName}
-                      className="w-12 h-12 rounded-full border-2 border-border"
-                      onError={(e) => { e.currentTarget.src = 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png' }}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-white truncate">{champ.championName}</p>
-                      <p className="text-xs text-muted-foreground">Poziom {champ.championLevel}</p>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-xs font-mono text-primary">{(champ.championPoints / 1000).toFixed(0)}K</p>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </section>
-        </div>
-
-        <div className="lg:col-span-8 space-y-4">
-          <h2 className="text-xl font-display text-white flex items-center border-b border-border pb-2"><Shield className="w-5 h-5 mr-2 text-primary" /> Ostatnie mecze</h2>
-          {isLoadingMatches ? (
-            Array(5).fill(0).map((_, i) => <div key={i} className="h-24 glass-panel rounded-xl animate-pulse" />)
-          ) : matches?.length === 0 ? (
-            <div className="glass-panel rounded-2xl p-8 text-center"><p className="text-muted-foreground">Brak historii meczy</p></div>
-          ) : (
-            matches?.map((match: any, i: number) => <MatchRow key={match.matchId} match={match} index={i} />)
-          )}
-        </div>
-      </main>
     </div>
   );
 }
