@@ -1,7 +1,7 @@
 import { Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 
-export function LoadingSpinner({ text = "Loading data..." }: { text?: string }) {
+export function LoadingSpinner({ text = "Wczytywanie danych..." }: { text?: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-20">
       <motion.div

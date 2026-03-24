@@ -17,7 +17,6 @@ export default function Home() {
     e.preventDefault();
     if (!gameName || !tagLine) return;
     
-    // Clean inputs
     const cleanName = encodeURIComponent(gameName.trim());
     const cleanTag = encodeURIComponent(tagLine.trim().replace(/^#/, ''));
     
@@ -26,7 +25,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen relative flex flex-col items-center justify-center px-4 overflow-hidden">
-      {/* Background Image */}
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 bg-background/80 z-10" />
         <img 
@@ -48,7 +46,7 @@ export default function Home() {
             <h1 className="text-5xl md:text-7xl text-gradient-gold">NEXUS SIGHT</h1>
           </div>
           <p className="text-muted-foreground text-lg md:text-xl font-light tracking-wide max-w-xl mx-auto">
-            Unveil player statistics, analyze match history, and scout your next opponent in the Rift.
+            Odkryj statystyki graczy, analizuj historie meczy i zwiaduj przeciwnika na Summoner's Rift.
           </p>
         </motion.div>
 
@@ -76,7 +74,7 @@ export default function Home() {
             <Search className="w-5 h-5 text-muted-foreground ml-2 mr-3" />
             <input
               type="text"
-              placeholder="Game Name"
+              placeholder="Nazwa gracza"
               value={gameName}
               onChange={(e) => setGameName(e.target.value)}
               className="w-full bg-transparent border-none text-foreground placeholder:text-muted-foreground focus:ring-0 outline-none py-3 text-lg"
@@ -97,7 +95,7 @@ export default function Home() {
             type="submit"
             className="w-full md:w-auto mt-2 md:mt-0 px-8 py-4 rounded-xl bg-gradient-to-r from-primary to-yellow-600 text-primary-foreground font-bold font-display tracking-widest uppercase hover:opacity-90 transition-opacity flex items-center justify-center group"
           >
-            Inspect
+            Szukaj
             <ChevronRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
           </button>
         </motion.form>
@@ -108,9 +106,9 @@ export default function Home() {
           transition={{ delay: 0.8 }}
           className="mt-12 flex gap-4 text-sm text-muted-foreground/60"
         >
-          <span>Supported Regions: EUW, NA, KR, and more</span>
+          <span>Regiony: EUW, NA, KR i inne</span>
           <span>•</span>
-          <span>Live API Data</span>
+          <span>Dane na żywo z API</span>
         </motion.div>
       </div>
     </div>
