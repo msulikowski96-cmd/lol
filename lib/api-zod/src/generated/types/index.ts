@@ -8,12 +8,17 @@
 
 export * from "./apiError";
 export * from "./championMastery";
+export * from "./championStats";
+export * from "./formTrend";
+export * from "./getSummonerAnalysisParams";
 export * from "./getSummonerMasteryParams";
 export * from "./getSummonerMatchesParams";
 export * from "./getSummonerRankedParams";
 export * from "./healthStatus";
 export * from "./matchSummary";
 export * from "./matchSummaryPerks";
+export * from "./performanceMetric";
+export * from "./playerAnalysis";
 export * from "./rankedEntry";
 export * from "./searchSummonerParams";
 export * from "./summonerProfile";

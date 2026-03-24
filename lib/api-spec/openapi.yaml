@@ -168,6 +168,40 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  /summoner/{puuid}/analysis:
+    get:
+      operationId: getSummonerAnalysis
+      tags: [summoner]
+      summary: Deep statistical analysis of a summoner's performance
+      parameters:
+        - name: puuid
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: region
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Performance analysis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlayerAnalysis"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
 components:
   schemas:
     HealthStatus:
@@ -333,3 +367,135 @@ components:
         - championLevel
         - championPoints
         - lastPlayTime
+    PerformanceMetric:
+      type: object
+      properties:
+        name:
+          type: string
+        value:
+          type: number
+        maxValue:
+          type: number
+        rating:
+          type: string
+        description:
+          type: string
+      required:
+        - name
+        - value
+        - maxValue
+        - rating
+        - description
+    ChampionStats:
+      type: object
+      properties:
+        championName:
+          type: string
+        gamesPlayed:
+          type: number
+        wins:
+          type: number
+        losses:
+          type: number
+        winRate:
+          type: number
+        avgKills:
+          type: number
+        avgDeaths:
+          type: number
+        avgAssists:
+          type: number
+        avgCs:
+          type: number
+        avgCsPerMin:
+          type: number
+        avgDamage:
+          type: number
+        avgGold:
+          type: number
+        avgVisionScore:
+          type: number
+        kda:
+          type: number
+        performanceScore:
+          type: number
+      required:
+        - championName
+        - gamesPlayed
+        - wins
+        - losses
+        - winRate
+        - avgKills
+        - avgDeaths
+        - avgAssists
+        - avgCs
+        - avgCsPerMin
+        - avgDamage
+        - avgGold
+        - avgVisionScore
+        - kda
+        - performanceScore
+    FormTrend:
+      type: object
+      properties:
+        recentWinRate:
+          type: number
+        overallWinRate:
+          type: number
+        recentKda:
+          type: number
+        overallKda:
+          type: number
+        trend:
+          type: string
+        trendDescription:
+          type: string
+        recentGames:
+          type: number
+      required:
+        - recentWinRate
+        - overallWinRate
+        - recentKda
+        - overallKda
+        - trend
+        - trendDescription
+        - recentGames
+    PlayerAnalysis:
+      type: object
+      properties:
+        overallScore:
+          type: number
+        overallRating:
+          type: string
+        totalGamesAnalyzed:
+          type: number
+        winRate:
+          type: number
+        metrics:
+          type: array
+          items:
+            $ref: "#/components/schemas/PerformanceMetric"
+        championBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChampionStats"
+        formTrend:
+          $ref: "#/components/schemas/FormTrend"
+        strengths:
+          type: array
+          items:
+            type: string
+        weaknesses:
+          type: array
+          items:
+            type: string
+      required:
+        - overallScore
+        - overallRating
+        - totalGamesAnalyzed
+        - winRate
+        - metrics
+        - championBreakdown
+        - formTrend
+        - strengths
+        - weaknesses

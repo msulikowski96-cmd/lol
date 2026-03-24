@@ -50,6 +50,16 @@ Every package extends `tsconfig.base.json` which sets `composite: true`. The roo
 
 ## Packages
 
+### `artifacts/web` (`@workspace/web`)
+
+React + Vite frontend for "Nexus Sight" — a League of Legends player stats checker.
+
+- Pages: Home (search), Profile (player stats with analysis)
+- Uses `@workspace/api-client-react` hooks for all API calls
+- Dark gaming aesthetic with glass-panel styling, framer-motion animations
+- Data Dragon 14.24.1 for champion/item images
+- Profile page includes: player header, ranked stats, match history, champion mastery, deep performance analysis
+
 ### `artifacts/api-server` (`@workspace/api-server`)
 
 Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` for request and response validation and `@workspace/db` for persistence.
@@ -57,6 +67,9 @@ Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` 
 - Entry: `src/index.ts` — reads `PORT`, starts Express
 - App setup: `src/app.ts` — mounts CORS, JSON/urlencoded parsing, routes at `/api`
 - Routes: `src/routes/index.ts` mounts sub-routers; `src/routes/health.ts` exposes `GET /health` (full path: `/api/health`)
+- Riot Games API routes: `src/routes/summoner.ts` (search, ranked, matches, mastery), `src/routes/analysis.ts` (deep player analysis)
+- Analysis engine: computes KDA, CS efficiency, vision control, damage output, gold efficiency, survival, consistency, carry potential, champion breakdown, form trend, strengths/weaknesses from match data
+- Uses `RIOT_API_KEY` env secret for Riot API access
 - Depends on: `@workspace/db`, `@workspace/api-zod`
 - `pnpm --filter @workspace/api-server run dev` — run the dev server
 - `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.cjs`)

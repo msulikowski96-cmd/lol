@@ -1,12 +1,18 @@
 import { useParams, Link } from "wouter";
 import { motion } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
-import { ChevronLeft, Trophy, Target, Shield, AlertCircle } from "lucide-react";
+import { 
+  ChevronLeft, Trophy, Target, Shield, AlertCircle, 
+  TrendingUp, TrendingDown, Minus, Flame, Snowflake, 
+  BarChart3, Swords, Eye, Coins, Activity, Award, 
+  ChevronUp, ChevronDown, Check, AlertTriangle 
+} from "lucide-react";
 import { 
   useSearchSummoner, 
   useGetSummonerRanked, 
   useGetSummonerMatches, 
-  useGetSummonerMastery 
+  useGetSummonerMastery,
+  useGetSummonerAnalysis 
 } from "@workspace/api-client-react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
@@ -119,6 +125,250 @@ function RankedBadge({ entry }: { entry: any }) {
   );
 }
 
+function PlayerAnalysisSection({ data, isLoading }: { data: any, isLoading: boolean }) {
+  if (isLoading) {
+    return (
+      <div className="glass-panel rounded-2xl p-8 mb-8 animate-pulse">
+        <div className="h-64 flex items-center justify-center">
+          <LoadingSpinner text="Analyzing player data..." />
+        </div>
+      </div>
+    );
+  }
+
+  if (!data || data.totalGamesAnalyzed === 0) {
+    return (
+      <div className="glass-panel rounded-2xl p-8 mb-8 text-center">
+        <AlertTriangle className="w-12 h-12 mx-auto text-yellow-500 mb-4" />
+        <h3 className="font-display text-2xl mb-2 text-white">Not enough match data for analysis</h3>
+        <p className="text-muted-foreground">Play more ranked matches to generate a performance analysis.</p>
+      </div>
+    );
+  }
+
+  const { overallScore, overallRating, totalGamesAnalyzed, winRate, metrics, championBreakdown, formTrend, strengths, weaknesses } = data;
+
+  const scoreColor = overallScore >= 70 ? 'text-green-500' : overallScore >= 50 ? 'text-yellow-500' : 'text-red-500';
+  const scoreRingColor = overallScore >= 70 ? 'stroke-green-500' : overallScore >= 50 ? 'stroke-yellow-500' : 'stroke-red-500';
+
+  const getTrendIcon = (trend: string) => {
+    switch (trend?.toLowerCase()) {
+      case 'hot': return <Flame className="w-6 h-6 text-orange-500" />;
+      case 'improving': return <TrendingUp className="w-6 h-6 text-green-500" />;
+      case 'declining': return <TrendingDown className="w-6 h-6 text-red-500" />;
+      case 'cold': return <Snowflake className="w-6 h-6 text-blue-300" />;
+      default: return <Minus className="w-6 h-6 text-muted-foreground" />;
+    }
+  };
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="space-y-8 mb-8 w-full"
+    >
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Overall Score */}
+        <div className="glass-panel p-6 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden">
+          <h3 className="font-display text-xl text-white mb-6">Overall Performance</h3>
+          
+          <div className="relative w-32 h-32 flex items-center justify-center mb-4">
+            <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="45" className="stroke-muted/30 stroke-[8px] fill-transparent" />
+              <circle 
+                cx="50" cy="50" r="45" 
+                className={`${scoreRingColor} stroke-[8px] fill-transparent`} 
+                strokeDasharray={`${overallScore * 2.827} 282.7`}
+                strokeLinecap="round" 
+              />
+            </svg>
+            <div className="text-center">
+              <span className={`text-4xl font-bold font-display ${scoreColor}`}>{overallRating}</span>
+              <span className="block text-xs text-muted-foreground">{overallScore}/100</span>
+            </div>
+          </div>
+          
+          <div className="flex gap-6 mt-2 text-center w-full justify-center">
+            <div>
+              <span className="block text-xl font-bold text-white">{totalGamesAnalyzed}</span>
+              <span className="text-xs text-muted-foreground uppercase tracking-wider">Games</span>
+            </div>
+            <div>
+              <span className={`block text-xl font-bold ${winRate >= 50 ? 'text-win' : 'text-loss'}`}>{winRate}%</span>
+              <span className="text-xs text-muted-foreground uppercase tracking-wider">Win Rate</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Form Trend */}
+        <div className="glass-panel p-6 rounded-2xl flex flex-col">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="font-display text-xl text-white">Form Trend</h3>
+            {getTrendIcon(formTrend?.trend)}
+          </div>
+          
+          <div className="flex-1 flex flex-col justify-center space-y-6">
+            <p className="text-sm text-muted-foreground mb-2">{formTrend?.trendDescription}</p>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-background/50 p-4 rounded-xl border border-border/50 text-center">
+                <span className="text-xs text-muted-foreground block mb-1">Recent Win Rate</span>
+                <div className="flex items-center justify-center gap-2">
+                  <span className={`text-lg font-bold ${formTrend?.recentWinRate >= formTrend?.overallWinRate ? 'text-green-500' : 'text-red-500'}`}>
+                    {formTrend?.recentWinRate}%
+                  </span>
+                  {formTrend?.recentWinRate > formTrend?.overallWinRate ? <ChevronUp className="w-4 h-4 text-green-500" /> : formTrend?.recentWinRate < formTrend?.overallWinRate ? <ChevronDown className="w-4 h-4 text-red-500" /> : <Minus className="w-4 h-4 text-muted-foreground" />}
+                </div>
+              </div>
+              
+              <div className="bg-background/50 p-4 rounded-xl border border-border/50 text-center">
+                <span className="text-xs text-muted-foreground block mb-1">Recent KDA</span>
+                <div className="flex items-center justify-center gap-2">
+                  <span className={`text-lg font-bold ${formTrend?.recentKda >= formTrend?.overallKda ? 'text-green-500' : 'text-red-500'}`}>
+                    {formTrend?.recentKda?.toFixed(2)}
+                  </span>
+                  {formTrend?.recentKda > formTrend?.overallKda ? <ChevronUp className="w-4 h-4 text-green-500" /> : formTrend?.recentKda < formTrend?.overallKda ? <ChevronDown className="w-4 h-4 text-red-500" /> : <Minus className="w-4 h-4 text-muted-foreground" />}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Strengths & Weaknesses */}
+        <div className="glass-panel rounded-2xl flex flex-col overflow-hidden">
+          <div className="flex-1 p-4 border-b border-border/50 bg-green-950/10">
+            <h4 className="flex items-center text-green-500 font-bold mb-3 text-sm uppercase tracking-wider">
+              <Check className="w-4 h-4 mr-2" /> Strengths
+            </h4>
+            <ul className="space-y-2">
+              {strengths?.map((str: string, i: number) => (
+                <li key={i} className="text-sm text-foreground/80 flex items-start">
+                  <span className="text-green-500 mr-2">•</span> {str}
+                </li>
+              ))}
+              {(!strengths || strengths.length === 0) && (
+                <li className="text-sm text-muted-foreground italic">No distinct strengths identified yet.</li>
+              )}
+            </ul>
+          </div>
+          <div className="flex-1 p-4 bg-red-950/10">
+            <h4 className="flex items-center text-red-500 font-bold mb-3 text-sm uppercase tracking-wider">
+              <AlertTriangle className="w-4 h-4 mr-2" /> Weaknesses
+            </h4>
+            <ul className="space-y-2">
+              {weaknesses?.map((wk: string, i: number) => (
+                <li key={i} className="text-sm text-foreground/80 flex items-start">
+                  <span className="text-red-500 mr-2">•</span> {wk}
+                </li>
+              ))}
+              {(!weaknesses || weaknesses.length === 0) && (
+                <li className="text-sm text-muted-foreground italic">No distinct weaknesses identified yet.</li>
+              )}
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div className="glass-panel p-6 rounded-2xl">
+        <h3 className="font-display text-xl text-white mb-6 flex items-center">
+          <BarChart3 className="w-5 h-5 mr-2 text-primary" /> Key Metrics
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {metrics?.map((metric: any, i: number) => {
+            const pct = Math.min(100, (metric.value / metric.maxValue) * 100);
+            const barColor = pct >= 70 ? 'bg-green-500' : pct >= 40 ? 'bg-yellow-500' : 'bg-red-500';
+            const badgeColor = pct >= 70 ? 'text-green-500 bg-green-500/10 border-green-500/20' : pct >= 40 ? 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20' : 'text-red-500 bg-red-500/10 border-red-500/20';
+            
+            return (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: i * 0.05 }}
+                key={i} 
+                className="bg-background/40 border border-border/50 rounded-xl p-4"
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <h4 className="font-bold text-sm text-white">{metric.name}</h4>
+                    <span className="text-xs text-muted-foreground">{metric.description}</span>
+                  </div>
+                  <span className={`text-xs px-2 py-1 rounded border font-bold ${badgeColor}`}>{metric.rating}</span>
+                </div>
+                
+                <div className="mt-4">
+                  <div className="flex justify-between text-sm font-mono mb-1">
+                    <span>{metric.value.toFixed(1)}</span>
+                    <span className="text-muted-foreground">{metric.maxValue.toFixed(1)}</span>
+                  </div>
+                  <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                    <div className={`h-full ${barColor} rounded-full`} style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="glass-panel p-6 rounded-2xl overflow-hidden">
+        <h3 className="font-display text-xl text-white mb-6 flex items-center">
+          <Swords className="w-5 h-5 mr-2 text-primary" /> Champion Performance
+        </h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[600px]">
+            <thead>
+              <tr className="border-b border-border text-xs uppercase tracking-wider text-muted-foreground">
+                <th className="pb-3 font-semibold px-2">Champion</th>
+                <th className="pb-3 font-semibold px-2 text-center">Games</th>
+                <th className="pb-3 font-semibold px-2 text-center">Win Rate</th>
+                <th className="pb-3 font-semibold px-2 text-center">KDA</th>
+                <th className="pb-3 font-semibold px-2 text-center">CS/min</th>
+                <th className="pb-3 font-semibold px-2 text-center">Score</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/50">
+              {championBreakdown?.sort((a: any, b: any) => b.gamesPlayed - a.gamesPlayed).map((champ: any, i: number) => {
+                 const perfColor = champ.performanceScore >= 70 ? 'bg-green-500' : champ.performanceScore >= 50 ? 'bg-yellow-500' : 'bg-red-500';
+                 return (
+                  <tr key={i} className="hover:bg-muted/30 transition-colors">
+                    <td className="py-3 px-2 flex items-center gap-3">
+                      <img 
+                        src={`https://ddragon.leagueoflegends.com/cdn/14.24.1/img/champion/${champ.championName}.png`}
+                        alt={champ.championName}
+                        className="w-8 h-8 rounded-full border border-border"
+                        onError={(e) => { e.currentTarget.src = 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png' }}
+                      />
+                      <span className="font-bold text-sm text-white">{champ.championName}</span>
+                    </td>
+                    <td className="py-3 px-2 text-center font-mono text-sm">{champ.gamesPlayed}</td>
+                    <td className={`py-3 px-2 text-center font-mono text-sm font-semibold ${champ.winRate >= 50 ? 'text-win' : 'text-loss'}`}>{champ.winRate}%</td>
+                    <td className="py-3 px-2 text-center font-mono text-sm">{champ.kda.toFixed(2)}</td>
+                    <td className="py-3 px-2 text-center font-mono text-sm">{champ.avgCsPerMin.toFixed(1)}</td>
+                    <td className="py-3 px-2">
+                      <div className="flex items-center gap-2 justify-center">
+                        <span className="font-mono text-xs text-muted-foreground w-6 text-right">{champ.performanceScore}</span>
+                        <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div className={`h-full ${perfColor}`} style={{ width: `${champ.performanceScore}%` }} />
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {(!championBreakdown || championBreakdown.length === 0) && (
+                <tr>
+                  <td colSpan={6} className="text-center py-4 text-muted-foreground">No champion data available</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 export default function Profile() {
   const params = useParams();
   const region = params.region as string;
@@ -150,6 +400,12 @@ export default function Profile() {
   const { data: mastery, isLoading: isLoadingMastery } = useGetSummonerMastery(
     puuid, 
     { region, count: 5 }, 
+    { query: { enabled: !!puuid } }
+  );
+
+  const { data: analysis, isLoading: isLoadingAnalysis } = useGetSummonerAnalysis(
+    puuid,
+    { region, count: 20 },
     { query: { enabled: !!puuid } }
   );
 
@@ -208,6 +464,11 @@ export default function Profile() {
           </div>
         </div>
       </header>
+
+      {/* Performance Analysis Section (Full Width) */}
+      <div className="max-w-6xl mx-auto px-4 mt-8">
+        <PlayerAnalysisSection data={analysis} isLoading={isLoadingAnalysis} />
+      </div>
 
       <main className="max-w-6xl mx-auto px-4 mt-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Column: Stats & Mastery */}

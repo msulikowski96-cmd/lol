@@ -16,11 +16,13 @@ import type {
 import type {
   ApiError,
   ChampionMastery,
+  GetSummonerAnalysisParams,
   GetSummonerMasteryParams,
   GetSummonerMatchesParams,
   GetSummonerRankedParams,
   HealthStatus,
   MatchSummary,
+  PlayerAnalysis,
   RankedEntry,
   SearchSummonerParams,
   SummonerProfile,
@@ -543,6 +545,123 @@ export function useGetSummonerMastery<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetSummonerMasteryQueryOptions(
+    puuid,
+    params,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Deep statistical analysis of a summoner's performance
+ */
+export const getGetSummonerAnalysisUrl = (
+  puuid: string,
+  params: GetSummonerAnalysisParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/summoner/${puuid}/analysis?${stringifiedParams}`
+    : `/api/summoner/${puuid}/analysis`;
+};
+
+export const getSummonerAnalysis = async (
+  puuid: string,
+  params: GetSummonerAnalysisParams,
+  options?: RequestInit,
+): Promise<PlayerAnalysis> => {
+  return customFetch<PlayerAnalysis>(getGetSummonerAnalysisUrl(puuid, params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetSummonerAnalysisQueryKey = (
+  puuid: string,
+  params?: GetSummonerAnalysisParams,
+) => {
+  return [
+    `/api/summoner/${puuid}/analysis`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetSummonerAnalysisQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSummonerAnalysis>>,
+  TError = ErrorType<ApiError>,
+>(
+  puuid: string,
+  params: GetSummonerAnalysisParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getSummonerAnalysis>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetSummonerAnalysisQueryKey(puuid, params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getSummonerAnalysis>>
+  > = ({ signal }) =>
+    getSummonerAnalysis(puuid, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!puuid,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getSummonerAnalysis>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetSummonerAnalysisQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getSummonerAnalysis>>
+>;
+export type GetSummonerAnalysisQueryError = ErrorType<ApiError>;
+
+/**
+ * @summary Deep statistical analysis of a summoner's performance
+ */
+
+export function useGetSummonerAnalysis<
+  TData = Awaited<ReturnType<typeof getSummonerAnalysis>>,
+  TError = ErrorType<ApiError>,
+>(
+  puuid: string,
+  params: GetSummonerAnalysisParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getSummonerAnalysis>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetSummonerAnalysisQueryOptions(
     puuid,
     params,
     options,

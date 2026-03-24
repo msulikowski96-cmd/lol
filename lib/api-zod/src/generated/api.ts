@@ -122,3 +122,61 @@ export const GetSummonerMasteryResponseItem = zod.object({
 export const GetSummonerMasteryResponse = zod.array(
   GetSummonerMasteryResponseItem,
 );
+
+/**
+ * @summary Deep statistical analysis of a summoner's performance
+ */
+export const GetSummonerAnalysisParams = zod.object({
+  puuid: zod.coerce.string(),
+});
+
+export const GetSummonerAnalysisQueryParams = zod.object({
+  region: zod.coerce.string(),
+  count: zod.coerce.number().optional(),
+});
+
+export const GetSummonerAnalysisResponse = zod.object({
+  overallScore: zod.number(),
+  overallRating: zod.string(),
+  totalGamesAnalyzed: zod.number(),
+  winRate: zod.number(),
+  metrics: zod.array(
+    zod.object({
+      name: zod.string(),
+      value: zod.number(),
+      maxValue: zod.number(),
+      rating: zod.string(),
+      description: zod.string(),
+    }),
+  ),
+  championBreakdown: zod.array(
+    zod.object({
+      championName: zod.string(),
+      gamesPlayed: zod.number(),
+      wins: zod.number(),
+      losses: zod.number(),
+      winRate: zod.number(),
+      avgKills: zod.number(),
+      avgDeaths: zod.number(),
+      avgAssists: zod.number(),
+      avgCs: zod.number(),
+      avgCsPerMin: zod.number(),
+      avgDamage: zod.number(),
+      avgGold: zod.number(),
+      avgVisionScore: zod.number(),
+      kda: zod.number(),
+      performanceScore: zod.number(),
+    }),
+  ),
+  formTrend: zod.object({
+    recentWinRate: zod.number(),
+    overallWinRate: zod.number(),
+    recentKda: zod.number(),
+    overallKda: zod.number(),
+    trend: zod.string(),
+    trendDescription: zod.string(),
+    recentGames: zod.number(),
+  }),
+  strengths: zod.array(zod.string()),
+  weaknesses: zod.array(zod.string()),
+});

@@ -71,6 +71,54 @@ export interface ChampionMastery {
   lastPlayTime: number;
 }
 
+export interface PerformanceMetric {
+  name: string;
+  value: number;
+  maxValue: number;
+  rating: string;
+  description: string;
+}
+
+export interface ChampionStats {
+  championName: string;
+  gamesPlayed: number;
+  wins: number;
+  losses: number;
+  winRate: number;
+  avgKills: number;
+  avgDeaths: number;
+  avgAssists: number;
+  avgCs: number;
+  avgCsPerMin: number;
+  avgDamage: number;
+  avgGold: number;
+  avgVisionScore: number;
+  kda: number;
+  performanceScore: number;
+}
+
+export interface FormTrend {
+  recentWinRate: number;
+  overallWinRate: number;
+  recentKda: number;
+  overallKda: number;
+  trend: string;
+  trendDescription: string;
+  recentGames: number;
+}
+
+export interface PlayerAnalysis {
+  overallScore: number;
+  overallRating: string;
+  totalGamesAnalyzed: number;
+  winRate: number;
+  metrics: PerformanceMetric[];
+  championBreakdown: ChampionStats[];
+  formTrend: FormTrend;
+  strengths: string[];
+  weaknesses: string[];
+}
+
 export type SearchSummonerParams = {
   gameName: string;
   tagLine: string;
@@ -87,6 +135,11 @@ export type GetSummonerMatchesParams = {
 };
 
 export type GetSummonerMasteryParams = {
+  region: string;
+  count?: number;
+};
+
+export type GetSummonerAnalysisParams = {
   region: string;
   count?: number;
 };
