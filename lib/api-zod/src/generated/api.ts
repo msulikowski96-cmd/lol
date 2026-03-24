@@ -8,7 +8,6 @@
 import * as zod from "zod";
 
 /**
- * Returns server health status
  * @summary Health check
  */
 export const HealthCheckResponse = zod.object({
@@ -185,4 +184,112 @@ export const GetSummonerAnalysisResponse = zod.object({
   playstyleDescription: zod.string(),
   criticalMistakes: zod.array(zod.string()),
   gameplayPatterns: zod.array(zod.string()),
+  primaryRole: zod.string(),
+  roleDistribution: zod.record(zod.string(), zod.number()),
+  currentStreak: zod.object({
+    type: zod.string(),
+    count: zod.number(),
+  }),
+  bestGame: zod
+    .object({
+      matchId: zod.string(),
+      championName: zod.string(),
+      kills: zod.number(),
+      deaths: zod.number(),
+      assists: zod.number(),
+      kda: zod.number(),
+      totalDamageDealt: zod.number(),
+      win: zod.boolean(),
+      gameDuration: zod.number(),
+      performanceScore: zod.number(),
+      gameEndTimestamp: zod.number(),
+    })
+    .nullish(),
+  worstGame: zod
+    .object({
+      matchId: zod.string(),
+      championName: zod.string(),
+      kills: zod.number(),
+      deaths: zod.number(),
+      assists: zod.number(),
+      kda: zod.number(),
+      totalDamageDealt: zod.number(),
+      win: zod.boolean(),
+      gameDuration: zod.number(),
+      performanceScore: zod.number(),
+      gameEndTimestamp: zod.number(),
+    })
+    .nullish(),
+  coachingTips: zod.array(zod.string()),
+  championRecommendations: zod.array(
+    zod.object({
+      championName: zod.string(),
+      reason: zod.string(),
+      playstyleMatch: zod.string(),
+    }),
+  ),
+  performanceByGameLength: zod.object({
+    short: zod.object({
+      label: zod.string(),
+      gamesPlayed: zod.number(),
+      winRate: zod.number(),
+      avgKda: zod.number(),
+      avgCsPerMin: zod.number(),
+    }),
+    medium: zod.object({
+      label: zod.string(),
+      gamesPlayed: zod.number(),
+      winRate: zod.number(),
+      avgKda: zod.number(),
+      avgCsPerMin: zod.number(),
+    }),
+    long: zod.object({
+      label: zod.string(),
+      gamesPlayed: zod.number(),
+      winRate: zod.number(),
+      avgKda: zod.number(),
+      avgCsPerMin: zod.number(),
+    }),
+  }),
+  damageTypeBreakdown: zod.object({
+    physicalPct: zod.number(),
+    magicPct: zod.number(),
+    truePct: zod.number(),
+  }),
+});
+
+/**
+ * @summary Check if summoner is currently in a game
+ */
+export const GetLiveGameParams = zod.object({
+  puuid: zod.coerce.string(),
+});
+
+export const GetLiveGameQueryParams = zod.object({
+  region: zod.coerce.string(),
+  summonerId: zod.coerce.string().optional(),
+});
+
+export const GetLiveGameResponse = zod.object({
+  gameId: zod.number(),
+  gameMode: zod.string(),
+  gameType: zod.string(),
+  gameLength: zod.number(),
+  mapId: zod.number(),
+  participants: zod.array(
+    zod.object({
+      puuid: zod.string(),
+      summonerName: zod.string(),
+      championId: zod.number(),
+      championName: zod.string(),
+      teamId: zod.number(),
+      spell1Id: zod.number(),
+      spell2Id: zod.number(),
+      perks: zod.object({
+        perkIds: zod.array(zod.number()),
+        perkStyle: zod.number(),
+        perkSubStyle: zod.number(),
+      }),
+    }),
+  ),
 });

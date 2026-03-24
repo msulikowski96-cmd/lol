@@ -17,7 +17,6 @@ paths:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -196,6 +195,46 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PlayerAnalysis"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /summoner/{puuid}/live:
+    get:
+      operationId: getLiveGame
+      tags: [summoner]
+      summary: Check if summoner is currently in a game
+      parameters:
+        - name: puuid
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: region
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: summonerId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Live game data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LiveGame"
+        "404":
+          description: Not in game
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
         "500":
           description: Server error
           content:
@@ -466,6 +505,176 @@ components:
         - trend
         - trendDescription
         - recentGames
+    GameHighlight:
+      type: object
+      properties:
+        matchId:
+          type: string
+        championName:
+          type: string
+        kills:
+          type: number
+        deaths:
+          type: number
+        assists:
+          type: number
+        kda:
+          type: number
+        totalDamageDealt:
+          type: number
+        win:
+          type: boolean
+        gameDuration:
+          type: number
+        performanceScore:
+          type: number
+        gameEndTimestamp:
+          type: number
+      required:
+        - matchId
+        - championName
+        - kills
+        - deaths
+        - assists
+        - kda
+        - totalDamageDealt
+        - win
+        - gameDuration
+        - performanceScore
+        - gameEndTimestamp
+    ChampionRecommendation:
+      type: object
+      properties:
+        championName:
+          type: string
+        reason:
+          type: string
+        playstyleMatch:
+          type: string
+      required:
+        - championName
+        - reason
+        - playstyleMatch
+    GameLengthStats:
+      type: object
+      properties:
+        label:
+          type: string
+        gamesPlayed:
+          type: number
+        winRate:
+          type: number
+        avgKda:
+          type: number
+        avgCsPerMin:
+          type: number
+      required:
+        - label
+        - gamesPlayed
+        - winRate
+        - avgKda
+        - avgCsPerMin
+    PerformanceByGameLength:
+      type: object
+      properties:
+        short:
+          $ref: "#/components/schemas/GameLengthStats"
+        medium:
+          $ref: "#/components/schemas/GameLengthStats"
+        long:
+          $ref: "#/components/schemas/GameLengthStats"
+      required:
+        - short
+        - medium
+        - long
+    DamageTypeBreakdown:
+      type: object
+      properties:
+        physicalPct:
+          type: number
+        magicPct:
+          type: number
+        truePct:
+          type: number
+      required:
+        - physicalPct
+        - magicPct
+        - truePct
+    CurrentStreak:
+      type: object
+      properties:
+        type:
+          type: string
+        count:
+          type: number
+      required:
+        - type
+        - count
+    LiveGameParticipant:
+      type: object
+      properties:
+        puuid:
+          type: string
+        summonerName:
+          type: string
+        championId:
+          type: number
+        championName:
+          type: string
+        teamId:
+          type: number
+        spell1Id:
+          type: number
+        spell2Id:
+          type: number
+        perks:
+          type: object
+          properties:
+            perkIds:
+              type: array
+              items:
+                type: number
+            perkStyle:
+              type: number
+            perkSubStyle:
+              type: number
+          required:
+            - perkIds
+            - perkStyle
+            - perkSubStyle
+      required:
+        - puuid
+        - summonerName
+        - championId
+        - championName
+        - teamId
+        - spell1Id
+        - spell2Id
+        - perks
+    LiveGame:
+      type: object
+      properties:
+        gameId:
+          type: number
+        gameMode:
+          type: string
+        gameType:
+          type: string
+        gameLength:
+          type: number
+        mapId:
+          type: number
+        participants:
+          type: array
+          items:
+            $ref: "#/components/schemas/LiveGameParticipant"
+      required:
+        - gameId
+        - gameMode
+        - gameType
+        - gameLength
+        - mapId
+        - participants
     PlayerAnalysis:
       type: object
       properties:
@@ -507,6 +716,34 @@ components:
           type: array
           items:
             type: string
+        primaryRole:
+          type: string
+        roleDistribution:
+          type: object
+          additionalProperties:
+            type: number
+        currentStreak:
+          $ref: "#/components/schemas/CurrentStreak"
+        bestGame:
+          nullable: true
+          oneOf:
+            - $ref: "#/components/schemas/GameHighlight"
+        worstGame:
+          nullable: true
+          oneOf:
+            - $ref: "#/components/schemas/GameHighlight"
+        coachingTips:
+          type: array
+          items:
+            type: string
+        championRecommendations:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChampionRecommendation"
+        performanceByGameLength:
+          $ref: "#/components/schemas/PerformanceByGameLength"
+        damageTypeBreakdown:
+          $ref: "#/components/schemas/DamageTypeBreakdown"
       required:
         - overallScore
         - overallRating
@@ -521,3 +758,10 @@ components:
         - playstyleDescription
         - criticalMistakes
         - gameplayPatterns
+        - primaryRole
+        - roleDistribution
+        - currentStreak
+        - coachingTips
+        - championRecommendations
+        - performanceByGameLength
+        - damageTypeBreakdown

@@ -16,11 +16,13 @@ import type {
 import type {
   ApiError,
   ChampionMastery,
+  GetLiveGameParams,
   GetSummonerAnalysisParams,
   GetSummonerMasteryParams,
   GetSummonerMatchesParams,
   GetSummonerRankedParams,
   HealthStatus,
+  LiveGame,
   MatchSummary,
   PlayerAnalysis,
   RankedEntry,
@@ -38,7 +40,6 @@ type Awaited<O> = O extends AwaitedInput<infer T> ? T : never;
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 /**
- * Returns server health status
  * @summary Health check
  */
 export const getHealthCheckUrl = () => {
@@ -666,6 +667,112 @@ export function useGetSummonerAnalysis<
     params,
     options,
   );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Check if summoner is currently in a game
+ */
+export const getGetLiveGameUrl = (puuid: string, params: GetLiveGameParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/summoner/${puuid}/live?${stringifiedParams}`
+    : `/api/summoner/${puuid}/live`;
+};
+
+export const getLiveGame = async (
+  puuid: string,
+  params: GetLiveGameParams,
+  options?: RequestInit,
+): Promise<LiveGame> => {
+  return customFetch<LiveGame>(getGetLiveGameUrl(puuid, params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetLiveGameQueryKey = (
+  puuid: string,
+  params?: GetLiveGameParams,
+) => {
+  return [`/api/summoner/${puuid}/live`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetLiveGameQueryOptions = <
+  TData = Awaited<ReturnType<typeof getLiveGame>>,
+  TError = ErrorType<ApiError>,
+>(
+  puuid: string,
+  params: GetLiveGameParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getLiveGame>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetLiveGameQueryKey(puuid, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getLiveGame>>> = ({
+    signal,
+  }) => getLiveGame(puuid, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!puuid,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getLiveGame>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetLiveGameQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getLiveGame>>
+>;
+export type GetLiveGameQueryError = ErrorType<ApiError>;
+
+/**
+ * @summary Check if summoner is currently in a game
+ */
+
+export function useGetLiveGame<
+  TData = Awaited<ReturnType<typeof getLiveGame>>,
+  TError = ErrorType<ApiError>,
+>(
+  puuid: string,
+  params: GetLiveGameParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getLiveGame>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetLiveGameQueryOptions(puuid, params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

@@ -4,6 +4,7 @@ import {
   GetSummonerRankedResponse,
   GetSummonerMatchesResponse,
   GetSummonerMasteryResponse,
+  GetLiveGameResponse,
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
@@ -264,6 +265,58 @@ router.get("/:puuid/mastery", async (req, res) => {
     }));
 
     const validated = GetSummonerMasteryResponse.parse(mastery);
+    res.json(validated);
+  } catch (err: any) {
+    res.status(500).json({ error: "riot_api_error", message: err?.message ?? "Unknown error" });
+  }
+});
+
+// GET /api/summoner/:puuid/live?region=&summonerId=
+router.get("/:puuid/live", async (req, res) => {
+  const { puuid } = req.params;
+  const { region, summonerId } = req.query as { region: string; summonerId?: string };
+  if (!region) { res.status(400).json({ error: "bad_request", message: "region is required" }); return; }
+  const regionLower = region.toLowerCase();
+  try {
+    let sId = summonerId;
+    if (!sId) {
+      const summonerUrl = `https://${regionLower}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${puuid}`;
+      const summonerRes = await fetch(summonerUrl, { headers: { "X-Riot-Token": RIOT_API_KEY } });
+      if (summonerRes.ok) {
+        const summoner = (await summonerRes.json()) as { id: string };
+        sId = summoner.id;
+      }
+    }
+    if (!sId) { res.status(404).json({ error: "not_in_game", message: "Player is not in a game" }); return; }
+    const liveUrl = `https://${regionLower}.api.riotgames.com/lol/spectator/v5/active-games/by-summoner/${sId}`;
+    const liveRes = await fetch(liveUrl, { headers: { "X-Riot-Token": RIOT_API_KEY } });
+    if (!liveRes.ok) {
+      if (liveRes.status === 404) { res.status(404).json({ error: "not_in_game", message: "Gracz nie jest teraz w meczu" }); }
+      else { res.status(500).json({ error: "riot_api_error", message: "Failed to fetch live game" }); }
+      return;
+    }
+    const liveData = (await liveRes.json()) as any;
+    const ddVersion = "14.24.1";
+    const champRes = await fetch(`https://ddragon.leagueoflegends.com/cdn/${ddVersion}/data/en_US/champion.json`);
+    const champData = (await champRes.json()) as { data: Record<string, { key: string; name: string }> };
+    const champById: Record<string, string> = {};
+    for (const [name, champ] of Object.entries(champData.data)) { champById[champ.key] = name; }
+    const participants = (liveData.participants ?? []).map((p: any) => ({
+      puuid: p.puuid ?? "",
+      summonerName: p.riotId ?? p.summonerName ?? "Nieznany",
+      championId: p.championId ?? 0,
+      championName: champById[String(p.championId)] ?? "Nieznany",
+      teamId: p.teamId ?? 0,
+      spell1Id: p.spell1Id ?? 0,
+      spell2Id: p.spell2Id ?? 0,
+      perks: { perkIds: p.perks?.perkIds ?? [], perkStyle: p.perks?.perkStyle ?? 0, perkSubStyle: p.perks?.perkSubStyle ?? 0 },
+    }));
+    const result = {
+      gameId: liveData.gameId ?? 0, gameMode: liveData.gameMode ?? "CLASSIC",
+      gameType: liveData.gameType ?? "MATCHED_GAME", gameLength: liveData.gameLength ?? 0,
+      mapId: liveData.mapId ?? 0, participants,
+    };
+    const validated = GetLiveGameResponse.parse(result);
     res.json(validated);
   } catch (err: any) {
     res.status(500).json({ error: "riot_api_error", message: err?.message ?? "Unknown error" });

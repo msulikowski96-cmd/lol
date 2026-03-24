@@ -109,6 +109,79 @@ export interface FormTrend {
   recentGames: number;
 }
 
+export interface GameHighlight {
+  matchId: string;
+  championName: string;
+  kills: number;
+  deaths: number;
+  assists: number;
+  kda: number;
+  totalDamageDealt: number;
+  win: boolean;
+  gameDuration: number;
+  performanceScore: number;
+  gameEndTimestamp: number;
+}
+
+export interface ChampionRecommendation {
+  championName: string;
+  reason: string;
+  playstyleMatch: string;
+}
+
+export interface GameLengthStats {
+  label: string;
+  gamesPlayed: number;
+  winRate: number;
+  avgKda: number;
+  avgCsPerMin: number;
+}
+
+export interface PerformanceByGameLength {
+  short: GameLengthStats;
+  medium: GameLengthStats;
+  long: GameLengthStats;
+}
+
+export interface DamageTypeBreakdown {
+  physicalPct: number;
+  magicPct: number;
+  truePct: number;
+}
+
+export interface CurrentStreak {
+  type: string;
+  count: number;
+}
+
+export type LiveGameParticipantPerks = {
+  perkIds: number[];
+  perkStyle: number;
+  perkSubStyle: number;
+};
+
+export interface LiveGameParticipant {
+  puuid: string;
+  summonerName: string;
+  championId: number;
+  championName: string;
+  teamId: number;
+  spell1Id: number;
+  spell2Id: number;
+  perks: LiveGameParticipantPerks;
+}
+
+export interface LiveGame {
+  gameId: number;
+  gameMode: string;
+  gameType: string;
+  gameLength: number;
+  mapId: number;
+  participants: LiveGameParticipant[];
+}
+
+export type PlayerAnalysisRoleDistribution = { [key: string]: number };
+
 export interface PlayerAnalysis {
   overallScore: number;
   overallRating: string;
@@ -123,6 +196,15 @@ export interface PlayerAnalysis {
   playstyleDescription: string;
   criticalMistakes: string[];
   gameplayPatterns: string[];
+  primaryRole: string;
+  roleDistribution: PlayerAnalysisRoleDistribution;
+  currentStreak: CurrentStreak;
+  bestGame?: GameHighlight | null;
+  worstGame?: GameHighlight | null;
+  coachingTips: string[];
+  championRecommendations: ChampionRecommendation[];
+  performanceByGameLength: PerformanceByGameLength;
+  damageTypeBreakdown: DamageTypeBreakdown;
 }
 
 export type SearchSummonerParams = {
@@ -148,4 +230,9 @@ export type GetSummonerMasteryParams = {
 export type GetSummonerAnalysisParams = {
   region: string;
   count?: number;
+};
+
+export type GetLiveGameParams = {
+  region: string;
+  summonerId?: string;
 };

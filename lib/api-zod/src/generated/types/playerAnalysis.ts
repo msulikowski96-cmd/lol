@@ -5,9 +5,15 @@
  * LoL Stats Checker API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ChampionRecommendation } from "./championRecommendation";
 import type { ChampionStats } from "./championStats";
+import type { CurrentStreak } from "./currentStreak";
+import type { DamageTypeBreakdown } from "./damageTypeBreakdown";
 import type { FormTrend } from "./formTrend";
+import type { GameHighlight } from "./gameHighlight";
+import type { PerformanceByGameLength } from "./performanceByGameLength";
 import type { PerformanceMetric } from "./performanceMetric";
+import type { PlayerAnalysisRoleDistribution } from "./playerAnalysisRoleDistribution";
 
 export interface PlayerAnalysis {
   overallScore: number;
@@ -23,4 +29,13 @@ export interface PlayerAnalysis {
   playstyleDescription: string;
   criticalMistakes: string[];
   gameplayPatterns: string[];
+  primaryRole: string;
+  roleDistribution: PlayerAnalysisRoleDistribution;
+  currentStreak: CurrentStreak;
+  bestGame?: GameHighlight | null;
+  worstGame?: GameHighlight | null;
+  coachingTips: string[];
+  championRecommendations: ChampionRecommendation[];
+  performanceByGameLength: PerformanceByGameLength;
+  damageTypeBreakdown: DamageTypeBreakdown;
 }
