@@ -74,7 +74,7 @@ function computeAnalysis(matches: MatchData[]) {
   if (totalGames === 0) {
     return {
       overallScore: 0,
-      overallRating: "Insufficient Data",
+      overallRating: "Niewystarczające dane",
       totalGamesAnalyzed: 0,
       winRate: 0,
       metrics: [],
@@ -85,7 +85,7 @@ function computeAnalysis(matches: MatchData[]) {
         recentKda: 0,
         overallKda: 0,
         trend: "neutral",
-        trendDescription: "Not enough data to determine trend",
+        trendDescription: "Za mało danych, aby określić trend",
         recentGames: 0,
       },
       strengths: [],
@@ -116,67 +116,67 @@ function computeAnalysis(matches: MatchData[]) {
   // KDA of 2.0 = ~40, 3.0 = ~60, 5.0 = ~80, 8.0+ = ~95+
   const kdaScore = clamp(Math.log2(avgKda + 1) * 30, 0, 100);
   const kdaRating = rateValue(avgKda, [
-    [8, "Legendary"],
-    [5, "Excellent"],
-    [3, "Good"],
-    [2, "Average"],
-    [1.5, "Below Average"],
-    [0, "Poor"],
+    [8, "Legendarny"],
+    [5, "Doskonały"],
+    [3, "Dobry"],
+    [2, "Przeciętny"],
+    [1.5, "Poniżej przeciętnej"],
+    [0, "Słaby"],
   ]);
 
   // --- CS Efficiency (0-100) ---
   // 6 cs/min = ~50, 8 cs/min = ~75, 10+ cs/min = ~95+
   const csScore = clamp((avgCsPerMin / 10) * 100, 0, 100);
   const csRating = rateValue(avgCsPerMin, [
-    [9, "Elite"],
-    [7.5, "Excellent"],
-    [6, "Good"],
-    [5, "Average"],
-    [4, "Below Average"],
-    [0, "Poor"],
+    [9, "Elitarny"],
+    [7.5, "Doskonały"],
+    [6, "Dobry"],
+    [5, "Przeciętny"],
+    [4, "Poniżej przeciętnej"],
+    [0, "Słaby"],
   ]);
 
   // --- Vision Control (0-100) ---
   // 0.5/min = ~33, 1.0/min = ~67, 1.5+/min = ~100
   const visionScore = clamp((avgVisionPerMin / 1.5) * 100, 0, 100);
   const visionRating = rateValue(avgVisionPerMin, [
-    [1.5, "Elite"],
-    [1.0, "Good"],
-    [0.7, "Average"],
-    [0.4, "Below Average"],
-    [0, "Poor"],
+    [1.5, "Elitarny"],
+    [1.0, "Dobry"],
+    [0.7, "Przeciętny"],
+    [0.4, "Poniżej przeciętnej"],
+    [0, "Słaby"],
   ]);
 
   // --- Damage Output (0-100) ---
   // 500 dmg/min = ~33, 1000 = ~67, 1500+ = ~100
   const dmgScore = clamp((avgDmgPerMin / 1500) * 100, 0, 100);
   const dmgRating = rateValue(avgDmgPerMin, [
-    [1200, "Dominant"],
-    [900, "High"],
-    [600, "Average"],
-    [400, "Below Average"],
-    [0, "Low"],
+    [1200, "Dominujący"],
+    [900, "Wysoki"],
+    [600, "Przeciętny"],
+    [400, "Poniżej przeciętnej"],
+    [0, "Niski"],
   ]);
 
   // --- Gold Efficiency (0-100) ---
   // How well they convert gold into damage
   const goldEffScore = clamp((avgDmgPerGold / 2.0) * 100, 0, 100);
   const goldEffRating = rateValue(avgDmgPerGold, [
-    [1.8, "Highly Efficient"],
-    [1.4, "Efficient"],
-    [1.0, "Average"],
-    [0.7, "Inefficient"],
-    [0, "Poor"],
+    [1.8, "Bardzo wydajny"],
+    [1.4, "Wydajny"],
+    [1.0, "Przeciętny"],
+    [0.7, "Niewydajny"],
+    [0, "Słaby"],
   ]);
 
   // --- Survival (0-100) - lower deaths = better ---
   const survivalScore = clamp(100 - avgDeaths * 12, 0, 100);
   const survivalRating = rateValue(100 - avgDeaths * 12, [
-    [80, "Exceptional"],
-    [60, "Good"],
-    [40, "Average"],
-    [20, "Risky"],
-    [0, "Reckless"],
+    [80, "Wyjątkowy"],
+    [60, "Dobry"],
+    [40, "Przeciętny"],
+    [20, "Ryzykowny"],
+    [0, "Lekkomyślny"],
   ]);
 
   // --- Consistency (0-100) ---
@@ -185,11 +185,11 @@ function computeAnalysis(matches: MatchData[]) {
   const coeffOfVariation = avgKda > 0 ? kdaStdDev / avgKda : 1;
   const consistencyScore = clamp(100 - coeffOfVariation * 80, 0, 100);
   const consistencyRating = rateValue(consistencyScore, [
-    [80, "Rock Solid"],
-    [60, "Reliable"],
-    [40, "Variable"],
-    [20, "Inconsistent"],
-    [0, "Unpredictable"],
+    [80, "Niezawodny"],
+    [60, "Solidny"],
+    [40, "Zmienny"],
+    [20, "Niestały"],
+    [0, "Nieprzewidywalny"],
   ]);
 
   // --- Win Impact (carry score) ---
@@ -201,11 +201,11 @@ function computeAnalysis(matches: MatchData[]) {
   const kdaDiff = winKda - lossKda;
   const carryScore = clamp(50 + kdaDiff * 10, 0, 100);
   const carryRating = rateValue(carryScore, [
-    [80, "Hard Carry"],
-    [60, "Impact Player"],
-    [40, "Team Player"],
-    [20, "Dependent"],
-    [0, "Low Impact"],
+    [80, "Twardy carry"],
+    [60, "Kluczowy gracz"],
+    [40, "Gracz zespołowy"],
+    [20, "Zależny"],
+    [0, "Mały wpływ"],
   ]);
 
   // --- Overall Score ---
@@ -248,60 +248,60 @@ function computeAnalysis(matches: MatchData[]) {
   // --- Metrics array ---
   const metrics = [
     {
-      name: "KDA Rating",
+      name: "Ocena KDA",
       value: Math.round(kdaScore),
       maxValue: 100,
       rating: kdaRating,
-      description: `Average KDA of ${avgKda.toFixed(2)} across ${totalGames} games`,
+      description: `Średnie KDA ${avgKda.toFixed(2)} przez ${totalGames} meczy`,
     },
     {
-      name: "CS Efficiency",
+      name: "Efektywność CS",
       value: Math.round(csScore),
       maxValue: 100,
       rating: csRating,
-      description: `${avgCsPerMin.toFixed(1)} CS/min average`,
+      description: `Średnio ${avgCsPerMin.toFixed(1)} CS/min`,
     },
     {
-      name: "Vision Control",
+      name: "Kontrola wizji",
       value: Math.round(visionScore),
       maxValue: 100,
       rating: visionRating,
-      description: `${avgVisionPerMin.toFixed(2)} vision score/min`,
+      description: `${avgVisionPerMin.toFixed(2)} pkt wizji/min`,
     },
     {
-      name: "Damage Output",
+      name: "Zadawane obrażenia",
       value: Math.round(dmgScore),
       maxValue: 100,
       rating: dmgRating,
-      description: `${avgDmgPerMin.toFixed(0)} damage/min to champions`,
+      description: `${avgDmgPerMin.toFixed(0)} obrażeń/min na bohaterów`,
     },
     {
-      name: "Gold Efficiency",
+      name: "Efektywność złota",
       value: Math.round(goldEffScore),
       maxValue: 100,
       rating: goldEffRating,
-      description: `${avgDmgPerGold.toFixed(2)} damage per gold earned`,
+      description: `${avgDmgPerGold.toFixed(2)} obrażeń na złoto`,
     },
     {
-      name: "Survival",
+      name: "Przeżywalność",
       value: Math.round(survivalScore),
       maxValue: 100,
       rating: survivalRating,
-      description: `${avgDeaths.toFixed(1)} average deaths per game`,
+      description: `Średnio ${avgDeaths.toFixed(1)} śmierci na mecz`,
     },
     {
-      name: "Consistency",
+      name: "Konsekwencja",
       value: Math.round(consistencyScore),
       maxValue: 100,
       rating: consistencyRating,
-      description: `Performance variance: ${(coeffOfVariation * 100).toFixed(0)}%`,
+      description: `Wariancja wyników: ${(coeffOfVariation * 100).toFixed(0)}%`,
     },
     {
-      name: "Carry Potential",
+      name: "Potencjał carry",
       value: Math.round(carryScore),
       maxValue: 100,
       rating: carryRating,
-      description: `KDA in wins: ${winKda.toFixed(2)} vs losses: ${lossKda.toFixed(2)}`,
+      description: `KDA w wygranych: ${winKda.toFixed(2)} vs porażkach: ${lossKda.toFixed(2)}`,
     },
   ];
 
@@ -370,19 +370,19 @@ function computeAnalysis(matches: MatchData[]) {
 
   if (winRateDiff > 10 && kdaDiffTrend > 0.5) {
     trend = "hot";
-    trendDescription = "On fire! Recent performance significantly above average";
+    trendDescription = "Rozpalony! Ostatnie wyniki znacznie powyżej średniej";
   } else if (winRateDiff > 5 || kdaDiffTrend > 0.3) {
     trend = "improving";
-    trendDescription = "Trending upward — performing better than usual";
+    trendDescription = "Rosnący trend — gra lepiej niż zwykle";
   } else if (winRateDiff < -10 && kdaDiffTrend < -0.5) {
     trend = "cold";
-    trendDescription = "In a slump — recent games significantly below average";
+    trendDescription = "Dołek — ostatnie mecze znacznie poniżej średniej";
   } else if (winRateDiff < -5 || kdaDiffTrend < -0.3) {
     trend = "declining";
-    trendDescription = "Slight decline in recent performance";
+    trendDescription = "Lekki spadek w ostatnich wynikach";
   } else {
     trend = "stable";
-    trendDescription = "Performing consistently at their usual level";
+    trendDescription = "Gra konsekwentnie na swoim zwykłym poziomie";
   }
 
   const formTrend = {
@@ -399,26 +399,26 @@ function computeAnalysis(matches: MatchData[]) {
   const strengths: string[] = [];
   const weaknesses: string[] = [];
 
-  if (kdaScore >= 70) strengths.push("Exceptional KDA — rarely dies without trading back");
-  if (csScore >= 70) strengths.push("Strong farming — maximizes gold income through CS");
-  if (visionScore >= 70) strengths.push("Excellent vision control — keeps the map lit up");
-  if (dmgScore >= 70) strengths.push("High damage output — carries fights consistently");
-  if (survivalScore >= 70) strengths.push("Great survival — rarely gives away free kills");
-  if (consistencyScore >= 70) strengths.push("Very consistent — delivers reliable performance every game");
-  if (carryScore >= 70) strengths.push("High carry potential — dramatically better in wins");
-  if (winRate >= 55) strengths.push("Above-average win rate — contributes to team success");
+  if (kdaScore >= 70) strengths.push("Wyjątkowe KDA — rzadko umiera bez zabrania czegoś w zamian");
+  if (csScore >= 70) strengths.push("Silne farmienie — maksymalizuje dochód złota przez CS");
+  if (visionScore >= 70) strengths.push("Doskonała kontrola wizji — utrzymuje mapę oświetloną");
+  if (dmgScore >= 70) strengths.push("Wysokie obrażenia — stale prowadzi walki");
+  if (survivalScore >= 70) strengths.push("Świetna przeżywalność — rzadko oddaje darmowe zabójstwa");
+  if (consistencyScore >= 70) strengths.push("Bardzo konsekwentny — niezawodne wyniki w każdym meczu");
+  if (carryScore >= 70) strengths.push("Wysoki potencjał carry — znacznie lepszy w wygranych");
+  if (winRate >= 55) strengths.push("Ponadprzeciętny % wygranych — przyczynia się do sukcesu drużyny");
 
-  if (kdaScore < 40) weaknesses.push("Low KDA — needs to reduce deaths or increase participation");
-  if (csScore < 40) weaknesses.push("Below-average farming — missing too much gold from minions");
-  if (visionScore < 40) weaknesses.push("Weak vision control — should buy more control wards");
-  if (dmgScore < 40) weaknesses.push("Low damage output — not maximizing damage in fights");
-  if (survivalScore < 40) weaknesses.push("Dies too often — needs better positioning and map awareness");
-  if (consistencyScore < 40) weaknesses.push("Inconsistent performance — large game-to-game variance");
-  if (carryScore < 40) weaknesses.push("Low carry potential — stats don't scale well with wins");
-  if (winRate < 45) weaknesses.push("Below-average win rate — may need to adjust playstyle or champion pool");
+  if (kdaScore < 40) weaknesses.push("Niskie KDA — wymaga ograniczenia śmierci lub zwiększenia uczestnictwa");
+  if (csScore < 40) weaknesses.push("Poniżej przeciętne farmienie — traci za dużo złota z minionów");
+  if (visionScore < 40) weaknesses.push("Słaba kontrola wizji — powinien kupować więcej ward kontrolnych");
+  if (dmgScore < 40) weaknesses.push("Niskie obrażenia — nie maksymalizuje obrażeń w walce");
+  if (survivalScore < 40) weaknesses.push("Za często umiera — potrzebuje lepszego pozycjonowania i świadomości mapy");
+  if (consistencyScore < 40) weaknesses.push("Niestałe wyniki — duże różnice między meczami");
+  if (carryScore < 40) weaknesses.push("Niski potencjał carry — statystyki nie rosną z wygraniami");
+  if (winRate < 45) weaknesses.push("Poniżej przeciętny % wygranych — może wymagać zmiany stylu gry lub puli bohaterów");
 
-  if (strengths.length === 0) strengths.push("Balanced player — no extreme strengths or weaknesses");
-  if (weaknesses.length === 0) weaknesses.push("No major weaknesses identified");
+  if (strengths.length === 0) strengths.push("Zrównoważony gracz — brak ekstremalnych mocnych ani słabych stron");
+  if (weaknesses.length === 0) weaknesses.push("Brak zidentyfikowanych większych słabości");
 
   return {
     overallScore,

@@ -1,6 +1,7 @@
 import { useParams, Link } from "wouter";
 import { motion } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
+import { pl } from "date-fns/locale";
 import { 
   ChevronLeft, Trophy, Target, Shield, AlertCircle, 
   TrendingUp, TrendingDown, Minus, Flame, Snowflake, 
@@ -19,8 +20,8 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 // Component to render individual matches
 function MatchRow({ match, index }: { match: any, index: number }) {
   const isWin = match.win;
-  const kda = match.deaths === 0 ? "Perfect" : ((match.kills + match.assists) / match.deaths).toFixed(2);
-  const timeAgo = formatDistanceToNow(new Date(match.gameEndTimestamp), { addSuffix: true });
+  const kda = match.deaths === 0 ? "Perfekcyjny" : ((match.kills + match.assists) / match.deaths).toFixed(2);
+  const timeAgo = formatDistanceToNow(new Date(match.gameEndTimestamp), { addSuffix: true, locale: pl });
   const durationMins = Math.floor(match.gameDuration / 60);
   const durationSecs = match.gameDuration % 60;
 
@@ -34,7 +35,7 @@ function MatchRow({ match, index }: { match: any, index: number }) {
       <div className={`absolute left-0 top-0 bottom-0 w-1 ${isWin ? 'bg-win' : 'bg-loss'}`} />
       
       <div className="flex flex-col w-24 text-center">
-        <span className={`font-bold ${isWin ? 'text-win' : 'text-loss'}`}>{isWin ? 'VICTORY' : 'DEFEAT'}</span>
+        <span className={`font-bold ${isWin ? 'text-win' : 'text-loss'}`}>{isWin ? 'WYGRANA' : 'PRZEGRANA'}</span>
         <span className="text-xs text-muted-foreground">{match.gameMode}</span>
         <span className="text-xs text-muted-foreground mt-1">{durationMins}:{durationSecs.toString().padStart(2, '0')}</span>
       </div>
@@ -64,7 +65,7 @@ function MatchRow({ match, index }: { match: any, index: number }) {
 
       <div className="flex flex-col items-center px-2 border-l border-border/50">
         <span className="text-sm font-semibold">{match.cs} CS</span>
-        <span className="text-xs text-muted-foreground">Vision: {match.visionScore}</span>
+        <span className="text-xs text-muted-foreground">Wizja: {match.visionScore}</span>
       </div>
 
       <div className="flex gap-1 ml-auto">
@@ -102,7 +103,7 @@ function RankedBadge({ entry }: { entry: any }) {
       </div>
       <div className="flex flex-col flex-1">
         <span className="text-xs text-muted-foreground uppercase tracking-widest mb-1">
-          {entry ? entry.queueType.replace('_', ' ') : 'RANKED'}
+          {entry?.queueType === 'RANKED_SOLO_5x5' ? 'Solo / Duo' : entry?.queueType === 'RANKED_FLEX_SR' ? 'Flex' : 'Rankingowe'}
         </span>
         <h3 className="font-display text-2xl text-gradient-gold">
           {tier} {entry?.rank}
@@ -118,7 +119,7 @@ function RankedBadge({ entry }: { entry: any }) {
             </div>
           </>
         ) : (
-          <span className="text-muted-foreground mt-2">No matches played</span>
+          <span className="text-muted-foreground mt-2">Brak rozegranych meczy</span>
         )}
       </div>
     </div>
@@ -130,7 +131,7 @@ function PlayerAnalysisSection({ data, isLoading }: { data: any, isLoading: bool
     return (
       <div className="glass-panel rounded-2xl p-8 mb-8 animate-pulse">
         <div className="h-64 flex items-center justify-center">
-          <LoadingSpinner text="Analyzing player data..." />
+          <LoadingSpinner text="Analizowanie danych gracza..." />
         </div>
       </div>
     );
@@ -140,8 +141,8 @@ function PlayerAnalysisSection({ data, isLoading }: { data: any, isLoading: bool
     return (
       <div className="glass-panel rounded-2xl p-8 mb-8 text-center">
         <AlertTriangle className="w-12 h-12 mx-auto text-yellow-500 mb-4" />
-        <h3 className="font-display text-2xl mb-2 text-white">Not enough match data for analysis</h3>
-        <p className="text-muted-foreground">Play more ranked matches to generate a performance analysis.</p>
+        <h3 className="font-display text-2xl mb-2 text-white">Za mało danych meczowych do analizy</h3>
+        <p className="text-muted-foreground">Zagraj więcej meczy rankingowych, aby wygenerować analizę wyników.</p>
       </div>
     );
   }
@@ -171,7 +172,7 @@ function PlayerAnalysisSection({ data, isLoading }: { data: any, isLoading: bool
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Overall Score */}
         <div className="glass-panel p-6 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden">
-          <h3 className="font-display text-xl text-white mb-6">Overall Performance</h3>
+          <h3 className="font-display text-xl text-white mb-6">Ogólne wyniki</h3>
           
           <div className="relative w-32 h-32 flex items-center justify-center mb-4">
             <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
@@ -192,11 +193,11 @@ function PlayerAnalysisSection({ data, isLoading }: { data: any, isLoading: bool
           <div className="flex gap-6 mt-2 text-center w-full justify-center">
             <div>
               <span className="block text-xl font-bold text-white">{totalGamesAnalyzed}</span>
-              <span className="text-xs text-muted-foreground uppercase tracking-wider">Games</span>
+              <span className="text-xs text-muted-foreground uppercase tracking-wider">Mecze</span>
             </div>
             <div>
               <span className={`block text-xl font-bold ${winRate >= 50 ? 'text-win' : 'text-loss'}`}>{winRate}%</span>
-              <span className="text-xs text-muted-foreground uppercase tracking-wider">Win Rate</span>
+              <span className="text-xs text-muted-foreground uppercase tracking-wider">% Wygranych</span>
             </div>
           </div>
         </div>
@@ -204,7 +205,7 @@ function PlayerAnalysisSection({ data, isLoading }: { data: any, isLoading: bool
         {/* Form Trend */}
         <div className="glass-panel p-6 rounded-2xl flex flex-col">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="font-display text-xl text-white">Form Trend</h3>
+            <h3 className="font-display text-xl text-white">Forma</h3>
             {getTrendIcon(formTrend?.trend)}
           </div>
           
@@ -213,7 +214,7 @@ function PlayerAnalysisSection({ data, isLoading }: { data: any, isLoading: bool
             
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-background/50 p-4 rounded-xl border border-border/50 text-center">
-                <span className="text-xs text-muted-foreground block mb-1">Recent Win Rate</span>
+                <span className="text-xs text-muted-foreground block mb-1">Ostatnie % wygranych</span>
                 <div className="flex items-center justify-center gap-2">
                   <span className={`text-lg font-bold ${formTrend?.recentWinRate >= formTrend?.overallWinRate ? 'text-green-500' : 'text-red-500'}`}>
                     {formTrend?.recentWinRate}%
@@ -223,7 +224,7 @@ function PlayerAnalysisSection({ data, isLoading }: { data: any, isLoading: bool
               </div>
               
               <div className="bg-background/50 p-4 rounded-xl border border-border/50 text-center">
-                <span className="text-xs text-muted-foreground block mb-1">Recent KDA</span>
+                <span className="text-xs text-muted-foreground block mb-1">Ostatnie KDA</span>
                 <div className="flex items-center justify-center gap-2">
                   <span className={`text-lg font-bold ${formTrend?.recentKda >= formTrend?.overallKda ? 'text-green-500' : 'text-red-500'}`}>
                     {formTrend?.recentKda?.toFixed(2)}
@@ -239,7 +240,7 @@ function PlayerAnalysisSection({ data, isLoading }: { data: any, isLoading: bool
         <div className="glass-panel rounded-2xl flex flex-col overflow-hidden">
           <div className="flex-1 p-4 border-b border-border/50 bg-green-950/10">
             <h4 className="flex items-center text-green-500 font-bold mb-3 text-sm uppercase tracking-wider">
-              <Check className="w-4 h-4 mr-2" /> Strengths
+              <Check className="w-4 h-4 mr-2" /> Mocne strony
             </h4>
             <ul className="space-y-2">
               {strengths?.map((str: string, i: number) => (
@@ -248,13 +249,13 @@ function PlayerAnalysisSection({ data, isLoading }: { data: any, isLoading: bool
                 </li>
               ))}
               {(!strengths || strengths.length === 0) && (
-                <li className="text-sm text-muted-foreground italic">No distinct strengths identified yet.</li>
+                <li className="text-sm text-muted-foreground italic">Brak wyraźnych mocnych stron.</li>
               )}
             </ul>
           </div>
           <div className="flex-1 p-4 bg-red-950/10">
             <h4 className="flex items-center text-red-500 font-bold mb-3 text-sm uppercase tracking-wider">
-              <AlertTriangle className="w-4 h-4 mr-2" /> Weaknesses
+              <AlertTriangle className="w-4 h-4 mr-2" /> Słabe strony
             </h4>
             <ul className="space-y-2">
               {weaknesses?.map((wk: string, i: number) => (
@@ -263,7 +264,7 @@ function PlayerAnalysisSection({ data, isLoading }: { data: any, isLoading: bool
                 </li>
               ))}
               {(!weaknesses || weaknesses.length === 0) && (
-                <li className="text-sm text-muted-foreground italic">No distinct weaknesses identified yet.</li>
+                <li className="text-sm text-muted-foreground italic">Brak wyraźnych słabych stron.</li>
               )}
             </ul>
           </div>
@@ -272,7 +273,7 @@ function PlayerAnalysisSection({ data, isLoading }: { data: any, isLoading: bool
 
       <div className="glass-panel p-6 rounded-2xl">
         <h3 className="font-display text-xl text-white mb-6 flex items-center">
-          <BarChart3 className="w-5 h-5 mr-2 text-primary" /> Key Metrics
+          <BarChart3 className="w-5 h-5 mr-2 text-primary" /> Kluczowe wskaźniki
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {metrics?.map((metric: any, i: number) => {
@@ -313,18 +314,18 @@ function PlayerAnalysisSection({ data, isLoading }: { data: any, isLoading: bool
 
       <div className="glass-panel p-6 rounded-2xl overflow-hidden">
         <h3 className="font-display text-xl text-white mb-6 flex items-center">
-          <Swords className="w-5 h-5 mr-2 text-primary" /> Champion Performance
+          <Swords className="w-5 h-5 mr-2 text-primary" /> Wyniki na bohaterach
         </h3>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[600px]">
             <thead>
               <tr className="border-b border-border text-xs uppercase tracking-wider text-muted-foreground">
-                <th className="pb-3 font-semibold px-2">Champion</th>
-                <th className="pb-3 font-semibold px-2 text-center">Games</th>
-                <th className="pb-3 font-semibold px-2 text-center">Win Rate</th>
+                <th className="pb-3 font-semibold px-2">Bohater</th>
+                <th className="pb-3 font-semibold px-2 text-center">Mecze</th>
+                <th className="pb-3 font-semibold px-2 text-center">% Wygranych</th>
                 <th className="pb-3 font-semibold px-2 text-center">KDA</th>
                 <th className="pb-3 font-semibold px-2 text-center">CS/min</th>
-                <th className="pb-3 font-semibold px-2 text-center">Score</th>
+                <th className="pb-3 font-semibold px-2 text-center">Wynik</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
@@ -358,7 +359,7 @@ function PlayerAnalysisSection({ data, isLoading }: { data: any, isLoading: bool
               })}
               {(!championBreakdown || championBreakdown.length === 0) && (
                 <tr>
-                  <td colSpan={6} className="text-center py-4 text-muted-foreground">No champion data available</td>
+                  <td colSpan={6} className="text-center py-4 text-muted-foreground">Brak danych o bohaterach</td>
                 </tr>
               )}
             </tbody>
@@ -413,18 +414,18 @@ export default function Profile() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-4">
         <AlertCircle className="w-16 h-16 text-destructive mb-4" />
-        <h2 className="font-display text-3xl mb-2">Summoner Not Found</h2>
-        <p className="text-muted-foreground mb-8">We couldn't find {gameName}#{tagLine} in {region}.</p>
+        <h2 className="font-display text-3xl mb-2">Nie znaleziono gracza</h2>
+        <p className="text-muted-foreground mb-8">Nie znaleźliśmy {gameName}#{tagLine} w regionie {region}.</p>
         <Link href="/">
           <a className="px-6 py-3 rounded-lg bg-card border border-border hover:bg-muted transition flex items-center">
-            <ChevronLeft className="w-4 h-4 mr-2" /> Back to Search
+            <ChevronLeft className="w-4 h-4 mr-2" /> Wróć do wyszukiwania
           </a>
         </Link>
       </div>
     );
   }
 
-  if (isLoadingProfile) return <LoadingSpinner text="Locating Summoner..." />;
+  if (isLoadingProfile) return <LoadingSpinner text="Wyszukiwanie gracza..." />;
 
   const soloQ = rankedStats?.find((r: any) => r.queueType === 'RANKED_SOLO_5x5');
   const flexQ = rankedStats?.find((r: any) => r.queueType === 'RANKED_FLEX_SR');
@@ -437,7 +438,7 @@ export default function Profile() {
         <div className="max-w-6xl mx-auto px-4 relative z-10 flex flex-col md:flex-row items-center md:items-end gap-6">
           <Link href="/">
             <a className="absolute top-0 left-4 text-muted-foreground hover:text-primary transition flex items-center text-sm uppercase tracking-wider font-semibold py-4">
-              <ChevronLeft className="w-4 h-4 mr-1" /> Search
+              <ChevronLeft className="w-4 h-4 mr-1" /> Szukaj
             </a>
           </Link>
           
@@ -475,7 +476,7 @@ export default function Profile() {
         <div className="lg:col-span-4 space-y-8">
           <section>
             <h2 className="text-xl font-display text-white mb-4 flex items-center border-b border-border pb-2">
-              <Trophy className="w-5 h-5 mr-2 text-primary" /> Ranked
+              <Trophy className="w-5 h-5 mr-2 text-primary" /> Rankingowe
             </h2>
             <div className="space-y-4">
               {isLoadingRanked ? (
@@ -491,13 +492,13 @@ export default function Profile() {
 
           <section>
             <h2 className="text-xl font-display text-white mb-4 flex items-center border-b border-border pb-2">
-              <Target className="w-5 h-5 mr-2 text-primary" /> Top Champions
+              <Target className="w-5 h-5 mr-2 text-primary" /> Najlepsi bohaterowie
             </h2>
             <div className="glass-panel rounded-2xl p-4 space-y-3">
               {isLoadingMastery ? (
                 Array(3).fill(0).map((_, i) => <div key={i} className="h-16 bg-muted/50 rounded-lg animate-pulse" />)
               ) : mastery?.length === 0 ? (
-                <p className="text-muted-foreground text-center py-4">No mastery data</p>
+                <p className="text-muted-foreground text-center py-4">Brak danych o mistrzostwie</p>
               ) : (
                 mastery?.map((champ: any, i: number) => (
                   <div key={champ.championId} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition">
@@ -524,7 +525,7 @@ export default function Profile() {
         {/* Right Column: Match History */}
         <div className="lg:col-span-8">
           <h2 className="text-xl font-display text-white mb-4 flex items-center border-b border-border pb-2">
-            <Shield className="w-5 h-5 mr-2 text-primary" /> Recent Matches
+            <Shield className="w-5 h-5 mr-2 text-primary" /> Ostatnie mecze
           </h2>
           
           <div className="space-y-3">
@@ -532,7 +533,7 @@ export default function Profile() {
                Array(5).fill(0).map((_, i) => <div key={i} className="h-28 glass-panel rounded-xl animate-pulse" />)
             ) : matches?.length === 0 ? (
               <div className="glass-panel p-12 text-center rounded-2xl">
-                <p className="text-muted-foreground text-lg">No recent matches found.</p>
+                <p className="text-muted-foreground text-lg">Brak ostatnich meczy.</p>
               </div>
             ) : (
               matches?.map((match: any, i: number) => (
