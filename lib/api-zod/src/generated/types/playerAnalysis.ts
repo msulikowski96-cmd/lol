@@ -19,4 +19,8 @@ export interface PlayerAnalysis {
   formTrend: FormTrend;
   strengths: string[];
   weaknesses: string[];
+  playstyleArchetype: string;
+  playstyleDescription: string;
+  criticalMistakes: string[];
+  gameplayPatterns: string[];
 }

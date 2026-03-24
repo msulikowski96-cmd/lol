@@ -6,7 +6,8 @@ import {
   ChevronLeft, Trophy, Target, Shield, AlertCircle, 
   TrendingUp, TrendingDown, Minus, Flame, Snowflake, 
   BarChart3, Swords, Eye, Coins, Activity, Award, 
-  ChevronUp, ChevronDown, Check, AlertTriangle 
+  ChevronUp, ChevronDown, Check, AlertTriangle,
+  UserRound, Brain, Zap, BookOpen, Crosshair, XCircle
 } from "lucide-react";
 import { 
   useSearchSummoner, 
@@ -147,7 +148,7 @@ function PlayerAnalysisSection({ data, isLoading }: { data: any, isLoading: bool
     );
   }
 
-  const { overallScore, overallRating, totalGamesAnalyzed, winRate, metrics, championBreakdown, formTrend, strengths, weaknesses } = data;
+  const { overallScore, overallRating, totalGamesAnalyzed, winRate, metrics, championBreakdown, formTrend, strengths, weaknesses, playstyleArchetype, playstyleDescription, criticalMistakes, gameplayPatterns } = data;
 
   const scoreColor = overallScore >= 70 ? 'text-green-500' : overallScore >= 50 ? 'text-yellow-500' : 'text-red-500';
   const scoreRingColor = overallScore >= 70 ? 'stroke-green-500' : overallScore >= 50 ? 'stroke-yellow-500' : 'stroke-red-500';
@@ -169,27 +170,20 @@ function PlayerAnalysisSection({ data, isLoading }: { data: any, isLoading: bool
       transition={{ duration: 0.5 }}
       className="space-y-8 mb-8 w-full"
     >
+      {/* Row 1: Overall Score | Form Trend | Strengths & Weaknesses */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Overall Score */}
         <div className="glass-panel p-6 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden">
           <h3 className="font-display text-xl text-white mb-6">Ogólne wyniki</h3>
-          
           <div className="relative w-32 h-32 flex items-center justify-center mb-4">
             <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
               <circle cx="50" cy="50" r="45" className="stroke-muted/30 stroke-[8px] fill-transparent" />
-              <circle 
-                cx="50" cy="50" r="45" 
-                className={`${scoreRingColor} stroke-[8px] fill-transparent`} 
-                strokeDasharray={`${overallScore * 2.827} 282.7`}
-                strokeLinecap="round" 
-              />
+              <circle cx="50" cy="50" r="45" className={`${scoreRingColor} stroke-[8px] fill-transparent`} strokeDasharray={`${overallScore * 2.827} 282.7`} strokeLinecap="round" />
             </svg>
             <div className="text-center">
               <span className={`text-4xl font-bold font-display ${scoreColor}`}>{overallRating}</span>
               <span className="block text-xs text-muted-foreground">{overallScore}/100</span>
             </div>
           </div>
-          
           <div className="flex gap-6 mt-2 text-center w-full justify-center">
             <div>
               <span className="block text-xl font-bold text-white">{totalGamesAnalyzed}</span>
@@ -202,33 +196,25 @@ function PlayerAnalysisSection({ data, isLoading }: { data: any, isLoading: bool
           </div>
         </div>
 
-        {/* Form Trend */}
         <div className="glass-panel p-6 rounded-2xl flex flex-col">
           <div className="flex items-center justify-between mb-6">
             <h3 className="font-display text-xl text-white">Forma</h3>
             {getTrendIcon(formTrend?.trend)}
           </div>
-          
           <div className="flex-1 flex flex-col justify-center space-y-6">
             <p className="text-sm text-muted-foreground mb-2">{formTrend?.trendDescription}</p>
-            
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-background/50 p-4 rounded-xl border border-border/50 text-center">
                 <span className="text-xs text-muted-foreground block mb-1">Ostatnie % wygranych</span>
                 <div className="flex items-center justify-center gap-2">
-                  <span className={`text-lg font-bold ${formTrend?.recentWinRate >= formTrend?.overallWinRate ? 'text-green-500' : 'text-red-500'}`}>
-                    {formTrend?.recentWinRate}%
-                  </span>
+                  <span className={`text-lg font-bold ${formTrend?.recentWinRate >= formTrend?.overallWinRate ? 'text-green-500' : 'text-red-500'}`}>{formTrend?.recentWinRate}%</span>
                   {formTrend?.recentWinRate > formTrend?.overallWinRate ? <ChevronUp className="w-4 h-4 text-green-500" /> : formTrend?.recentWinRate < formTrend?.overallWinRate ? <ChevronDown className="w-4 h-4 text-red-500" /> : <Minus className="w-4 h-4 text-muted-foreground" />}
                 </div>
               </div>
-              
               <div className="bg-background/50 p-4 rounded-xl border border-border/50 text-center">
                 <span className="text-xs text-muted-foreground block mb-1">Ostatnie KDA</span>
                 <div className="flex items-center justify-center gap-2">
-                  <span className={`text-lg font-bold ${formTrend?.recentKda >= formTrend?.overallKda ? 'text-green-500' : 'text-red-500'}`}>
-                    {formTrend?.recentKda?.toFixed(2)}
-                  </span>
+                  <span className={`text-lg font-bold ${formTrend?.recentKda >= formTrend?.overallKda ? 'text-green-500' : 'text-red-500'}`}>{formTrend?.recentKda?.toFixed(2)}</span>
                   {formTrend?.recentKda > formTrend?.overallKda ? <ChevronUp className="w-4 h-4 text-green-500" /> : formTrend?.recentKda < formTrend?.overallKda ? <ChevronDown className="w-4 h-4 text-red-500" /> : <Minus className="w-4 h-4 text-muted-foreground" />}
                 </div>
               </div>
@@ -236,7 +222,6 @@ function PlayerAnalysisSection({ data, isLoading }: { data: any, isLoading: bool
           </div>
         </div>
 
-        {/* Strengths & Weaknesses */}
         <div className="glass-panel rounded-2xl flex flex-col overflow-hidden">
           <div className="flex-1 p-4 border-b border-border/50 bg-green-950/10">
             <h4 className="flex items-center text-green-500 font-bold mb-3 text-sm uppercase tracking-wider">
@@ -244,13 +229,9 @@ function PlayerAnalysisSection({ data, isLoading }: { data: any, isLoading: bool
             </h4>
             <ul className="space-y-2">
               {strengths?.map((str: string, i: number) => (
-                <li key={i} className="text-sm text-foreground/80 flex items-start">
-                  <span className="text-green-500 mr-2">•</span> {str}
-                </li>
+                <li key={i} className="text-sm text-foreground/80 flex items-start"><span className="text-green-500 mr-2 mt-0.5 flex-shrink-0">•</span> {str}</li>
               ))}
-              {(!strengths || strengths.length === 0) && (
-                <li className="text-sm text-muted-foreground italic">Brak wyraźnych mocnych stron.</li>
-              )}
+              {(!strengths || strengths.length === 0) && <li className="text-sm text-muted-foreground italic">Brak wyraźnych mocnych stron.</li>}
             </ul>
           </div>
           <div className="flex-1 p-4 bg-red-950/10">
@@ -259,51 +240,105 @@ function PlayerAnalysisSection({ data, isLoading }: { data: any, isLoading: bool
             </h4>
             <ul className="space-y-2">
               {weaknesses?.map((wk: string, i: number) => (
-                <li key={i} className="text-sm text-foreground/80 flex items-start">
-                  <span className="text-red-500 mr-2">•</span> {wk}
-                </li>
+                <li key={i} className="text-sm text-foreground/80 flex items-start"><span className="text-red-500 mr-2 mt-0.5 flex-shrink-0">•</span> {wk}</li>
               ))}
-              {(!weaknesses || weaknesses.length === 0) && (
-                <li className="text-sm text-muted-foreground italic">Brak wyraźnych słabych stron.</li>
-              )}
+              {(!weaknesses || weaknesses.length === 0) && <li className="text-sm text-muted-foreground italic">Brak wyraźnych słabych stron.</li>}
             </ul>
           </div>
         </div>
       </div>
 
+      {/* Row 2: Playstyle Archetype + Gameplay Patterns */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="md:col-span-2 glass-panel p-6 rounded-2xl">
+          <h3 className="font-display text-xl text-white mb-4 flex items-center">
+            <UserRound className="w-5 h-5 mr-2 text-primary" /> Profil gracza
+          </h3>
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 w-16 h-16 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center">
+              <Brain className="w-8 h-8 text-primary" />
+            </div>
+            <div>
+              <h4 className="text-xl font-bold text-white mb-1">{playstyleArchetype}</h4>
+              <p className="text-sm text-muted-foreground leading-relaxed">{playstyleDescription}</p>
+            </div>
+          </div>
+          {gameplayPatterns && gameplayPatterns.length > 0 && (
+            <div className="mt-5 pt-4 border-t border-border/50">
+              <h5 className="text-xs uppercase tracking-widest text-muted-foreground mb-3 flex items-center">
+                <BookOpen className="w-3.5 h-3.5 mr-1.5" /> Wykryte wzorce gry
+              </h5>
+              <ul className="space-y-1.5">
+                {gameplayPatterns.map((pattern: string, i: number) => (
+                  <li key={i} className="text-sm text-foreground/80 flex items-start">
+                    <Zap className="w-3.5 h-3.5 text-primary mr-2 mt-0.5 flex-shrink-0" /> {pattern}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        {/* Critical Mistakes */}
+        <div className="glass-panel p-6 rounded-2xl bg-red-950/5 border border-red-900/20">
+          <h3 className="font-display text-xl text-white mb-4 flex items-center">
+            <XCircle className="w-5 h-5 mr-2 text-red-500" /> Krytyczne błędy
+          </h3>
+          {(!criticalMistakes || criticalMistakes.length === 0) ? (
+            <div className="flex flex-col items-center justify-center h-24 text-center">
+              <Check className="w-8 h-8 text-green-500 mb-2" />
+              <p className="text-sm text-muted-foreground">Brak wykrytych krytycznych błędów</p>
+            </div>
+          ) : (
+            <ul className="space-y-3">
+              {criticalMistakes.map((mistake: string, i: number) => (
+                <motion.li
+                  key={i}
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.08 }}
+                  className="text-sm text-foreground/85 flex items-start bg-red-950/20 rounded-lg p-3 border border-red-900/20"
+                >
+                  <AlertTriangle className="w-4 h-4 text-red-400 mr-2 mt-0.5 flex-shrink-0" /> {mistake}
+                </motion.li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      {/* Row 3: Key Metrics */}
       <div className="glass-panel p-6 rounded-2xl">
         <h3 className="font-display text-xl text-white mb-6 flex items-center">
           <BarChart3 className="w-5 h-5 mr-2 text-primary" /> Kluczowe wskaźniki
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {metrics?.map((metric: any, i: number) => {
             const pct = Math.min(100, (metric.value / metric.maxValue) * 100);
             const barColor = pct >= 70 ? 'bg-green-500' : pct >= 40 ? 'bg-yellow-500' : 'bg-red-500';
             const badgeColor = pct >= 70 ? 'text-green-500 bg-green-500/10 border-green-500/20' : pct >= 40 ? 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20' : 'text-red-500 bg-red-500/10 border-red-500/20';
-            
             return (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: i * 0.05 }}
-                key={i} 
+                transition={{ delay: i * 0.04 }}
+                key={i}
                 className="bg-background/40 border border-border/50 rounded-xl p-4"
               >
                 <div className="flex justify-between items-start mb-2">
-                  <div>
+                  <div className="flex-1 pr-2">
                     <h4 className="font-bold text-sm text-white">{metric.name}</h4>
                     <span className="text-xs text-muted-foreground">{metric.description}</span>
                   </div>
-                  <span className={`text-xs px-2 py-1 rounded border font-bold ${badgeColor}`}>{metric.rating}</span>
+                  <span className={`text-xs px-2 py-1 rounded border font-bold flex-shrink-0 ${badgeColor}`}>{metric.rating}</span>
                 </div>
-                
-                <div className="mt-4">
+                <div className="mt-3">
                   <div className="flex justify-between text-sm font-mono mb-1">
-                    <span>{metric.value.toFixed(1)}</span>
-                    <span className="text-muted-foreground">{metric.maxValue.toFixed(1)}</span>
+                    <span>{metric.value.toFixed(0)}</span>
+                    <span className="text-muted-foreground">{metric.maxValue}</span>
                   </div>
                   <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                    <div className={`h-full ${barColor} rounded-full`} style={{ width: `${pct}%` }} />
+                    <div className={`h-full ${barColor} rounded-full transition-all duration-700`} style={{ width: `${pct}%` }} />
                   </div>
                 </div>
               </motion.div>
@@ -312,29 +347,32 @@ function PlayerAnalysisSection({ data, isLoading }: { data: any, isLoading: bool
         </div>
       </div>
 
+      {/* Row 4: Champion Performance */}
       <div className="glass-panel p-6 rounded-2xl overflow-hidden">
         <h3 className="font-display text-xl text-white mb-6 flex items-center">
           <Swords className="w-5 h-5 mr-2 text-primary" /> Wyniki na bohaterach
         </h3>
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[600px]">
+          <table className="w-full text-left border-collapse min-w-[750px]">
             <thead>
               <tr className="border-b border-border text-xs uppercase tracking-wider text-muted-foreground">
                 <th className="pb-3 font-semibold px-2">Bohater</th>
                 <th className="pb-3 font-semibold px-2 text-center">Mecze</th>
-                <th className="pb-3 font-semibold px-2 text-center">% Wygranych</th>
+                <th className="pb-3 font-semibold px-2 text-center">% Wyg.</th>
                 <th className="pb-3 font-semibold px-2 text-center">KDA</th>
+                <th className="pb-3 font-semibold px-2 text-center">KP%</th>
                 <th className="pb-3 font-semibold px-2 text-center">CS/min</th>
+                <th className="pb-3 font-semibold px-2 text-center">Udz. obrażeń</th>
                 <th className="pb-3 font-semibold px-2 text-center">Wynik</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
               {championBreakdown?.sort((a: any, b: any) => b.gamesPlayed - a.gamesPlayed).map((champ: any, i: number) => {
-                 const perfColor = champ.performanceScore >= 70 ? 'bg-green-500' : champ.performanceScore >= 50 ? 'bg-yellow-500' : 'bg-red-500';
-                 return (
+                const perfColor = champ.performanceScore >= 70 ? 'bg-green-500' : champ.performanceScore >= 50 ? 'bg-yellow-500' : 'bg-red-500';
+                return (
                   <tr key={i} className="hover:bg-muted/30 transition-colors">
                     <td className="py-3 px-2 flex items-center gap-3">
-                      <img 
+                      <img
                         src={`https://ddragon.leagueoflegends.com/cdn/14.24.1/img/champion/${champ.championName}.png`}
                         alt={champ.championName}
                         className="w-8 h-8 rounded-full border border-border"
@@ -345,7 +383,17 @@ function PlayerAnalysisSection({ data, isLoading }: { data: any, isLoading: bool
                     <td className="py-3 px-2 text-center font-mono text-sm">{champ.gamesPlayed}</td>
                     <td className={`py-3 px-2 text-center font-mono text-sm font-semibold ${champ.winRate >= 50 ? 'text-win' : 'text-loss'}`}>{champ.winRate}%</td>
                     <td className="py-3 px-2 text-center font-mono text-sm">{champ.kda.toFixed(2)}</td>
+                    <td className="py-3 px-2 text-center font-mono text-sm">
+                      <span className={`${(champ.killParticipation ?? 0) >= 60 ? 'text-green-400' : (champ.killParticipation ?? 0) >= 40 ? 'text-yellow-400' : 'text-red-400'}`}>
+                        {(champ.killParticipation ?? 0).toFixed(0)}%
+                      </span>
+                    </td>
                     <td className="py-3 px-2 text-center font-mono text-sm">{champ.avgCsPerMin.toFixed(1)}</td>
+                    <td className="py-3 px-2 text-center font-mono text-sm">
+                      <span className={`${(champ.damageShare ?? 0) >= 25 ? 'text-orange-400' : (champ.damageShare ?? 0) >= 15 ? 'text-foreground' : 'text-muted-foreground'}`}>
+                        {(champ.damageShare ?? 0).toFixed(0)}%
+                      </span>
+                    </td>
                     <td className="py-3 px-2">
                       <div className="flex items-center gap-2 justify-center">
                         <span className="font-mono text-xs text-muted-foreground w-6 text-right">{champ.performanceScore}</span>
@@ -358,9 +406,7 @@ function PlayerAnalysisSection({ data, isLoading }: { data: any, isLoading: bool
                 );
               })}
               {(!championBreakdown || championBreakdown.length === 0) && (
-                <tr>
-                  <td colSpan={6} className="text-center py-4 text-muted-foreground">Brak danych o bohaterach</td>
-                </tr>
+                <tr><td colSpan={8} className="text-center py-4 text-muted-foreground">Brak danych o bohaterach</td></tr>
               )}
             </tbody>
           </table>

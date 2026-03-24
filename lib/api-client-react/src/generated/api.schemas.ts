@@ -94,6 +94,8 @@ export interface ChampionStats {
   avgGold: number;
   avgVisionScore: number;
   kda: number;
+  killParticipation: number;
+  damageShare: number;
   performanceScore: number;
 }
 
@@ -117,6 +119,10 @@ export interface PlayerAnalysis {
   formTrend: FormTrend;
   strengths: string[];
   weaknesses: string[];
+  playstyleArchetype: string;
+  playstyleDescription: string;
+  criticalMistakes: string[];
+  gameplayPatterns: string[];
 }
 
 export type SearchSummonerParams = {

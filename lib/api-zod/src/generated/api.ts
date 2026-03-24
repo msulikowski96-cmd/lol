@@ -165,6 +165,8 @@ export const GetSummonerAnalysisResponse = zod.object({
       avgGold: zod.number(),
       avgVisionScore: zod.number(),
       kda: zod.number(),
+      killParticipation: zod.number(),
+      damageShare: zod.number(),
       performanceScore: zod.number(),
     }),
   ),
@@ -179,4 +181,8 @@ export const GetSummonerAnalysisResponse = zod.object({
   }),
   strengths: zod.array(zod.string()),
   weaknesses: zod.array(zod.string()),
+  playstyleArchetype: zod.string(),
+  playstyleDescription: zod.string(),
+  criticalMistakes: zod.array(zod.string()),
+  gameplayPatterns: zod.array(zod.string()),
 });

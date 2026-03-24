@@ -417,6 +417,10 @@ components:
           type: number
         kda:
           type: number
+        killParticipation:
+          type: number
+        damageShare:
+          type: number
         performanceScore:
           type: number
       required:
@@ -434,6 +438,8 @@ components:
         - avgGold
         - avgVisionScore
         - kda
+        - killParticipation
+        - damageShare
         - performanceScore
     FormTrend:
       type: object
@@ -489,6 +495,18 @@ components:
           type: array
           items:
             type: string
+        playstyleArchetype:
+          type: string
+        playstyleDescription:
+          type: string
+        criticalMistakes:
+          type: array
+          items:
+            type: string
+        gameplayPatterns:
+          type: array
+          items:
+            type: string
       required:
         - overallScore
         - overallRating
@@ -499,3 +517,7 @@ components:
         - formTrend
         - strengths
         - weaknesses
+        - playstyleArchetype
+        - playstyleDescription
+        - criticalMistakes
+        - gameplayPatterns

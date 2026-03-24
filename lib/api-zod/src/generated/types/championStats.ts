@@ -21,5 +21,7 @@ export interface ChampionStats {
   avgGold: number;
   avgVisionScore: number;
   kda: number;
+  killParticipation: number;
+  damageShare: number;
   performanceScore: number;
 }
