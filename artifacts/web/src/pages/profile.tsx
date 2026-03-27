@@ -173,35 +173,141 @@ function RadarChart({ data }: { data: { aggression: number; farming: number; vis
   );
 }
 
-function MatchRow({ match, index }: { match: any; index: number }) {
+function MatchParticipantRow({ p, isSelf }: { p: any; isSelf: boolean }) {
+  const kda = p.deaths === 0 ? "Perf" : ((p.kills + p.assists) / p.deaths).toFixed(1);
+  const dmgK = Math.round(p.totalDamageDealt / 1000);
+  const goldK = (p.goldEarned / 1000).toFixed(1);
+  return (
+    <div className={`flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors ${isSelf ? (p.win ? "bg-win/10 ring-1 ring-win/30" : "bg-loss/10 ring-1 ring-loss/30") : "hover:bg-white/[0.03]"}`}>
+      <img
+        src={`${DD}/champion/${p.championName}.png`}
+        alt={p.championName}
+        className="w-7 h-7 rounded-md border border-border flex-shrink-0"
+        onError={(e) => { e.currentTarget.src = FALLBACK_ICON; }}
+      />
+      <div className="flex-1 min-w-0">
+        <span className={`text-xs truncate block font-medium ${isSelf ? "text-primary" : "text-foreground/80"}`}>
+          {p.summonerName || p.championName}
+        </span>
+      </div>
+      <span className="font-mono text-[10px] text-muted-foreground w-16 text-center flex-shrink-0">
+        {p.kills}/<span className="text-loss">{p.deaths}</span>/{p.assists}
+      </span>
+      <span className="text-[10px] text-muted-foreground w-8 text-right flex-shrink-0">{kda}</span>
+      <span className="text-[10px] text-muted-foreground w-10 text-right flex-shrink-0">{p.cs} CS</span>
+      <span className="text-[10px] text-muted-foreground w-10 text-right flex-shrink-0">{dmgK}K</span>
+      <span className="text-[10px] text-yellow-500/80 w-10 text-right flex-shrink-0">{goldK}K</span>
+      <OpScoreBadge score={p.opScore} />
+    </div>
+  );
+}
+
+function MatchRow({ match, index, selfPuuid }: { match: any; index: number; selfPuuid?: string }) {
+  const [expanded, setExpanded] = useState(false);
   const w = match.win;
   const kda = match.deaths === 0 ? "Perf" : ((match.kills + match.assists) / match.deaths).toFixed(1);
   const dur = `${Math.floor(match.gameDuration / 60)}:${(match.gameDuration % 60).toString().padStart(2, "0")}`;
   const timeAgo = formatDistanceToNow(new Date(match.gameEndTimestamp), { addSuffix: true, locale: pl });
+
+  const participants: any[] = match.participants ?? [];
+  const team1 = participants.filter((p: any) => p.teamId === 100);
+  const team2 = participants.filter((p: any) => p.teamId === 200);
+  const hasParticipants = participants.length > 0;
+
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: index * 0.03 }}
-      title={timeAgo}
-      className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border-l-2 ${w ? "border-l-win bg-win-bg/30" : "border-l-loss bg-loss-bg/30"} hover:bg-muted/20 transition-colors`}>
-      <div className="relative flex-shrink-0">
-        <img src={`${DD}/champion/${match.championName}.png`} alt={match.championName} className="w-8 h-8 rounded-lg border border-border"
-          onError={(e) => { e.currentTarget.src = FALLBACK_ICON; }} />
-        {match.opponent && (
-          <img src={`${DD}/champion/${match.opponent.championName}.png`} alt={match.opponent.championName}
-            className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border border-border bg-card"
-            onError={(e) => { e.currentTarget.style.display = "none"; }} />
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: index * 0.03 }}>
+      {/* Main row — click to expand */}
+      <div
+        title={timeAgo}
+        onClick={() => hasParticipants && setExpanded(v => !v)}
+        className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border-l-2 transition-colors
+          ${w ? "border-l-win bg-win-bg/30" : "border-l-loss bg-loss-bg/30"}
+          ${hasParticipants ? "cursor-pointer hover:bg-muted/20" : ""}
+          ${expanded ? (w ? "rounded-b-none" : "rounded-b-none") : ""}`}
+      >
+        <div className="relative flex-shrink-0">
+          <img src={`${DD}/champion/${match.championName}.png`} alt={match.championName} className="w-8 h-8 rounded-lg border border-border"
+            onError={(e) => { e.currentTarget.src = FALLBACK_ICON; }} />
+          {match.opponent && (
+            <img src={`${DD}/champion/${match.opponent.championName}.png`} alt={match.opponent.championName}
+              className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border border-border bg-card"
+              onError={(e) => { e.currentTarget.style.display = "none"; }} />
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className={`text-[10px] font-bold ${w ? "text-win" : "text-loss"}`}>{w ? "W" : "L"}</span>
+            <span className="font-mono text-xs font-semibold">
+              {match.kills}<span className="text-muted-foreground/50">/</span><span className="text-loss">{match.deaths}</span><span className="text-muted-foreground/50">/</span>{match.assists}
+            </span>
+            <span className="text-[10px] text-muted-foreground">{kda}</span>
+          </div>
+          <div className="text-[10px] text-muted-foreground">{match.cs} CS · {dur}</div>
+        </div>
+        {match.opScore !== undefined && <OpScoreBadge score={match.opScore} />}
+        {hasParticipants && (
+          <motion.div animate={{ rotate: expanded ? 180 : 0 }} transition={{ duration: 0.2 }} className="flex-shrink-0">
+            <ChevronDown className="w-3.5 h-3.5 text-muted-foreground/50" />
+          </motion.div>
         )}
       </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5">
-          <span className={`text-[10px] font-bold ${w ? "text-win" : "text-loss"}`}>{w ? "W" : "L"}</span>
-          <span className="font-mono text-xs font-semibold">
-            {match.kills}<span className="text-muted-foreground/50">/</span><span className="text-loss">{match.deaths}</span><span className="text-muted-foreground/50">/</span>{match.assists}
-          </span>
-          <span className="text-[10px] text-muted-foreground">{kda}</span>
-        </div>
-        <div className="text-[10px] text-muted-foreground">{match.cs} CS · {dur}</div>
-      </div>
-      {match.opScore !== undefined && <OpScoreBadge score={match.opScore} />}
+
+      {/* Expanded participants panel */}
+      <AnimatePresence>
+        {expanded && hasParticipants && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22, ease: "easeInOut" }}
+            className="overflow-hidden"
+          >
+            <div className={`border border-t-0 rounded-b-lg px-3 pb-3 pt-2 ${w ? "border-win/20 bg-win/5" : "border-loss/20 bg-loss/5"}`}>
+              {/* Header row */}
+              <div className="flex items-center gap-2 px-2 pb-1.5 mb-1 border-b border-white/[0.06]">
+                <div className="w-7 flex-shrink-0" />
+                <div className="flex-1" />
+                <span className="text-[9px] text-muted-foreground/50 uppercase tracking-wider w-16 text-center flex-shrink-0">KDA</span>
+                <span className="text-[9px] text-muted-foreground/50 uppercase tracking-wider w-8 text-right flex-shrink-0">Ratio</span>
+                <span className="text-[9px] text-muted-foreground/50 uppercase tracking-wider w-10 text-right flex-shrink-0">CS</span>
+                <span className="text-[9px] text-muted-foreground/50 uppercase tracking-wider w-10 text-right flex-shrink-0">DMG</span>
+                <span className="text-[9px] text-muted-foreground/50 uppercase tracking-wider w-10 text-right flex-shrink-0">Złoto</span>
+                <span className="text-[9px] text-muted-foreground/50 uppercase tracking-wider w-8 text-right flex-shrink-0">OP</span>
+              </div>
+
+              {/* Team 1 */}
+              <div className="mb-2">
+                <p className="text-[9px] font-bold text-blue-400 uppercase tracking-widest px-2 mb-1">
+                  {w && team1.some((p: any) => p.puuid === selfPuuid) ? "✓ " : ""}Drużyna Niebieska
+                  <span className={`ml-1.5 ${team1[0]?.win ? "text-win" : "text-loss"}`}>
+                    {team1[0]?.win ? "WYGRANA" : "PRZEGRANA"}
+                  </span>
+                </p>
+                <div className="space-y-0.5">
+                  {team1.map((p: any, i: number) => (
+                    <MatchParticipantRow key={i} p={p} isSelf={p.puuid === selfPuuid} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Team 2 */}
+              <div>
+                <p className="text-[9px] font-bold text-red-400 uppercase tracking-widest px-2 mb-1">
+                  {!w && team2.some((p: any) => p.puuid === selfPuuid) ? "✓ " : ""}Drużyna Czerwona
+                  <span className={`ml-1.5 ${team2[0]?.win ? "text-win" : "text-loss"}`}>
+                    {team2[0]?.win ? "WYGRANA" : "PRZEGRANA"}
+                  </span>
+                </p>
+                <div className="space-y-0.5">
+                  {team2.map((p: any, i: number) => (
+                    <MatchParticipantRow key={i} p={p} isSelf={p.puuid === selfPuuid} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
@@ -792,7 +898,7 @@ export default function Profile() {
                   ? Array(5).fill(0).map((_, i) => <div key={i} className="h-14 rounded-lg animate-pulse" style={{ background: "rgba(255,255,255,0.025)" }} />)
                   : matches?.length === 0
                     ? <p className="text-xs text-muted-foreground text-center py-3">Brak historii</p>
-                    : matches?.map((m: any, i: number) => <MatchRow key={m.matchId} match={m} index={i} />)
+                    : matches?.map((m: any, i: number) => <MatchRow key={m.matchId} match={m} index={i} selfPuuid={puuid} />)
                 }
               </div>
             </div>

@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { MatchOpponent } from "./matchOpponent";
+import type { MatchParticipant } from "./matchParticipant";
 import type { MatchSummaryPerks } from "./matchSummaryPerks";
 
 export interface MatchSummary {
@@ -29,4 +30,5 @@ export interface MatchSummary {
   perks: MatchSummaryPerks;
   opScore: number;
   opponent?: MatchOpponent | null;
+  participants: MatchParticipant[];
 }

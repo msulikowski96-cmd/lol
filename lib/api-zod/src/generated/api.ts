@@ -103,6 +103,23 @@ export const GetSummonerMatchesResponseItem = zod.object({
       assists: zod.number(),
     })
     .nullish(),
+  participants: zod.array(
+    zod.object({
+      summonerName: zod.string(),
+      puuid: zod.string(),
+      championName: zod.string(),
+      kills: zod.number(),
+      deaths: zod.number(),
+      assists: zod.number(),
+      cs: zod.number(),
+      totalDamageDealt: zod.number(),
+      goldEarned: zod.number(),
+      win: zod.boolean(),
+      teamId: zod.number(),
+      items: zod.array(zod.number()),
+      opScore: zod.number(),
+    }),
+  ),
 });
 export const GetSummonerMatchesResponse = zod.array(
   GetSummonerMatchesResponseItem,

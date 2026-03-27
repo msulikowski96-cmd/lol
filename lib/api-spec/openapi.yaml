@@ -390,6 +390,10 @@ components:
           nullable: true
           oneOf:
             - $ref: "#/components/schemas/MatchOpponent"
+        participants:
+          type: array
+          items:
+            $ref: "#/components/schemas/MatchParticipant"
       required:
         - matchId
         - gameMode
@@ -409,6 +413,52 @@ components:
         - summoner1Id
         - summoner2Id
         - perks
+        - opScore
+        - participants
+    MatchParticipant:
+      type: object
+      properties:
+        summonerName:
+          type: string
+        puuid:
+          type: string
+        championName:
+          type: string
+        kills:
+          type: number
+        deaths:
+          type: number
+        assists:
+          type: number
+        cs:
+          type: number
+        totalDamageDealt:
+          type: number
+        goldEarned:
+          type: number
+        win:
+          type: boolean
+        teamId:
+          type: number
+        items:
+          type: array
+          items:
+            type: number
+        opScore:
+          type: number
+      required:
+        - summonerName
+        - puuid
+        - championName
+        - kills
+        - deaths
+        - assists
+        - cs
+        - totalDamageDealt
+        - goldEarned
+        - win
+        - teamId
+        - items
         - opScore
     ChampionMastery:
       type: object

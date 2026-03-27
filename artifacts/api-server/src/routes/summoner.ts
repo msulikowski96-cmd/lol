@@ -223,6 +223,35 @@ router.get("/:puuid/matches", async (req, res) => {
           }
         }
 
+        // Build participants list for all 10 players
+        const participants = allParticipants.map((p: any) => {
+          const pTeamId: number = p.teamId;
+          const pKills: number = p.kills ?? 0;
+          const pDeaths: number = p.deaths ?? 0;
+          const pAssists: number = p.assists ?? 0;
+          const pCs: number = (p.totalMinionsKilled ?? 0) + (p.neutralMinionsKilled ?? 0);
+          const pDmg: number = p.totalDamageDealtToChampions ?? 0;
+          const pWin: boolean = p.win ?? false;
+          const pTeam = allParticipants.filter((x: any) => x.teamId === pTeamId);
+          const pTeamKills: number = pTeam.reduce((s: number, x: any) => s + (x.kills ?? 0), 0);
+          const pOpScore = computeOpScore(pKills, pDeaths, pAssists, pCs, gameDuration, pDmg, pTeamKills, pWin);
+          return {
+            summonerName: (p.riotIdGameName ?? p.summonerName ?? "Nieznany") as string,
+            puuid: (p.puuid ?? "") as string,
+            championName: (p.championName ?? "Unknown") as string,
+            kills: pKills,
+            deaths: pDeaths,
+            assists: pAssists,
+            cs: pCs,
+            totalDamageDealt: pDmg,
+            goldEarned: (p.goldEarned ?? 0) as number,
+            win: pWin,
+            teamId: pTeamId,
+            items: [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5, p.item6].map((i: any) => i ?? 0) as number[],
+            opScore: pOpScore,
+          };
+        });
+
         return {
           matchId,
           gameMode: matchData.info.gameMode as string,
@@ -250,6 +279,7 @@ router.get("/:puuid/matches", async (req, res) => {
           },
           opScore,
           opponent,
+          participants,
         };
       })
     );

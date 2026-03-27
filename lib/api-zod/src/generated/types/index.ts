@@ -25,6 +25,7 @@ export * from "./liveGame";
 export * from "./liveGameParticipant";
 export * from "./liveGameParticipantPerks";
 export * from "./matchOpponent";
+export * from "./matchParticipant";
 export * from "./matchSummary";
 export * from "./matchSummaryPerks";
 export * from "./performanceByGameLength";

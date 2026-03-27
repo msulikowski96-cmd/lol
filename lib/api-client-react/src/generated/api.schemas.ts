@@ -49,6 +49,22 @@ export type MatchSummaryPerks = {
   subStyleId: number;
 };
 
+export interface MatchParticipant {
+  summonerName: string;
+  puuid: string;
+  championName: string;
+  kills: number;
+  deaths: number;
+  assists: number;
+  cs: number;
+  totalDamageDealt: number;
+  goldEarned: number;
+  win: boolean;
+  teamId: number;
+  items: number[];
+  opScore: number;
+}
+
 export interface MatchSummary {
   matchId: string;
   gameMode: string;
@@ -70,6 +86,7 @@ export interface MatchSummary {
   perks: MatchSummaryPerks;
   opScore: number;
   opponent?: MatchOpponent | null;
+  participants: MatchParticipant[];
 }
 
 export interface ChampionMastery {
