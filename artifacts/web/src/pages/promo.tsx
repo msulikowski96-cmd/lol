@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, ChevronDown, Activity, Zap } from 'lucide-react';
+import { Search, ChevronDown, Activity, Zap, Video, Download, Loader2 } from 'lucide-react';
 
 const SCENE_DURATIONS = [3000, 4000, 5000, 5000, 3000];
 const BASE = import.meta.env.BASE_URL;
@@ -336,8 +336,16 @@ function Scene4({ currentScene }: { currentScene: number }) {
   );
 }
 
+const TOTAL_DURATION = SCENE_DURATIONS.reduce((a, b) => a + b, 0);
+
+type RecordState = 'idle' | 'waiting' | 'recording' | 'done';
+
 export default function Promo() {
   const [currentScene, setCurrentScene] = useState(0);
+  const [recordState, setRecordState] = useState<RecordState>('idle');
+  const [countdown, setCountdown] = useState(0);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -346,9 +354,97 @@ export default function Promo() {
     return () => clearTimeout(timeout);
   }, [currentScene]);
 
+  const handleRecord = async () => {
+    try {
+      setRecordState('waiting');
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { frameRate: 30 },
+        audio: false,
+      });
+
+      chunksRef.current = [];
+      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+        ? 'video/webm;codecs=vp9'
+        : 'video/webm';
+      const recorder = new MediaRecorder(stream, { mimeType });
+      recorderRef.current = recorder;
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(chunksRef.current, { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'nexus-sight-promo.webm';
+        a.click();
+        URL.revokeObjectURL(url);
+        setRecordState('done');
+        setTimeout(() => setRecordState('idle'), 4000);
+      };
+
+      setCurrentScene(0);
+      setRecordState('recording');
+      setCountdown(TOTAL_DURATION / 1000);
+
+      recorder.start(100);
+
+      const tick = setInterval(() => {
+        setCountdown(c => {
+          if (c <= 1) { clearInterval(tick); return 0; }
+          return c - 1;
+        });
+      }, 1000);
+
+      setTimeout(() => {
+        recorder.stop();
+        clearInterval(tick);
+      }, TOTAL_DURATION + 300);
+
+    } catch {
+      setRecordState('idle');
+    }
+  };
+
   return (
-    <div className="w-full h-screen bg-background overflow-hidden relative flex items-center justify-center font-sans select-none">
-      <div className="relative w-full max-w-[450px] h-full max-h-[850px] aspect-[9/16] bg-background shadow-2xl overflow-hidden md:rounded-3xl border border-white/5">
+    <div className="w-full h-screen bg-background overflow-hidden relative flex flex-col items-center justify-center font-sans select-none gap-4">
+
+      <div className="flex items-center gap-3 z-20">
+        {recordState === 'idle' && (
+          <button
+            onClick={handleRecord}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all hover:scale-105 active:scale-95"
+            style={{ background: "linear-gradient(135deg, hsl(42,92%,52%), hsl(38,85%,44%))", color: "hsl(228,32%,4%)", boxShadow: "0 4px 20px rgba(202,138,4,0.3)" }}
+          >
+            <Video className="w-4 h-4" />
+            Nagraj wideo (20s)
+          </button>
+        )}
+        {recordState === 'waiting' && (
+          <div className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm text-muted-foreground" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Wybierz kartę / okno w przeglądarce…
+          </div>
+        )}
+        {recordState === 'recording' && (
+          <div className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold" style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171" }}>
+            <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
+            Nagrywanie… {countdown}s
+          </div>
+        )}
+        {recordState === 'done' && (
+          <div className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold" style={{ background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.3)", color: "#4ade80" }}>
+            <Download className="w-4 h-4" />
+            Pobrano! Plik .webm gotowy do TikToka
+          </div>
+        )}
+        <span className="text-[11px] text-muted-foreground/50">Wideo automatycznie zrestartuje się do sceny 1</span>
+      </div>
+
+      <div className="relative w-full max-w-[450px] h-full max-h-[800px] aspect-[9/16] bg-background shadow-2xl overflow-hidden md:rounded-3xl border border-white/5">
 
         <div className="absolute inset-0 z-0">
           <img
