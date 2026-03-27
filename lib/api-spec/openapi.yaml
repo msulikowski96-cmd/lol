@@ -319,6 +319,22 @@ components:
         - veteran
         - freshBlood
         - inactive
+    MatchOpponent:
+      type: object
+      properties:
+        championName:
+          type: string
+        kills:
+          type: number
+        deaths:
+          type: number
+        assists:
+          type: number
+      required:
+        - championName
+        - kills
+        - deaths
+        - assists
     MatchSummary:
       type: object
       properties:
@@ -368,6 +384,12 @@ components:
           required:
             - primaryStyleId
             - subStyleId
+        opScore:
+          type: number
+        opponent:
+          nullable: true
+          oneOf:
+            - $ref: "#/components/schemas/MatchOpponent"
       required:
         - matchId
         - gameMode
@@ -387,6 +409,7 @@ components:
         - summoner1Id
         - summoner2Id
         - perks
+        - opScore
     ChampionMastery:
       type: object
       properties:
@@ -610,6 +633,44 @@ components:
       required:
         - type
         - count
+    PredictedTier:
+      type: object
+      properties:
+        tier:
+          type: string
+        division:
+          type: string
+        lp:
+          type: number
+        confidence:
+          type: string
+        description:
+          type: string
+      required:
+        - tier
+        - division
+        - lp
+        - confidence
+        - description
+    PlaystyleRadar:
+      type: object
+      properties:
+        aggression:
+          type: number
+        farming:
+          type: number
+        vision:
+          type: number
+        teamfighting:
+          type: number
+        carry:
+          type: number
+      required:
+        - aggression
+        - farming
+        - vision
+        - teamfighting
+        - carry
     LiveGameParticipant:
       type: object
       properties:
@@ -744,6 +805,10 @@ components:
           $ref: "#/components/schemas/PerformanceByGameLength"
         damageTypeBreakdown:
           $ref: "#/components/schemas/DamageTypeBreakdown"
+        predictedTier:
+          $ref: "#/components/schemas/PredictedTier"
+        playstyleRadar:
+          $ref: "#/components/schemas/PlaystyleRadar"
       required:
         - overallScore
         - overallRating
@@ -765,3 +830,5 @@ components:
         - championRecommendations
         - performanceByGameLength
         - damageTypeBreakdown
+        - predictedTier
+        - playstyleRadar

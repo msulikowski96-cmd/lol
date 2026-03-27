@@ -94,6 +94,15 @@ export const GetSummonerMatchesResponseItem = zod.object({
     primaryStyleId: zod.number(),
     subStyleId: zod.number(),
   }),
+  opScore: zod.number(),
+  opponent: zod
+    .object({
+      championName: zod.string(),
+      kills: zod.number(),
+      deaths: zod.number(),
+      assists: zod.number(),
+    })
+    .nullish(),
 });
 export const GetSummonerMatchesResponse = zod.array(
   GetSummonerMatchesResponseItem,
@@ -255,6 +264,20 @@ export const GetSummonerAnalysisResponse = zod.object({
     physicalPct: zod.number(),
     magicPct: zod.number(),
     truePct: zod.number(),
+  }),
+  predictedTier: zod.object({
+    tier: zod.string(),
+    division: zod.string(),
+    lp: zod.number(),
+    confidence: zod.string(),
+    description: zod.string(),
+  }),
+  playstyleRadar: zod.object({
+    aggression: zod.number(),
+    farming: zod.number(),
+    vision: zod.number(),
+    teamfighting: zod.number(),
+    carry: zod.number(),
   }),
 });
 

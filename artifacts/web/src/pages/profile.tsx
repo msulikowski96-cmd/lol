@@ -88,17 +88,78 @@ function LiveGameBanner({ data }: { data: any }) {
   );
 }
 
+function OpScoreBadge({ score }: { score: number }) {
+  const color = score >= 8 ? "text-green-400 bg-green-500/10 border-green-500/20"
+    : score >= 6 ? "text-yellow-400 bg-yellow-500/10 border-yellow-500/20"
+    : "text-red-400 bg-red-500/10 border-red-500/20";
+  return (
+    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${color} flex-shrink-0`}>{score.toFixed(1)}</span>
+  );
+}
+
+function RadarChart({ data }: { data: { aggression: number; farming: number; vision: number; teamfighting: number; carry: number } }) {
+  const cx = 100, cy = 100, r = 70;
+  const labels = [
+    { key: "aggression", label: "Agresja" },
+    { key: "farming", label: "Farmienie" },
+    { key: "vision", label: "Wizja" },
+    { key: "teamfighting", label: "Walki" },
+    { key: "carry", label: "Carry" },
+  ];
+  const angles = labels.map((_, i) => (i * 72 - 90) * (Math.PI / 180));
+  const values = labels.map((l) => (data as any)[l.key] / 100);
+  const pts = (fracs: number[]) => fracs.map((f, i) => ({
+    x: cx + f * r * Math.cos(angles[i]),
+    y: cy + f * r * Math.sin(angles[i]),
+  }));
+  const toPath = (points: { x: number; y: number }[]) =>
+    points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ") + " Z";
+  const gridLevels = [0.25, 0.5, 0.75, 1];
+  const axisEndPts = pts(Array(5).fill(1));
+  const dataPts = pts(values);
+  const labelPts = pts(Array(5).fill(1.28));
+  return (
+    <svg viewBox="0 0 200 200" className="w-full h-full">
+      {gridLevels.map((lvl) => {
+        const gPts = pts(Array(5).fill(lvl));
+        return <path key={lvl} d={toPath(gPts)} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="1" />;
+      })}
+      {axisEndPts.map((p, i) => (
+        <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+      ))}
+      <path d={toPath(dataPts)} fill="rgba(139,92,246,0.2)" stroke="rgba(139,92,246,0.7)" strokeWidth="1.5" />
+      {dataPts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="3" fill="#8b5cf6" />)}
+      {labelPts.map((p, i) => (
+        <text key={i} x={p.x} y={p.y} textAnchor="middle" dominantBaseline="middle"
+          className="fill-muted-foreground" style={{ fontSize: "9px", fill: "rgba(148,163,184,0.9)", fontFamily: "inherit" }}>
+          {labels[i].label}
+          <tspan x={p.x} dy="10" style={{ fontSize: "8px", fill: "rgba(139,92,246,0.9)", fontWeight: "bold" }}>
+            {Math.round((data as any)[labels[i].key])}
+          </tspan>
+        </text>
+      ))}
+    </svg>
+  );
+}
+
 function MatchRow({ match, index }: { match: any; index: number }) {
   const w = match.win;
-  const kda = match.deaths === 0 ? "Perfect" : ((match.kills + match.assists) / match.deaths).toFixed(1);
+  const kda = match.deaths === 0 ? "Perf" : ((match.kills + match.assists) / match.deaths).toFixed(1);
   const dur = `${Math.floor(match.gameDuration / 60)}:${(match.gameDuration % 60).toString().padStart(2, "0")}`;
   const timeAgo = formatDistanceToNow(new Date(match.gameEndTimestamp), { addSuffix: true, locale: pl });
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: index * 0.03 }}
       title={timeAgo}
-      className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg border-l-2 ${w ? "border-l-win bg-win-bg/30" : "border-l-loss bg-loss-bg/30"} hover:bg-muted/20 transition-colors`}>
-      <img src={`${DD}/champion/${match.championName}.png`} alt={match.championName} className="w-8 h-8 rounded-lg border border-border flex-shrink-0"
-        onError={(e) => { e.currentTarget.src = FALLBACK_ICON; }} />
+      className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border-l-2 ${w ? "border-l-win bg-win-bg/30" : "border-l-loss bg-loss-bg/30"} hover:bg-muted/20 transition-colors`}>
+      <div className="relative flex-shrink-0">
+        <img src={`${DD}/champion/${match.championName}.png`} alt={match.championName} className="w-8 h-8 rounded-lg border border-border"
+          onError={(e) => { e.currentTarget.src = FALLBACK_ICON; }} />
+        {match.opponent && (
+          <img src={`${DD}/champion/${match.opponent.championName}.png`} alt={match.opponent.championName}
+            className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border border-border bg-card"
+            onError={(e) => { e.currentTarget.style.display = "none"; }} />
+        )}
+      </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
           <span className={`text-[10px] font-bold ${w ? "text-win" : "text-loss"}`}>{w ? "W" : "L"}</span>
@@ -107,8 +168,9 @@ function MatchRow({ match, index }: { match: any; index: number }) {
           </span>
           <span className="text-[10px] text-muted-foreground">{kda}</span>
         </div>
-        <div className="text-[10px] text-muted-foreground">{match.cs} CS · {dur} · <span className="text-muted-foreground/50">{timeAgo}</span></div>
+        <div className="text-[10px] text-muted-foreground">{match.cs} CS · {dur}</div>
       </div>
+      {match.opScore !== undefined && <OpScoreBadge score={match.opScore} />}
     </motion.div>
   );
 }
@@ -148,7 +210,8 @@ function AnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoad
 
   const { overallScore, overallRating, totalGamesAnalyzed, winRate, metrics, championBreakdown, formTrend, strengths, weaknesses,
     playstyleArchetype, playstyleDescription, criticalMistakes, gameplayPatterns, primaryRole, roleDistribution, currentStreak,
-    bestGame, worstGame, coachingTips, championRecommendations, performanceByGameLength, damageTypeBreakdown } = data;
+    bestGame, worstGame, coachingTips, championRecommendations, performanceByGameLength, damageTypeBreakdown,
+    predictedTier, playstyleRadar } = data;
 
   const sc = overallScore >= 70 ? "text-green-400" : overallScore >= 50 ? "text-yellow-400" : "text-red-400";
   const sr = overallScore >= 70 ? "stroke-green-400" : overallScore >= 50 ? "stroke-yellow-400" : "stroke-red-400";
@@ -215,15 +278,15 @@ function AnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoad
         </div>
       </div>
 
-      {/* Playstyle + Strengths/Weaknesses */}
+      {/* Playstyle + Radar + Strengths/Weaknesses */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 glass-panel p-4">
+        <div className="glass-panel p-4">
           <div className="flex items-start gap-3 mb-3">
             <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
               <Brain className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h4 className="font-display text-base text-white">{playstyleArchetype}</h4>
+              <h4 className="font-display text-sm text-white">{playstyleArchetype}</h4>
               <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">{playstyleDescription}</p>
             </div>
           </div>
@@ -237,6 +300,13 @@ function AnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoad
               </div>
             </div>
           )}
+        </div>
+
+        <div className="glass-panel p-4 flex flex-col items-center">
+          <p className="section-title self-start"><BarChart3 className="w-3.5 h-3.5 text-primary" /> Pajęczyna stylów</p>
+          <div className="w-48 h-48 mt-1">
+            {playstyleRadar && <RadarChart data={playstyleRadar} />}
+          </div>
         </div>
 
         <div className="glass-panel overflow-hidden">
@@ -552,6 +622,24 @@ export default function Profile() {
               <p className="section-title"><Trophy className="w-3.5 h-3.5 text-primary" /> Rang</p>
               <div className="space-y-2">
                 {isLoadingRanked ? <div className="stat-card h-20 animate-pulse" /> : (<><RankedCard entry={soloQ} />{flexQ && <RankedCard entry={flexQ} />}</>)}
+                {!isLoadingAnalysis && analysis?.predictedTier && (
+                  <div className="stat-card border-primary/20 bg-primary/5">
+                    <p className="text-[10px] uppercase tracking-widest text-primary font-bold mb-1.5 flex items-center gap-1">
+                      <Brain className="w-3 h-3" /> Szacowana ranga
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <img src={`https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-shared-components/global/default/${analysis.predictedTier.tier.toLowerCase()}.png`}
+                        alt={analysis.predictedTier.tier} className="w-10 h-10 object-contain"
+                        onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                      <div>
+                        <p className="text-sm font-bold text-gradient-gold">
+                          {analysis.predictedTier.tier} {analysis.predictedTier.division}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">~{analysis.predictedTier.lp} LP · {analysis.predictedTier.confidence}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

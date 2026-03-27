@@ -14,6 +14,8 @@ import type { GameHighlight } from "./gameHighlight";
 import type { PerformanceByGameLength } from "./performanceByGameLength";
 import type { PerformanceMetric } from "./performanceMetric";
 import type { PlayerAnalysisRoleDistribution } from "./playerAnalysisRoleDistribution";
+import type { PlaystyleRadar } from "./playstyleRadar";
+import type { PredictedTier } from "./predictedTier";
 
 export interface PlayerAnalysis {
   overallScore: number;
@@ -38,4 +40,6 @@ export interface PlayerAnalysis {
   championRecommendations: ChampionRecommendation[];
   performanceByGameLength: PerformanceByGameLength;
   damageTypeBreakdown: DamageTypeBreakdown;
+  predictedTier: PredictedTier;
+  playstyleRadar: PlaystyleRadar;
 }

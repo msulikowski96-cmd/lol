@@ -5,6 +5,7 @@
  * LoL Stats Checker API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { MatchOpponent } from "./matchOpponent";
 import type { MatchSummaryPerks } from "./matchSummaryPerks";
 
 export interface MatchSummary {
@@ -26,4 +27,6 @@ export interface MatchSummary {
   summoner1Id: number;
   summoner2Id: number;
   perks: MatchSummaryPerks;
+  opScore: number;
+  opponent?: MatchOpponent | null;
 }

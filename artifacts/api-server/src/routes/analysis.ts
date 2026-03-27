@@ -111,6 +111,8 @@ function computeAnalysis(matches: MatchData[]) {
         long: { label: "> 35 min", gamesPlayed: 0, winRate: 0, avgKda: 0, avgCsPerMin: 0 },
       },
       damageTypeBreakdown: { physicalPct: 0, magicPct: 0, truePct: 0 },
+      predictedTier: { tier: "UNRANKED", division: "", lp: 0, confidence: "Niska", description: "Za mało meczy do oszacowania rangi." },
+      playstyleRadar: { aggression: 0, farming: 0, vision: 0, teamfighting: 0, carry: 0 },
     };
   }
 
@@ -390,6 +392,67 @@ function computeAnalysis(matches: MatchData[]) {
     truePct: Math.round((totalTrue2 / totalAllDmg) * 100),
   };
 
+  // ─── Predicted Tier ───
+  const rankScore = clamp(
+    overallScore * 0.4 + winRateScore * 0.35 + kdaScore * 0.15 + csScore * 0.10,
+    0, 100
+  );
+  const TIERS: { tier: string; min: number; max: number; hasDivision: boolean }[] = [
+    { tier: "IRON",        min: 0,  max: 20,  hasDivision: true },
+    { tier: "BRONZE",      min: 20, max: 35,  hasDivision: true },
+    { tier: "SILVER",      min: 35, max: 50,  hasDivision: true },
+    { tier: "GOLD",        min: 50, max: 63,  hasDivision: true },
+    { tier: "PLATINUM",    min: 63, max: 72,  hasDivision: true },
+    { tier: "EMERALD",     min: 72, max: 80,  hasDivision: true },
+    { tier: "DIAMOND",     min: 80, max: 87,  hasDivision: true },
+    { tier: "MASTER",      min: 87, max: 92,  hasDivision: false },
+    { tier: "GRANDMASTER", min: 92, max: 96,  hasDivision: false },
+    { tier: "CHALLENGER",  min: 96, max: 101, hasDivision: false },
+  ];
+  const TIER_LABELS_PL: Record<string, string> = {
+    IRON: "Żelazo", BRONZE: "Brąz", SILVER: "Srebro", GOLD: "Złoto",
+    PLATINUM: "Platyna", EMERALD: "Szmaragd", DIAMOND: "Diament",
+    MASTER: "Mistrz", GRANDMASTER: "Wielki Mistrz", CHALLENGER: "Challenger",
+  };
+  const DIVISIONS = ["IV", "III", "II", "I"];
+  const tierEntry = TIERS.find((t) => rankScore >= t.min && rankScore < t.max) ?? TIERS[0];
+  const tierProgress = (rankScore - tierEntry.min) / (tierEntry.max - tierEntry.min);
+  let division = "";
+  let lp = 0;
+  if (tierEntry.hasDivision) {
+    const divIndex = Math.floor(tierProgress * 4);
+    const divProgress = (tierProgress * 4) - divIndex;
+    division = DIVISIONS[Math.min(divIndex, 3)];
+    lp = Math.round(divProgress * 100);
+  } else {
+    lp = Math.round(tierProgress * 1000);
+  }
+  const confidence = totalGames >= 15 ? "Wysoka" : totalGames >= 7 ? "Średnia" : "Niska";
+  const tierLabel = TIER_LABELS_PL[tierEntry.tier] ?? tierEntry.tier;
+  const predictedTier = {
+    tier: tierEntry.tier,
+    division,
+    lp,
+    confidence,
+    description: `Na podstawie ${totalGames} meczy szacowana ranga to ${tierLabel}${division ? ` ${division}` : ""} (~${lp} LP). Pewność: ${confidence}.`,
+  };
+
+  // ─── Playstyle Radar ───
+  const killsArr = matches.map((m) => m.kills);
+  const avgKills = mean(killsArr);
+  const killsPerMin = mean(matches.map((m) => m.gameDuration > 0 ? (m.kills / m.gameDuration) * 60 : 0));
+  const aggressionRaw = clamp(
+    avgSoloKills * 15 + firstBloodRate * 0.5 + killsPerMin * 200 + clamp((avgKills - 3) * 10, 0, 20),
+    0, 100
+  );
+  const playstyleRadar = {
+    aggression: Math.round(aggressionRaw),
+    farming: Math.round(clamp((avgCsPerMin / 9) * 100, 0, 100)),
+    vision: Math.round(combinedVisionScore),
+    teamfighting: Math.round(clamp(kpScore * 0.65 + multikillScoreNorm * 0.35, 0, 100)),
+    carry: Math.round(clamp(carryScore * 0.45 + dmgShareScore * 0.35 + clamp(avgDamageShare * 1.5, 0, 20), 0, 100)),
+  };
+
   // ─── Coaching Tips ───
   const coachingTips: string[] = [];
   if (avgDeaths > 6) coachingTips.push("Priorytet: ogranicz śmierci — ponad 6/mecz to największy hamulec Twojego rankingu. Graj bezpieczniej gdy CD są aktywne");
@@ -462,6 +525,7 @@ function computeAnalysis(matches: MatchData[]) {
     playstyleArchetype, playstyleDescription, criticalMistakes, gameplayPatterns,
     primaryRole, roleDistribution, currentStreak,
     bestGame, worstGame, coachingTips, championRecommendations, performanceByGameLength, damageTypeBreakdown,
+    predictedTier, playstyleRadar,
   };
 }
 

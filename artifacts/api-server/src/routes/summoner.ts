@@ -148,6 +148,25 @@ router.get("/:puuid/ranked", async (req, res) => {
   }
 });
 
+function computeOpScore(
+  kills: number, deaths: number, assists: number,
+  cs: number, gameDuration: number, totalDamageDealt: number,
+  teamKills: number, win: boolean
+): number {
+  const kda = deaths === 0 ? kills + assists : (kills + assists) / deaths;
+  const csPerMin = gameDuration > 0 ? (cs / gameDuration) * 60 : 0;
+  const kp = teamKills > 0 ? ((kills + assists) / teamKills) * 100 : 0;
+  const winBonus = win ? 15 : 0;
+  const raw =
+    Math.log2(kda + 1) * 30 * 0.35 +
+    Math.min((csPerMin / 10) * 100, 100) * 0.15 +
+    Math.min((kp / 70) * 100, 100) * 0.2 +
+    Math.min((totalDamageDealt / 15000) * 100, 100) * 0.15 +
+    Math.min(100 - deaths * 12, 100) * 0.15 +
+    winBonus;
+  return Math.round(Math.max(0, Math.min(100, raw))) / 10;
+}
+
 // GET /api/summoner/:puuid/matches?region=&count=
 router.get("/:puuid/matches", async (req, res) => {
   const { puuid } = req.params;
@@ -162,47 +181,66 @@ router.get("/:puuid/matches", async (req, res) => {
   const matchCount = Math.min(Number(count ?? 20), 20);
 
   try {
-    // Get match IDs
     const matchListUrl = `https://${cluster}.api.riotgames.com/lol/match/v5/matches/by-puuid/${puuid}/ids?count=${matchCount}`;
     const matchListRes = await riotFetch(matchListUrl, req);
     const matchIds = (await matchListRes.json()) as string[];
 
-    // Fetch each match in parallel
     const matches = await Promise.all(
       matchIds.map(async (matchId) => {
         const matchUrl = `https://${cluster}.api.riotgames.com/lol/match/v5/matches/${matchId}`;
         const matchRes = await riotFetch(matchUrl, req);
         const matchData = (await matchRes.json()) as any;
+        const allParticipants: any[] = matchData.info.participants ?? [];
 
-        const participant = matchData.info.participants.find(
-          (p: any) => p.puuid === puuid
-        );
-
+        const participant = allParticipants.find((p: any) => p.puuid === puuid);
         if (!participant) return null;
+
+        const myTeamId: number = participant.teamId;
+        const myPosition: string = participant.teamPosition ?? "";
+        const totalDamageDealt = participant.totalDamageDealtToChampions as number;
+        const cs = (participant.totalMinionsKilled + participant.neutralMinionsKilled) as number;
+        const gameDuration = matchData.info.gameDuration as number;
+        const win = participant.win as boolean;
+        const kills = participant.kills as number;
+        const deaths = participant.deaths as number;
+        const assists = participant.assists as number;
+
+        const myTeam = allParticipants.filter((p: any) => p.teamId === myTeamId);
+        const teamKills = myTeam.reduce((sum: number, p: any) => sum + (p.kills ?? 0), 0);
+
+        const opScore = computeOpScore(kills, deaths, assists, cs, gameDuration, totalDamageDealt, teamKills, win);
+
+        let opponent: { championName: string; kills: number; deaths: number; assists: number } | null = null;
+        if (myPosition) {
+          const opp = allParticipants.find((p: any) => p.teamId !== myTeamId && p.teamPosition === myPosition);
+          if (opp) {
+            opponent = {
+              championName: opp.championName as string,
+              kills: opp.kills as number,
+              deaths: opp.deaths as number,
+              assists: opp.assists as number,
+            };
+          }
+        }
 
         return {
           matchId,
           gameMode: matchData.info.gameMode as string,
-          gameDuration: matchData.info.gameDuration as number,
+          gameDuration,
           gameEndTimestamp: matchData.info.gameEndTimestamp as number,
-          win: participant.win as boolean,
+          win,
           championName: participant.championName as string,
           championId: participant.championId as number,
-          kills: participant.kills as number,
-          deaths: participant.deaths as number,
-          assists: participant.assists as number,
-          totalDamageDealt: participant.totalDamageDealtToChampions as number,
+          kills,
+          deaths,
+          assists,
+          totalDamageDealt,
           goldEarned: participant.goldEarned as number,
-          cs: (participant.totalMinionsKilled + participant.neutralMinionsKilled) as number,
+          cs,
           visionScore: participant.visionScore as number,
           items: [
-            participant.item0,
-            participant.item1,
-            participant.item2,
-            participant.item3,
-            participant.item4,
-            participant.item5,
-            participant.item6,
+            participant.item0, participant.item1, participant.item2,
+            participant.item3, participant.item4, participant.item5, participant.item6,
           ] as number[],
           summoner1Id: participant.summoner1Id as number,
           summoner2Id: participant.summoner2Id as number,
@@ -210,6 +248,8 @@ router.get("/:puuid/matches", async (req, res) => {
             primaryStyleId: participant.perks?.styles?.[0]?.style ?? 0,
             subStyleId: participant.perks?.styles?.[1]?.style ?? 0,
           },
+          opScore,
+          opponent,
         };
       })
     );

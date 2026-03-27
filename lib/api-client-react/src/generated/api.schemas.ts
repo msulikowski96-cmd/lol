@@ -37,6 +37,13 @@ export interface RankedEntry {
   inactive: boolean;
 }
 
+export interface MatchOpponent {
+  championName: string;
+  kills: number;
+  deaths: number;
+  assists: number;
+}
+
 export type MatchSummaryPerks = {
   primaryStyleId: number;
   subStyleId: number;
@@ -61,6 +68,8 @@ export interface MatchSummary {
   summoner1Id: number;
   summoner2Id: number;
   perks: MatchSummaryPerks;
+  opScore: number;
+  opponent?: MatchOpponent | null;
 }
 
 export interface ChampionMastery {
@@ -154,6 +163,22 @@ export interface CurrentStreak {
   count: number;
 }
 
+export interface PredictedTier {
+  tier: string;
+  division: string;
+  lp: number;
+  confidence: string;
+  description: string;
+}
+
+export interface PlaystyleRadar {
+  aggression: number;
+  farming: number;
+  vision: number;
+  teamfighting: number;
+  carry: number;
+}
+
 export type LiveGameParticipantPerks = {
   perkIds: number[];
   perkStyle: number;
@@ -205,6 +230,8 @@ export interface PlayerAnalysis {
   championRecommendations: ChampionRecommendation[];
   performanceByGameLength: PerformanceByGameLength;
   damageTypeBreakdown: DamageTypeBreakdown;
+  predictedTier: PredictedTier;
+  playstyleRadar: PlaystyleRadar;
 }
 
 export type SearchSummonerParams = {
