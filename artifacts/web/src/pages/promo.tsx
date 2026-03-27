@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import html2canvas from 'html2canvas';
 import {
   Search, ChevronDown, Activity, Zap, Video, Download, Loader2,
   Star, Flame, Users, TrendingUp, Shield, Trophy, Eye
@@ -633,7 +634,7 @@ function Scene7({ currentScene }: { currentScene: number }) {
 const TOTAL_DURATION = SCENE_DURATIONS.reduce((a, b) => a + b, 0);
 const SCENE_COUNT = SCENE_DURATIONS.length;
 
-type RecordState = 'idle' | 'waiting' | 'recording' | 'done';
+type RecordState = 'idle' | 'capturing' | 'recording' | 'done';
 
 export default function Promo() {
   const [currentScene, setCurrentScene] = useState(0);
@@ -641,6 +642,9 @@ export default function Promo() {
   const [countdown, setCountdown] = useState(0);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const streamCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const capturingRef = useRef(false);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -650,37 +654,75 @@ export default function Promo() {
   }, [currentScene]);
 
   const handleRecord = async () => {
-    try {
-      setRecordState('waiting');
-      const stream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30 }, audio: false });
-      chunksRef.current = [];
-      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm';
-      const recorder = new MediaRecorder(stream, { mimeType });
-      recorderRef.current = recorder;
-      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
-      recorder.onstop = () => {
-        stream.getTracks().forEach(t => t.stop());
-        const blob = new Blob(chunksRef.current, { type: mimeType });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'nexus-sight-promo.webm';
-        a.click();
-        URL.revokeObjectURL(url);
-        setRecordState('done');
-        setTimeout(() => setRecordState('idle'), 4000);
-      };
-      setCurrentScene(0);
-      setRecordState('recording');
-      setCountdown(TOTAL_DURATION / 1000);
-      recorder.start(100);
-      const tick = setInterval(() => {
-        setCountdown(c => { if (c <= 1) { clearInterval(tick); return 0; } return c - 1; });
-      }, 1000);
-      setTimeout(() => { recorder.stop(); clearInterval(tick); }, TOTAL_DURATION + 400);
-    } catch {
-      setRecordState('idle');
-    }
+    const container = containerRef.current;
+    if (!container) return;
+
+    chunksRef.current = [];
+    capturingRef.current = true;
+    setCurrentScene(0);
+    setRecordState('capturing');
+    setCountdown(Math.round(TOTAL_DURATION / 1000));
+
+    // Hidden canvas that feeds the MediaRecorder
+    const canvas = document.createElement('canvas');
+    canvas.width = 540;
+    canvas.height = 960;
+    streamCanvasRef.current = canvas;
+    const ctx = canvas.getContext('2d')!;
+
+    const stream = canvas.captureStream(15);
+    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+      ? 'video/webm;codecs=vp9'
+      : 'video/webm';
+    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 4_000_000 });
+    recorderRef.current = recorder;
+
+    recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+    recorder.onstop = () => {
+      stream.getTracks().forEach(t => t.stop());
+      const blob = new Blob(chunksRef.current, { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'nexus-sight-promo.webm';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      setRecordState('done');
+      setTimeout(() => setRecordState('idle'), 5000);
+    };
+
+    recorder.start(200);
+    setRecordState('recording');
+
+    const tick = setInterval(() => {
+      setCountdown(c => { if (c <= 1) { clearInterval(tick); return 0; } return c - 1; });
+    }, 1000);
+
+    // html2canvas capture loop — runs as fast as possible
+    const captureLoop = async () => {
+      if (!capturingRef.current) return;
+      try {
+        const snap = await html2canvas(container, {
+          useCORS: true,
+          allowTaint: true,
+          scale: 540 / container.offsetWidth,
+          logging: false,
+          backgroundColor: '#060818',
+          imageTimeout: 0,
+        });
+        ctx.drawImage(snap, 0, 0, 540, 960);
+      } catch { /* skip frame on error */ }
+      if (capturingRef.current) setTimeout(captureLoop, 40); // ~25fps target
+    };
+
+    // Wait a tick for the animation to reset to scene 0, then start capturing
+    setTimeout(captureLoop, 150);
+
+    setTimeout(() => {
+      capturingRef.current = false;
+      clearInterval(tick);
+      recorder.stop();
+    }, TOTAL_DURATION + 600);
   };
 
   return (
@@ -694,15 +736,15 @@ export default function Promo() {
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all hover:scale-105 active:scale-95"
             style={{ background: "linear-gradient(135deg, hsl(42,92%,52%), hsl(38,85%,44%))", color: "hsl(228,32%,4%)", boxShadow: "0 4px 20px rgba(202,138,4,0.3)" }}
           >
-            <Video className="w-4 h-4" />
-            Nagraj wideo (35s)
+            <Download className="w-4 h-4" />
+            Pobierz wideo (35s)
           </button>
         )}
-        {recordState === 'waiting' && (
+        {recordState === 'capturing' && (
           <div className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm text-muted-foreground"
             style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
             <Loader2 className="w-4 h-4 animate-spin" />
-            Wybierz kartę / okno w przeglądarce…
+            Przygotowuję nagranie…
           </div>
         )}
         {recordState === 'recording' && (
@@ -723,7 +765,7 @@ export default function Promo() {
       </div>
 
       {/* 9:16 TikTok container */}
-      <div className="relative w-full max-w-[420px] h-full max-h-[780px] aspect-[9/16] bg-background shadow-2xl overflow-hidden md:rounded-3xl border border-white/5">
+      <div ref={containerRef} className="relative w-full max-w-[420px] h-full max-h-[780px] aspect-[9/16] bg-background shadow-2xl overflow-hidden md:rounded-3xl border border-white/5">
 
         {/* Persistent animated background */}
         <div className="absolute inset-0 z-0">
