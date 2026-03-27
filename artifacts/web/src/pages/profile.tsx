@@ -47,7 +47,8 @@ function InfoTooltip({ text, align = "left" }: { text: string; align?: "left" | 
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -3, scale: 0.97 }}
             transition={{ duration: 0.12 }}
-            className={`absolute top-5 z-[100] w-64 text-[11px] text-foreground/85 leading-relaxed bg-card border border-border/70 rounded-xl p-3 shadow-2xl pointer-events-none ${align === "right" ? "right-0" : "left-0"}`}
+            className={`absolute top-5 z-[100] w-64 text-[11px] text-foreground/85 leading-relaxed shadow-2xl pointer-events-none ${align === "right" ? "right-0" : "left-0"}`}
+            style={{ background: "rgba(5,10,22,0.98)", border: "1px solid rgba(0,212,255,0.15)", borderRadius: "6px", padding: "10px 12px" }}
           >
             {text}
           </motion.span>
@@ -71,12 +72,12 @@ function SparklineChart({ matches }: { matches: any[] }) {
     <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-full" preserveAspectRatio="none">
       <defs>
         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="rgba(139,92,246,0.15)" />
-          <stop offset="100%" stopColor="rgba(139,92,246,0)" />
+          <stop offset="0%" stopColor="rgba(0,212,255,0.18)" />
+          <stop offset="100%" stopColor="rgba(0,212,255,0)" />
         </linearGradient>
       </defs>
       <path d={`${d} L ${pts[pts.length - 1].x} ${h} L ${pts[0].x} ${h} Z`} fill={`url(#${gradientId})`} />
-      <path d={d} fill="none" stroke="rgba(139,92,246,0.5)" strokeWidth="1.5" />
+      <path d={d} fill="none" stroke="rgba(0,212,255,0.55)" strokeWidth="1.5" />
       {pts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="2.5" fill={p.win ? "#22c55e" : "#ef4444"} />)}
     </svg>
   );
@@ -297,18 +298,18 @@ function RadarChart({ data }: { data: { aggression: number; farming: number; vis
     <svg viewBox="0 0 200 200" className="w-full h-full">
       {gridLevels.map((lvl) => {
         const gPts = pts(Array(5).fill(lvl));
-        return <path key={lvl} d={toPath(gPts)} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="1" />;
+        return <path key={lvl} d={toPath(gPts)} fill="none" stroke="rgba(0,212,255,0.08)" strokeWidth="1" />;
       })}
       {axisEndPts.map((p, i) => (
-        <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+        <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="rgba(0,212,255,0.12)" strokeWidth="1" />
       ))}
-      <path d={toPath(dataPts)} fill="rgba(139,92,246,0.2)" stroke="rgba(139,92,246,0.7)" strokeWidth="1.5" />
-      {dataPts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="3" fill="#8b5cf6" />)}
+      <path d={toPath(dataPts)} fill="rgba(0,212,255,0.12)" stroke="rgba(0,212,255,0.6)" strokeWidth="1.5" />
+      {dataPts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="3" fill="hsl(196,100%,50%)" />)}
       {labelPts.map((p, i) => (
         <text key={i} x={p.x} y={p.y} textAnchor="middle" dominantBaseline="middle"
           className="fill-muted-foreground" style={{ fontSize: "9px", fill: "rgba(148,163,184,0.9)", fontFamily: "inherit" }}>
           {labels[i].label}
-          <tspan x={p.x} dy="10" style={{ fontSize: "8px", fill: "rgba(139,92,246,0.9)", fontWeight: "bold" }}>
+          <tspan x={p.x} dy="10" style={{ fontSize: "8px", fill: "rgba(0,212,255,0.9)", fontWeight: "bold" }}>
             {Math.round((data as any)[labels[i].key])}
           </tspan>
         </text>
@@ -461,27 +462,37 @@ function RankedCard({ entry }: { entry: any }) {
   const wr = entry ? Math.round((entry.wins / (entry.wins + entry.losses)) * 100) : 0;
   const queueLabel = entry?.queueType === "RANKED_SOLO_5x5" ? "Solo / Duo" : entry?.queueType === "RANKED_FLEX_SR" ? "Flex 5v5" : "Rankingowe";
   const wrBarColor = wr >= 55 ? "#22c55e" : wr >= 50 ? "#eab308" : "#ef4444";
+  const tierColor = TIER_COLOR[tier] ?? "#6B6B6B";
   return (
-    <div className="relative overflow-hidden rounded-xl border border-white/[0.07] p-3 gradient-border-gold"
-      style={{ background: "linear-gradient(135deg, rgba(202,138,4,0.06) 0%, rgba(13,18,38,0.8) 100%)" }}>
+    <div className="relative overflow-hidden p-3 gradient-border-cyan"
+      style={{
+        background: "rgba(5,10,22,0.85)",
+        border: "1px solid rgba(0,212,255,0.1)",
+        borderRadius: "8px",
+        borderLeft: `2px solid ${tierColor}`,
+      }}>
       <div className="flex items-center gap-3">
         <div className="relative flex-shrink-0">
           <img src={`https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-shared-components/global/default/${tier.toLowerCase()}.png`}
-            alt={tier} className="w-14 h-14 object-contain drop-shadow-lg" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+            alt={tier} className="w-12 h-12 object-contain drop-shadow-lg" onError={(e) => { e.currentTarget.style.display = "none"; }} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[9px] text-muted-foreground uppercase tracking-[0.15em] font-semibold mb-0.5">{queueLabel}</p>
-          <p className="font-display text-sm leading-tight text-gradient-gold">{tier}{entry?.rank ? ` ${entry.rank}` : ""}</p>
+          <p className="data-label mb-0.5">{queueLabel}</p>
+          <p className="text-sm font-bold leading-tight" style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, color: tierColor }}>
+            {tier}{entry?.rank ? ` ${entry.rank}` : ""}
+          </p>
           {entry && (
             <>
               <div className="flex items-center gap-2 text-xs mt-1">
-                <span className="text-foreground font-bold">{entry.leaguePoints} <span className="text-muted-foreground font-normal text-[10px]">LP</span></span>
+                <span className="text-foreground font-bold" style={{ fontFamily: "'Barlow Condensed',sans-serif" }}>
+                  {entry.leaguePoints} <span className="text-muted-foreground font-normal text-[10px]">LP</span>
+                </span>
                 <span className="text-muted-foreground text-[10px]">·</span>
                 <span className="text-muted-foreground text-[10px]">{entry.wins}W {entry.losses}L</span>
                 <span className={`font-bold text-[10px] ml-auto ${wr >= 50 ? "text-win" : "text-loss"}`}>{wr}%</span>
               </div>
-              <div className="mt-1.5 w-full h-1 rounded-full overflow-hidden bg-white/[0.06]">
-                <div className="h-full rounded-full transition-all" style={{ width: `${wr}%`, background: wrBarColor, opacity: 0.7 }} />
+              <div className="mt-1.5 w-full h-0.5 rounded-full overflow-hidden" style={{ background: "rgba(0,212,255,0.08)" }}>
+                <div className="h-full rounded-full transition-all" style={{ width: `${wr}%`, background: wrBarColor, opacity: 0.8 }} />
               </div>
             </>
           )}
@@ -1033,50 +1044,58 @@ export default function Profile() {
     <div className="min-h-screen pb-16">
 
       {/* Header */}
-      <header className="relative border-b overflow-hidden" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+      <header className="relative border-b overflow-hidden" style={{ borderColor: "rgba(0,212,255,0.08)" }}>
+        <div className="absolute inset-0 pointer-events-none grid-bg opacity-40" />
         <div className="absolute inset-0 pointer-events-none"
-          style={{ background: "linear-gradient(135deg, rgba(202,138,4,0.04) 0%, transparent 50%, rgba(139,92,246,0.04) 100%)" }} />
+          style={{ background: "linear-gradient(135deg, rgba(0,180,220,0.05) 0%, transparent 50%, rgba(88,28,220,0.04) 100%)" }} />
         <div className="absolute inset-x-0 bottom-0 h-px"
-          style={{ background: "linear-gradient(90deg, transparent, rgba(202,138,4,0.25), transparent)" }} />
+          style={{ background: "linear-gradient(90deg, transparent, rgba(0,212,255,0.3), transparent)" }} />
 
         <div className="relative max-w-7xl mx-auto px-4 py-4 sm:py-5 flex items-center gap-4">
-          <Link href="/" className="text-muted-foreground hover:text-primary transition-colors flex-shrink-0 p-1.5 rounded-lg hover:bg-white/[0.05]">
+          <Link href="/" className="text-muted-foreground hover:text-primary transition-colors flex-shrink-0 p-1.5 rounded-[4px] hover:bg-white/[0.05]"
+            style={{ border: "1px solid rgba(0,212,255,0.1)" }}>
             <ChevronLeft className="w-5 h-5" />
           </Link>
 
           <div className="relative flex-shrink-0">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden glow-gold"
-              style={{ border: "1.5px solid rgba(202,138,4,0.3)", boxShadow: "0 0 20px rgba(202,138,4,0.12)" }}>
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-[8px] overflow-hidden"
+              style={{ border: "1.5px solid rgba(0,212,255,0.25)", boxShadow: "0 0 20px rgba(0,212,255,0.14), 0 0 0 0 rgba(0,212,255,0)" }}>
               <img src={`${DD}/profileicon/${profile?.profileIconId}.png`} alt="" className="w-full h-full object-cover" />
             </div>
-            <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 text-[9px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
-              style={{ background: "rgba(13,18,38,0.95)", border: "1px solid rgba(202,138,4,0.2)", color: "hsl(42,92%,65%)" }}>
+            <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 text-[9px] font-bold px-2 py-0.5 rounded-[3px] whitespace-nowrap"
+              style={{
+                background: "rgba(5,10,22,0.98)",
+                border: "1px solid rgba(0,212,255,0.2)",
+                color: "hsl(196,100%,60%)",
+                fontFamily: "'Rajdhani',sans-serif",
+                letterSpacing: "0.05em",
+              }}>
               Lv. {profile?.summonerLevel}
             </span>
           </div>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight leading-none">{profile?.gameName}</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight leading-none"
+                style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, letterSpacing: "0.02em" }}>
+                {profile?.gameName}
+              </h1>
               <span className="text-sm text-muted-foreground font-sans font-normal">#{profile?.tagLine}</span>
-              <span className="text-[9px] px-2 py-0.5 rounded font-bold tracking-widest uppercase flex-shrink-0"
-                style={{ background: "rgba(202,138,4,0.1)", color: "hsl(42,92%,65%)", border: "1px solid rgba(202,138,4,0.2)" }}>
-                {region}
-              </span>
+              <span className="tag-chip flex-shrink-0">{region}</span>
               <button
                 onClick={handleShare}
                 title="Kopiuj link"
-                className="flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-lg transition-all flex-shrink-0 font-medium"
+                className="flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-[4px] transition-all flex-shrink-0"
                 style={shareState === "copied"
-                  ? { background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.25)", color: "#4ade80" }
-                  : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(148,163,184,0.7)" }}
+                  ? { background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.25)", color: "#4ade80", fontFamily: "'Rajdhani',sans-serif", fontWeight: 700 }
+                  : { background: "rgba(0,212,255,0.04)", border: "1px solid rgba(0,212,255,0.1)", color: "rgba(148,163,184,0.7)", fontFamily: "'Rajdhani',sans-serif", fontWeight: 700 }}
               >
                 {shareState === "copied" ? <CheckCheck className="w-3 h-3" /> : <Share2 className="w-3 h-3" />}
                 {shareState === "copied" ? "Skopiowano!" : "Udostępnij"}
               </button>
               {liveGame && (
-                <span className="text-[9px] px-2 py-0.5 rounded font-bold tracking-wider flex items-center gap-1.5 flex-shrink-0"
-                  style={{ background: "rgba(34,197,94,0.1)", color: "hsl(152,62%,50%)", border: "1px solid rgba(34,197,94,0.2)" }}>
+                <span className="text-[9px] px-2 py-0.5 rounded-[3px] font-bold tracking-wider flex items-center gap-1.5 flex-shrink-0"
+                  style={{ background: "rgba(34,197,94,0.1)", color: "hsl(152,62%,50%)", border: "1px solid rgba(34,197,94,0.2)", fontFamily: "'Rajdhani',sans-serif" }}>
                   <span className="pulse-dot" />
                   LIVE
                 </span>
@@ -1085,9 +1104,9 @@ export default function Profile() {
             {!isLoadingRanked && (
               <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground flex-wrap">
                 {soloQ && (
-                  <span className="flex items-center gap-1">
-                    <Trophy className="w-3 h-3 text-primary/50" />
-                    <span className="text-foreground/80 font-semibold">{soloQ.tier} {soloQ.rank}</span>
+                  <span className="flex items-center gap-1.5">
+                    <Trophy className="w-3 h-3" style={{ color: "rgba(0,212,255,0.5)" }} />
+                    <span className="font-bold" style={{ color: "hsl(196,100%,65%)" }}>{soloQ.tier} {soloQ.rank}</span>
                     <span className="text-muted-foreground/60">{soloQ.leaguePoints} LP</span>
                   </span>
                 )}
@@ -1109,7 +1128,7 @@ export default function Profile() {
 
         {/* Mobile tab navigation */}
         <div className="lg:hidden mb-4 sticky top-0 z-30 py-2"
-          style={{ background: "linear-gradient(180deg, hsl(228,32%,4%) 80%, transparent)" }}>
+          style={{ background: "linear-gradient(180deg, hsl(218,60%,3%) 80%, transparent)" }}>
           <div className="mobile-tab-bar">
             {MOBILE_TABS.map(tab => (
               <button
@@ -1189,7 +1208,7 @@ export default function Profile() {
                           <p className="text-xs font-semibold text-white/90 truncate">{ch.championName}</p>
                           <p className="text-[10px] text-muted-foreground">Lv. {ch.championLevel}</p>
                         </div>
-                        <span className="text-[10px] font-bold font-mono" style={{ color: "hsl(42,92%,62%)" }}>
+                        <span className="text-[10px] font-bold" style={{ color: "hsl(196,100%,55%)", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700 }}>
                           {(ch.championPoints / 1000).toFixed(0)}K
                         </span>
                       </div>
