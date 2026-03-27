@@ -9,13 +9,17 @@ import type { ChampionRecommendation } from "./championRecommendation";
 import type { ChampionStats } from "./championStats";
 import type { CurrentStreak } from "./currentStreak";
 import type { DamageTypeBreakdown } from "./damageTypeBreakdown";
+import type { DeathAnalysis } from "./deathAnalysis";
 import type { FormTrend } from "./formTrend";
 import type { GameHighlight } from "./gameHighlight";
+import type { LanePhaseStats } from "./lanePhaseStats";
+import type { ObjectiveStats } from "./objectiveStats";
 import type { PerformanceByGameLength } from "./performanceByGameLength";
 import type { PerformanceMetric } from "./performanceMetric";
 import type { PlayerAnalysisRoleDistribution } from "./playerAnalysisRoleDistribution";
 import type { PlaystyleRadar } from "./playstyleRadar";
 import type { PredictedTier } from "./predictedTier";
+import type { TiltIndicator } from "./tiltIndicator";
 
 export interface PlayerAnalysis {
   overallScore: number;
@@ -42,4 +46,8 @@ export interface PlayerAnalysis {
   damageTypeBreakdown: DamageTypeBreakdown;
   predictedTier: PredictedTier;
   playstyleRadar: PlaystyleRadar;
+  lanePhaseStats: LanePhaseStats;
+  objectiveStats: ObjectiveStats;
+  deathAnalysis: DeathAnalysis;
+  tiltIndicator: TiltIndicator;
 }

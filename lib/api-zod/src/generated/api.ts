@@ -296,6 +296,40 @@ export const GetSummonerAnalysisResponse = zod.object({
     teamfighting: zod.number(),
     carry: zod.number(),
   }),
+  lanePhaseStats: zod.object({
+    firstBloodRate: zod.number(),
+    avgEarlyKills: zod.number(),
+    avgCsAdvantage: zod.number(),
+    earlyPressureScore: zod.number(),
+    grade: zod.string(),
+    description: zod.string(),
+  }),
+  objectiveStats: zod.object({
+    avgTurretKills: zod.number(),
+    avgDragonKills: zod.number(),
+    avgObjectivesStolen: zod.number(),
+    avgInhibitorKills: zod.number(),
+    objectiveControlScore: zod.number(),
+    grade: zod.string(),
+    description: zod.string(),
+  }),
+  deathAnalysis: zod.object({
+    avgDeaths: zod.number(),
+    avgTimeDeadPct: zod.number(),
+    deathSpikeGames: zod.number(),
+    deathSpikeRate: zod.number(),
+    mostDeathsInGame: zod.number(),
+    avgBountyGold: zod.number(),
+    deathScore: zod.number(),
+    grade: zod.string(),
+    description: zod.string(),
+  }),
+  tiltIndicator: zod.object({
+    score: zod.number(),
+    description: zod.string(),
+    lossStreakKdaDrop: zod.number(),
+    isTilted: zod.boolean(),
+  }),
 });
 
 /**

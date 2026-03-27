@@ -233,6 +233,44 @@ export interface LiveGame {
   bans: LiveGameBan[];
 }
 
+export interface LanePhaseStats {
+  firstBloodRate: number;
+  avgEarlyKills: number;
+  avgCsAdvantage: number;
+  earlyPressureScore: number;
+  grade: string;
+  description: string;
+}
+
+export interface ObjectiveStats {
+  avgTurretKills: number;
+  avgDragonKills: number;
+  avgObjectivesStolen: number;
+  avgInhibitorKills: number;
+  objectiveControlScore: number;
+  grade: string;
+  description: string;
+}
+
+export interface DeathAnalysis {
+  avgDeaths: number;
+  avgTimeDeadPct: number;
+  deathSpikeGames: number;
+  deathSpikeRate: number;
+  mostDeathsInGame: number;
+  avgBountyGold: number;
+  deathScore: number;
+  grade: string;
+  description: string;
+}
+
+export interface TiltIndicator {
+  score: number;
+  description: string;
+  lossStreakKdaDrop: number;
+  isTilted: boolean;
+}
+
 export type PlayerAnalysisRoleDistribution = { [key: string]: number };
 
 export interface PlayerAnalysis {
@@ -260,6 +298,10 @@ export interface PlayerAnalysis {
   damageTypeBreakdown: DamageTypeBreakdown;
   predictedTier: PredictedTier;
   playstyleRadar: PlaystyleRadar;
+  lanePhaseStats: LanePhaseStats;
+  objectiveStats: ObjectiveStats;
+  deathAnalysis: DeathAnalysis;
+  tiltIndicator: TiltIndicator;
 }
 
 export type SearchSummonerParams = {

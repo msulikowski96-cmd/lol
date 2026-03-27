@@ -816,6 +816,100 @@ components:
         - mapId
         - participants
         - bans
+    LanePhaseStats:
+      type: object
+      properties:
+        firstBloodRate:
+          type: number
+        avgEarlyKills:
+          type: number
+        avgCsAdvantage:
+          type: number
+        earlyPressureScore:
+          type: number
+        grade:
+          type: string
+        description:
+          type: string
+      required:
+        - firstBloodRate
+        - avgEarlyKills
+        - avgCsAdvantage
+        - earlyPressureScore
+        - grade
+        - description
+    ObjectiveStats:
+      type: object
+      properties:
+        avgTurretKills:
+          type: number
+        avgDragonKills:
+          type: number
+        avgObjectivesStolen:
+          type: number
+        avgInhibitorKills:
+          type: number
+        objectiveControlScore:
+          type: number
+        grade:
+          type: string
+        description:
+          type: string
+      required:
+        - avgTurretKills
+        - avgDragonKills
+        - avgObjectivesStolen
+        - avgInhibitorKills
+        - objectiveControlScore
+        - grade
+        - description
+    DeathAnalysis:
+      type: object
+      properties:
+        avgDeaths:
+          type: number
+        avgTimeDeadPct:
+          type: number
+        deathSpikeGames:
+          type: number
+        deathSpikeRate:
+          type: number
+        mostDeathsInGame:
+          type: number
+        avgBountyGold:
+          type: number
+        deathScore:
+          type: number
+        grade:
+          type: string
+        description:
+          type: string
+      required:
+        - avgDeaths
+        - avgTimeDeadPct
+        - deathSpikeGames
+        - deathSpikeRate
+        - mostDeathsInGame
+        - avgBountyGold
+        - deathScore
+        - grade
+        - description
+    TiltIndicator:
+      type: object
+      properties:
+        score:
+          type: number
+        description:
+          type: string
+        lossStreakKdaDrop:
+          type: number
+        isTilted:
+          type: boolean
+      required:
+        - score
+        - description
+        - lossStreakKdaDrop
+        - isTilted
     PlayerAnalysis:
       type: object
       properties:
@@ -889,6 +983,14 @@ components:
           $ref: "#/components/schemas/PredictedTier"
         playstyleRadar:
           $ref: "#/components/schemas/PlaystyleRadar"
+        lanePhaseStats:
+          $ref: "#/components/schemas/LanePhaseStats"
+        objectiveStats:
+          $ref: "#/components/schemas/ObjectiveStats"
+        deathAnalysis:
+          $ref: "#/components/schemas/DeathAnalysis"
+        tiltIndicator:
+          $ref: "#/components/schemas/TiltIndicator"
       required:
         - overallScore
         - overallRating
@@ -912,3 +1014,7 @@ components:
         - damageTypeBreakdown
         - predictedTier
         - playstyleRadar
+        - lanePhaseStats
+        - objectiveStats
+        - deathAnalysis
+        - tiltIndicator

@@ -503,7 +503,7 @@ function AnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoad
   const { overallScore, overallRating, totalGamesAnalyzed, winRate, metrics, championBreakdown, formTrend, strengths, weaknesses,
     playstyleArchetype, playstyleDescription, criticalMistakes, gameplayPatterns, primaryRole, roleDistribution, currentStreak,
     bestGame, worstGame, coachingTips, championRecommendations, performanceByGameLength, damageTypeBreakdown,
-    predictedTier, playstyleRadar } = data;
+    predictedTier, playstyleRadar, lanePhaseStats, objectiveStats, deathAnalysis, tiltIndicator } = data;
 
   const sc = overallScore >= 70 ? "text-green-400" : overallScore >= 50 ? "text-yellow-400" : "text-red-400";
   const sr = overallScore >= 70 ? "stroke-green-400" : overallScore >= 50 ? "stroke-yellow-400" : "stroke-red-400";
@@ -771,6 +771,131 @@ function AnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoad
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Deep Analysis: Lane Phase + Objectives + Deaths + Tilt */}
+      {(lanePhaseStats || objectiveStats || deathAnalysis || tiltIndicator) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          {/* Lane Phase */}
+          {lanePhaseStats && (
+            <div className="glass-panel p-4">
+              <p className="section-title"><Swords className="w-3.5 h-3.5 text-yellow-400" /> Faza linii (Early game) <InfoTooltip text="Analiza agresywności i dominacji w fazie lining. Uwzględnia first blood rate, solo kills, przewagę CS nad oponentem i presję wywieraną na wrogiej linii." /></p>
+              <div className="flex items-center gap-3 mb-3">
+                <span className={`text-3xl font-black ${lanePhaseStats.grade === "S+" || lanePhaseStats.grade === "S" ? "text-yellow-400" : lanePhaseStats.grade === "A" || lanePhaseStats.grade === "B" ? "text-green-400" : lanePhaseStats.grade === "C" ? "text-yellow-400" : "text-red-400"}`}>{lanePhaseStats.grade}</span>
+                <div className="flex-1">
+                  <div className="h-1.5 bg-muted/40 rounded-full overflow-hidden">
+                    <div className="h-full bg-yellow-500 rounded-full transition-all" style={{ width: `${lanePhaseStats.earlyPressureScore}%` }} />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-1">Wynik presji: {lanePhaseStats.earlyPressureScore}/100</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                <div className="text-center stat-card py-2">
+                  <p className="text-sm font-bold text-yellow-400">{lanePhaseStats.firstBloodRate.toFixed(0)}%</p>
+                  <p className="text-[10px] text-muted-foreground">First blood</p>
+                </div>
+                <div className="text-center stat-card py-2">
+                  <p className="text-sm font-bold text-orange-400">{lanePhaseStats.avgEarlyKills.toFixed(1)}</p>
+                  <p className="text-[10px] text-muted-foreground">Kills/mecz</p>
+                </div>
+                <div className="text-center stat-card py-2">
+                  <p className="text-sm font-bold text-blue-400">{lanePhaseStats.avgCsAdvantage.toFixed(0)}</p>
+                  <p className="text-[10px] text-muted-foreground">Przewaga CS</p>
+                </div>
+              </div>
+              <p className="text-[10px] text-muted-foreground leading-relaxed">{lanePhaseStats.description}</p>
+            </div>
+          )}
+
+          {/* Objective Stats */}
+          {objectiveStats && (
+            <div className="glass-panel p-4">
+              <p className="section-title"><Star className="w-3.5 h-3.5 text-blue-400" /> Kontrola obiektywów <InfoTooltip text="Twój wpływ na smoki, wieże, inhibitory i cele kluczowe. Gracze wygrywający rankingi konwertują walkowe przewagi na trwałe obiektywy mapy." /></p>
+              <div className="flex items-center gap-3 mb-3">
+                <span className={`text-3xl font-black ${objectiveStats.grade === "S+" || objectiveStats.grade === "S" ? "text-blue-400" : objectiveStats.grade === "A" || objectiveStats.grade === "B" ? "text-green-400" : objectiveStats.grade === "C" ? "text-yellow-400" : "text-red-400"}`}>{objectiveStats.grade}</span>
+                <div className="flex-1">
+                  <div className="h-1.5 bg-muted/40 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${objectiveStats.objectiveControlScore}%` }} />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-1">Wynik: {objectiveStats.objectiveControlScore}/100</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-4 gap-1.5 mb-3">
+                {[
+                  { label: "🐉 Smoki", val: objectiveStats.avgDragonKills.toFixed(1) },
+                  { label: "🏰 Wieże", val: objectiveStats.avgTurretKills.toFixed(1) },
+                  { label: "🔴 Inhibit.", val: objectiveStats.avgInhibitorKills.toFixed(1) },
+                  { label: "⚡ Kradz.", val: objectiveStats.avgObjectivesStolen.toFixed(2) },
+                ].map((item, i) => (
+                  <div key={i} className="text-center stat-card py-2 px-1">
+                    <p className="text-xs font-bold text-white">{item.val}</p>
+                    <p className="text-[9px] text-muted-foreground leading-tight">{item.label}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] text-muted-foreground leading-relaxed">{objectiveStats.description}</p>
+            </div>
+          )}
+
+          {/* Death Analysis */}
+          {deathAnalysis && (
+            <div className="glass-panel p-4">
+              <p className="section-title"><AlertTriangle className="w-3.5 h-3.5 text-red-400" /> Analiza śmierci <InfoTooltip text="Szczegółowa analiza wzorców śmierci: kiedy umierasz, jak długo jesteś martwy i jak to wpływa na Twoje mecze. Czas spędzony martwym to czas bez wpływu na grę." /></p>
+              <div className="flex items-center gap-3 mb-3">
+                <span className={`text-3xl font-black ${deathAnalysis.grade === "S+" || deathAnalysis.grade === "S" ? "text-green-400" : deathAnalysis.grade === "A" || deathAnalysis.grade === "B" ? "text-green-400" : deathAnalysis.grade === "C" ? "text-yellow-400" : "text-red-400"}`}>{deathAnalysis.grade}</span>
+                <div className="flex-1">
+                  <div className="h-1.5 bg-muted/40 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full ${deathAnalysis.deathScore >= 70 ? "bg-green-500" : deathAnalysis.deathScore >= 45 ? "bg-yellow-500" : "bg-red-500"}`} style={{ width: `${deathAnalysis.deathScore}%` }} />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-1">Wynik przeżycia: {deathAnalysis.deathScore}/100</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                <div className="text-center stat-card py-2">
+                  <p className={`text-sm font-bold ${deathAnalysis.avgDeaths < 3 ? "text-green-400" : deathAnalysis.avgDeaths < 5 ? "text-yellow-400" : "text-red-400"}`}>{deathAnalysis.avgDeaths.toFixed(1)}</p>
+                  <p className="text-[10px] text-muted-foreground">Śmierci/mecz</p>
+                </div>
+                <div className="text-center stat-card py-2">
+                  <p className={`text-sm font-bold ${deathAnalysis.avgTimeDeadPct < 8 ? "text-green-400" : deathAnalysis.avgTimeDeadPct < 16 ? "text-yellow-400" : "text-red-400"}`}>{deathAnalysis.avgTimeDeadPct.toFixed(1)}%</p>
+                  <p className="text-[10px] text-muted-foreground">Czas martwy</p>
+                </div>
+                <div className="text-center stat-card py-2">
+                  <p className={`text-sm font-bold ${deathAnalysis.deathSpikeRate < 15 ? "text-green-400" : deathAnalysis.deathSpikeRate < 30 ? "text-yellow-400" : "text-red-400"}`}>{deathAnalysis.deathSpikeRate.toFixed(0)}%</p>
+                  <p className="text-[10px] text-muted-foreground">Mecze 7+ śmierci</p>
+                </div>
+              </div>
+              <p className="text-[10px] text-muted-foreground leading-relaxed">{deathAnalysis.description}</p>
+            </div>
+          )}
+
+          {/* Tilt Indicator */}
+          {tiltIndicator && (
+            <div className={`glass-panel p-4 ${tiltIndicator.isTilted ? "border-orange-900/20" : ""}`}>
+              <p className="section-title"><Flame className="w-3.5 h-3.5 text-orange-400" /> Wskaźnik tiltu <InfoTooltip text="Mierzy jak bardzo Twoja gra pogarsza się po seriach porażek. Wysoki tilt = duży spadek KDA i jakości decyzji podczas strat z rzędu. Kluczowy wskaźnik zdrowia psychicznego w rankingach." /></p>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="relative w-14 h-14 flex-shrink-0">
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                    <circle cx="18" cy="18" r="14" className="stroke-muted/30" strokeWidth="3.5" fill="transparent" />
+                    <circle cx="18" cy="18" r="14" strokeWidth="3.5" fill="transparent" strokeLinecap="round"
+                      strokeDasharray={`${tiltIndicator.score * 0.88} 88`}
+                      className={tiltIndicator.score >= 75 ? "stroke-red-500" : tiltIndicator.score >= 55 ? "stroke-orange-400" : tiltIndicator.score >= 35 ? "stroke-yellow-400" : "stroke-green-500"} />
+                  </svg>
+                  <span className={`absolute inset-0 flex items-center justify-center text-xs font-black ${tiltIndicator.score >= 55 ? "text-orange-400" : "text-green-400"}`}>{tiltIndicator.score}</span>
+                </div>
+                <div className="flex-1">
+                  <p className={`text-sm font-bold ${tiltIndicator.score >= 75 ? "text-red-400" : tiltIndicator.score >= 55 ? "text-orange-400" : tiltIndicator.score >= 35 ? "text-yellow-400" : "text-green-400"}`}>
+                    {tiltIndicator.score >= 75 ? "Silny tilt" : tiltIndicator.score >= 55 ? "Umiarkowany tilt" : tiltIndicator.score >= 35 ? "Lekkie wahania" : "Mentalnie stabilny"}
+                  </p>
+                  {tiltIndicator.lossStreakKdaDrop > 0.2 && (
+                    <p className="text-[10px] text-muted-foreground">KDA spada o {tiltIndicator.lossStreakKdaDrop.toFixed(2)} podczas serii porażek</p>
+                  )}
+                </div>
+              </div>
+              <p className="text-[10px] text-muted-foreground leading-relaxed">{tiltIndicator.description}</p>
+            </div>
+          )}
         </div>
       )}
 
