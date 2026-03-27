@@ -348,18 +348,26 @@ router.get("/:puuid/live", async (req, res) => {
   if (!region) { res.status(400).json({ error: "bad_request", message: "region is required" }); return; }
   const regionLower = region.toLowerCase();
   try {
-    let sId = summonerId;
-    if (!sId) {
-      const summonerUrl = `https://${regionLower}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${puuid}`;
-      const summonerRes = await fetch(summonerUrl, { headers: { "X-Riot-Token": RIOT_API_KEY } });
-      if (summonerRes.ok) {
-        const summoner = (await summonerRes.json()) as { id: string };
-        sId = summoner.id;
+    // Try PUUID-based spectator endpoint first (Riot API v5 preferred)
+    const liveByPuuidUrl = `https://${regionLower}.api.riotgames.com/lol/spectator/v5/active-games/by-puuid/${puuid}`;
+    let liveRes = await fetch(liveByPuuidUrl, { headers: { "X-Riot-Token": RIOT_API_KEY } });
+
+    // Fall back to summonerId-based endpoint if PUUID endpoint unavailable
+    if (!liveRes.ok && liveRes.status !== 404) {
+      let sId = summonerId;
+      if (!sId) {
+        const summonerUrl = `https://${regionLower}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${puuid}`;
+        const summonerRes = await fetch(summonerUrl, { headers: { "X-Riot-Token": RIOT_API_KEY } });
+        if (summonerRes.ok) {
+          const summoner = (await summonerRes.json()) as { id: string };
+          sId = summoner.id;
+        }
+      }
+      if (sId) {
+        const liveByIdUrl = `https://${regionLower}.api.riotgames.com/lol/spectator/v5/active-games/by-summoner/${sId}`;
+        liveRes = await fetch(liveByIdUrl, { headers: { "X-Riot-Token": RIOT_API_KEY } });
       }
     }
-    if (!sId) { res.status(404).json({ error: "not_in_game", message: "Player is not in a game" }); return; }
-    const liveUrl = `https://${regionLower}.api.riotgames.com/lol/spectator/v5/active-games/by-summoner/${sId}`;
-    const liveRes = await fetch(liveUrl, { headers: { "X-Riot-Token": RIOT_API_KEY } });
     if (!liveRes.ok) {
       if (liveRes.status === 404) { res.status(404).json({ error: "not_in_game", message: "Gracz nie jest teraz w meczu" }); }
       else { res.status(500).json({ error: "riot_api_error", message: "Failed to fetch live game" }); }
