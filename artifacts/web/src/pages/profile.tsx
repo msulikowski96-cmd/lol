@@ -1,5 +1,5 @@
 import { useParams, Link } from "wouter";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -10,7 +10,8 @@ import {
   ChevronUp, ChevronDown, Check, AlertTriangle,
   Brain, Zap, BookOpen, XCircle,
   Wifi, Clock, Star, GraduationCap, Timer,
-  Layers, ArrowUpRight, ArrowDownRight, Info, Users
+  Layers, ArrowUpRight, ArrowDownRight, Info, Users,
+  Share2, Copy, CheckCheck, ChevronRight, RefreshCw
 } from "lucide-react";
 import {
   useSearchSummoner,
@@ -696,22 +697,48 @@ const MOBILE_TABS: { id: MobileTab; label: string; icon: React.ElementType }[] =
   { id: "mecze", label: "Mecze", icon: Shield },
 ];
 
+function pushHistory(gameName: string, tagLine: string, region: string) {
+  try {
+    const raw = JSON.parse(localStorage.getItem("nexus_sight_history") ?? "[]") as any[];
+    const filtered = raw.filter((e: any) => !(
+      e.gameName?.toLowerCase() === gameName.toLowerCase() &&
+      e.tagLine?.toLowerCase() === tagLine.toLowerCase() &&
+      e.region === region
+    ));
+    const updated = [{ gameName, tagLine, region, ts: Date.now() }, ...filtered].slice(0, 8);
+    localStorage.setItem("nexus_sight_history", JSON.stringify(updated));
+  } catch { /* ignore */ }
+}
+
 export default function Profile() {
   const params = useParams();
   const region = params.region as string;
   const gameName = decodeURIComponent(params.gameName || "");
   const tagLine = decodeURIComponent(params.tagLine || "");
   const [mobileTab, setMobileTab] = useState<MobileTab>("analiza");
+  const [matchCount, setMatchCount] = useState(10);
+  const [shareState, setShareState] = useState<"idle" | "copied">("idle");
 
   const { data: profile, isLoading: isLoadingProfile, error: profileError } = useSearchSummoner({ region, gameName, tagLine });
   const puuid = profile?.puuid ?? "";
   const summonerId = profile?.summonerId ?? "";
 
   const { data: rankedStats, isLoading: isLoadingRanked } = useGetSummonerRanked(puuid, { region }, { query: { enabled: !!puuid } });
-  const { data: matches, isLoading: isLoadingMatches } = useGetSummonerMatches(puuid, { region, count: 10 }, { query: { enabled: !!puuid } });
+  const { data: matches, isLoading: isLoadingMatches } = useGetSummonerMatches(puuid, { region, count: matchCount }, { query: { enabled: !!puuid } });
   const { data: mastery, isLoading: isLoadingMastery } = useGetSummonerMastery(puuid, { region, count: 5 }, { query: { enabled: !!puuid } });
   const { data: analysis, isLoading: isLoadingAnalysis } = useGetSummonerAnalysis(puuid, { region, count: 20 }, { query: { enabled: !!puuid } });
   const { data: liveGame } = useGetLiveGame(puuid, { region, summonerId }, { query: { enabled: !!puuid, retry: false } });
+
+  useEffect(() => {
+    if (profile?.gameName) pushHistory(profile.gameName, profile.tagLine ?? tagLine, region);
+  }, [profile?.gameName]);
+
+  const handleShare = () => {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+      setShareState("copied");
+      setTimeout(() => setShareState("idle"), 2000);
+    });
+  };
 
   if (profileError) return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4">
@@ -763,6 +790,17 @@ export default function Profile() {
                 style={{ background: "rgba(202,138,4,0.1)", color: "hsl(42,92%,65%)", border: "1px solid rgba(202,138,4,0.2)" }}>
                 {region}
               </span>
+              <button
+                onClick={handleShare}
+                title="Kopiuj link"
+                className="flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-lg transition-all flex-shrink-0 font-medium"
+                style={shareState === "copied"
+                  ? { background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.25)", color: "#4ade80" }
+                  : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(148,163,184,0.7)" }}
+              >
+                {shareState === "copied" ? <CheckCheck className="w-3 h-3" /> : <Share2 className="w-3 h-3" />}
+                {shareState === "copied" ? "Skopiowano!" : "Udostępnij"}
+              </button>
               {liveGame && (
                 <span className="text-[9px] px-2 py-0.5 rounded font-bold tracking-wider flex items-center gap-1.5 flex-shrink-0"
                   style={{ background: "rgba(34,197,94,0.1)", color: "hsl(152,62%,50%)", border: "1px solid rgba(34,197,94,0.2)" }}>
@@ -887,11 +925,70 @@ export default function Profile() {
               </div>
             </div>
 
+            {/* Champion Pool Analysis */}
+            {!isLoadingMatches && matches && matches.length >= 3 && (() => {
+              const champMap: Record<string, { games: number; wins: number }> = {};
+              for (const m of matches as any[]) {
+                if (!champMap[m.championName]) champMap[m.championName] = { games: 0, wins: 0 };
+                champMap[m.championName].games++;
+                if (m.win) champMap[m.championName].wins++;
+              }
+              const champs = Object.entries(champMap).sort((a, b) => b[1].games - a[1].games);
+              const total = matches.length;
+              const top1Pct = Math.round((champs[0]?.[1]?.games ?? 0) / total * 100);
+              const top3Pct = Math.round(champs.slice(0, 3).reduce((s, c) => s + c[1].games, 0) / total * 100);
+              const poolLabel = champs.length === 1 ? "Mono-main" : champs.length <= 2 ? "Duo-main" : champs.length <= 4 ? "Wąska pula" : champs.length <= 7 ? "Zrównoważona" : "Szeroka pula";
+              const poolColor = champs.length <= 2 ? "text-yellow-400" : champs.length <= 5 ? "text-green-400" : "text-blue-400";
+              return (
+                <div className={mobileTab === "mecze" ? "hidden lg:block" : ""}>
+                  <p className="section-title">
+                    <Layers className="w-3.5 h-3.5 text-primary" /> Pula postaci
+                    <InfoTooltip align="right" text="Analiza puli bohaterów z ostatnich meczy. Top1% = ile % gier grasz główną postacią. Top3% = ile % pokrywa 3 najpopularniejsze. Mono-main = 1 postać, Szeroka pula = 8+ postaci." />
+                  </p>
+                  <div className="glass-panel p-3">
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <p className={`text-sm font-bold ${poolColor}`}>{poolLabel}</p>
+                        <p className="text-[10px] text-muted-foreground">{champs.length} {champs.length === 1 ? "bohater" : "bohaterów"} w {total} meczach</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-muted-foreground">Top1 · Top3</p>
+                        <p className="text-xs font-mono font-bold">{top1Pct}% · <span className="text-muted-foreground">{top3Pct}%</span></p>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      {champs.slice(0, 5).map(([name, stat]) => {
+                        const wr = Math.round(stat.wins / stat.games * 100);
+                        const pct = Math.round(stat.games / total * 100);
+                        return (
+                          <div key={name} className="flex items-center gap-2">
+                            <img src={`${DD}/champion/${name}.png`} alt={name}
+                              className="w-6 h-6 rounded-md border border-border flex-shrink-0"
+                              onError={(e) => { e.currentTarget.src = FALLBACK_ICON; }} />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex justify-between mb-0.5">
+                                <span className="text-[10px] text-white/80 font-medium truncate">{name}</span>
+                                <span className={`text-[10px] font-mono font-bold ${wr >= 50 ? "text-win" : "text-loss"}`}>{wr}%</span>
+                              </div>
+                              <div className="h-1 rounded-full overflow-hidden bg-white/[0.06]">
+                                <div className={`h-full rounded-full ${wr >= 50 ? "bg-win" : "bg-loss"}`} style={{ width: `${pct}%` }} />
+                              </div>
+                            </div>
+                            <span className="text-[10px] text-muted-foreground w-4 text-right flex-shrink-0">{stat.games}g</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Match History */}
             <div className={mobileTab === "rang" ? "hidden lg:block" : ""}>
               <p className="section-title">
                 <Shield className="w-3.5 h-3.5 text-primary" /> Ostatnie mecze
-                <InfoTooltip align="right" text="10 ostatnich gier rankingowych. W/L = wynik meczu. K/D/A = Zabójstwa/Śmierci/Asysty. CS = zabite minionki. Mała ikona na portrecie = bohater przeciwnika z Twojej linii. Liczba z prawej = OP Score (0–10): ogólna ocena Twojej wydajności w meczu." />
+                <InfoTooltip align="right" text="Ostatnie gry rankingowe. W/L = wynik meczu. K/D/A = Zabójstwa/Śmierci/Asysty. CS = zabite minionki. Mała ikona na portrecie = bohater przeciwnika z Twojej linii. Liczba z prawej = OP Score (0–10). Kliknij mecz żeby zobaczyć wszystkich graczy." />
               </p>
               <div className="space-y-1.5">
                 {isLoadingMatches
@@ -901,6 +998,29 @@ export default function Profile() {
                     : matches?.map((m: any, i: number) => <MatchRow key={m.matchId} match={m} index={i} selfPuuid={puuid} />)
                 }
               </div>
+              {!isLoadingMatches && (matches?.length ?? 0) > 0 && (
+                <div className="mt-2 flex gap-2">
+                  {matchCount < 30 && (
+                    <button
+                      onClick={() => setMatchCount(c => Math.min(c + 10, 30))}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs text-muted-foreground transition-all hover:text-primary hover:bg-white/[0.04]"
+                      style={{ border: "1px solid rgba(255,255,255,0.06)" }}
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                      Załaduj {Math.min(matchCount + 10, 30) - matchCount} więcej
+                    </button>
+                  )}
+                  {matchCount > 10 && (
+                    <button
+                      onClick={() => setMatchCount(10)}
+                      className="py-2 px-3 rounded-lg text-xs text-muted-foreground/50 transition-all hover:text-muted-foreground hover:bg-white/[0.03]"
+                      style={{ border: "1px solid rgba(255,255,255,0.04)" }}
+                    >
+                      Zwiń
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </aside>
         </div>

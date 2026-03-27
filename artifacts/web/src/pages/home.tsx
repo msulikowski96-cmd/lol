@@ -1,7 +1,26 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { motion } from "framer-motion";
-import { Search, ChevronRight, Swords, BarChart3, Zap, Shield, Users } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Search, ChevronRight, Swords, BarChart3, Zap, Shield, Users, Clock, X } from "lucide-react";
+
+const HISTORY_KEY = "nexus_sight_history";
+const MAX_HISTORY = 8;
+
+type HistoryEntry = { gameName: string; tagLine: string; region: string; ts: number };
+
+function loadHistory(): HistoryEntry[] {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) ?? "[]"); } catch { return []; }
+}
+function saveHistory(entries: HistoryEntry[]) {
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(entries)); } catch { /* ignore */ }
+}
+export function pushHistory(gameName: string, tagLine: string, region: string) {
+  const existing = loadHistory().filter(
+    e => !(e.gameName.toLowerCase() === gameName.toLowerCase() && e.tagLine.toLowerCase() === tagLine.toLowerCase() && e.region === region)
+  );
+  const updated: HistoryEntry[] = [{ gameName, tagLine, region, ts: Date.now() }, ...existing].slice(0, MAX_HISTORY);
+  saveHistory(updated);
+}
 
 const REGIONS = [
   "EUW1", "NA1", "KR", "EUN1", "BR1", "LA1", "LA2", "OC1", "TR1", "RU", "JP1", "PH2", "SG2", "TW2", "TH2", "VN2"
@@ -52,6 +71,9 @@ export default function Home() {
   const [region, setRegion] = useState("EUW1");
   const [gameName, setGameName] = useState("");
   const [tagLine, setTagLine] = useState("");
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+
+  useEffect(() => { setHistory(loadHistory()); }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -185,23 +207,68 @@ export default function Home() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.45 }}
-          className="flex flex-wrap items-center justify-center gap-2 mb-12"
+          className="mb-10 w-full"
         >
-          <span className="text-[11px] text-muted-foreground/50 uppercase tracking-wider">Szybki podgląd:</span>
-          {QUICK_SEARCH.map(q => (
-            <button
-              key={q.name}
-              onClick={() => handleQuick(q)}
-              className="text-[11px] px-3 py-1.5 rounded-full transition-all hover:scale-105"
-              style={{
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                color: "rgba(148,163,184,0.8)",
-              }}
-            >
-              {q.name}<span className="text-muted-foreground/40">#{q.tag}</span>
-            </button>
-          ))}
+          {history.length > 0 ? (
+            <div>
+              <div className="flex items-center gap-2 mb-2.5">
+                <Clock className="w-3 h-3 text-muted-foreground/50" />
+                <span className="text-[11px] text-muted-foreground/50 uppercase tracking-wider">Ostatnio wyszukiwani</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <AnimatePresence>
+                  {history.map((h) => (
+                    <motion.div
+                      key={`${h.gameName}-${h.tagLine}-${h.region}`}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.85 }}
+                      className="flex items-center gap-1 rounded-full overflow-hidden"
+                      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                    >
+                      <button
+                        onClick={() => setLocation(`/profile/${h.region}/${encodeURIComponent(h.gameName)}/${encodeURIComponent(h.tagLine)}`)}
+                        className="text-[11px] px-3 py-1.5 text-left transition-colors hover:text-primary"
+                        style={{ color: "rgba(148,163,184,0.9)" }}
+                      >
+                        <span className="font-medium">{h.gameName}</span>
+                        <span className="text-muted-foreground/40">#{h.tagLine}</span>
+                        <span className="ml-1.5 text-[9px] text-muted-foreground/30 uppercase">{h.region}</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          const updated = history.filter(e => !(e.gameName === h.gameName && e.tagLine === h.tagLine && e.region === h.region));
+                          setHistory(updated);
+                          saveHistory(updated);
+                        }}
+                        className="pr-2.5 text-muted-foreground/30 hover:text-red-400 transition-colors"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <span className="text-[11px] text-muted-foreground/50 uppercase tracking-wider">Szybki podgląd:</span>
+              {QUICK_SEARCH.map(q => (
+                <button
+                  key={q.name}
+                  onClick={() => handleQuick(q)}
+                  className="text-[11px] px-3 py-1.5 rounded-full transition-all hover:scale-105"
+                  style={{
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    color: "rgba(148,163,184,0.8)",
+                  }}
+                >
+                  {q.name}<span className="text-muted-foreground/40">#{q.tag}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </motion.div>
 
         <motion.div
