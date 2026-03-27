@@ -68,7 +68,6 @@ export default function Home() {
   return (
     <div className="min-h-screen relative flex flex-col items-center justify-center px-4 overflow-hidden">
 
-      {/* Background */}
       <div className="absolute inset-0 z-0 overflow-hidden">
         <div className="absolute inset-0 bg-background/75 z-10" />
         <img
@@ -77,7 +76,6 @@ export default function Home() {
           className="w-full h-full object-cover opacity-50 mix-blend-screen"
         />
 
-        {/* Animated orbs */}
         <motion.div
           animate={{ x: [0, 30, 0], y: [0, -20, 0], scale: [1, 1.1, 1] }}
           transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
@@ -100,7 +98,6 @@ export default function Home() {
 
       <div className="z-10 w-full max-w-2xl flex flex-col items-center">
 
-        {/* Hero */}
         <motion.div
           initial={{ opacity: 0, y: -24 }}
           animate={{ opacity: 1, y: 0 }}
@@ -119,7 +116,6 @@ export default function Home() {
           </p>
         </motion.div>
 
-        {/* Search Form */}
         <motion.form
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -136,7 +132,6 @@ export default function Home() {
           }}
         >
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-            {/* Region */}
             <div className="sm:border-r sm:border-white/[0.07] sm:pr-3 sm:mr-1">
               <select
                 value={region}
@@ -150,7 +145,6 @@ export default function Home() {
               </select>
             </div>
 
-            {/* Name + Tag */}
             <div className="flex flex-1 items-center gap-1 px-2">
               <Search className="w-4 h-4 text-muted-foreground flex-shrink-0" />
               <input
@@ -172,7 +166,6 @@ export default function Home() {
               />
             </div>
 
-            {/* Submit */}
             <button
               type="submit"
               className="sm:w-auto flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl font-bold font-display tracking-widest uppercase text-sm group transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
@@ -188,7 +181,6 @@ export default function Home() {
           </div>
         </motion.form>
 
-        {/* Quick search */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -212,7 +204,6 @@ export default function Home() {
           ))}
         </motion.div>
 
-        {/* Feature cards */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
