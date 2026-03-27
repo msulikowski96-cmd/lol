@@ -1,5 +1,6 @@
 import { useParams, Link } from "wouter";
-import { motion } from "framer-motion";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
 import {
@@ -9,7 +10,7 @@ import {
   ChevronUp, ChevronDown, Check, AlertTriangle,
   Brain, Zap, BookOpen, XCircle,
   Wifi, Clock, Star, GraduationCap, Timer,
-  Layers, ArrowUpRight, ArrowDownRight
+  Layers, ArrowUpRight, ArrowDownRight, Info
 } from "lucide-react";
 import {
   useSearchSummoner,
@@ -24,6 +25,36 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 const ROLE_EMOJI: Record<string, string> = { Top: "⚔️", Jungler: "🌿", Mid: "✨", ADC: "🏹", Support: "🛡️", Nieznana: "❓" };
 const DD = "https://ddragon.leagueoflegends.com/cdn/14.24.1/img";
 const FALLBACK_ICON = "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png";
+
+function InfoTooltip({ text, align = "left" }: { text: string; align?: "left" | "right" }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="relative inline-flex items-center ml-1">
+      <button
+        type="button"
+        className="text-muted-foreground/40 hover:text-primary/80 transition-colors cursor-help flex-shrink-0"
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onClick={() => setOpen(v => !v)}
+      >
+        <Info className="w-3 h-3" />
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.span
+            initial={{ opacity: 0, y: -3, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -3, scale: 0.97 }}
+            transition={{ duration: 0.12 }}
+            className={`absolute top-5 z-[100] w-64 text-[11px] text-foreground/85 leading-relaxed bg-card border border-border/70 rounded-xl p-3 shadow-2xl pointer-events-none ${align === "right" ? "right-0" : "left-0"}`}
+          >
+            {text}
+          </motion.span>
+        )}
+      </AnimatePresence>
+    </span>
+  );
+}
 
 function SparklineChart({ matches }: { matches: any[] }) {
   if (!matches || matches.length < 3) return null;
@@ -303,7 +334,7 @@ function AnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoad
         </div>
 
         <div className="glass-panel p-4 flex flex-col items-center">
-          <p className="section-title self-start"><BarChart3 className="w-3.5 h-3.5 text-primary" /> Pajęczyna stylów</p>
+          <p className="section-title self-start"><BarChart3 className="w-3.5 h-3.5 text-primary" /> Pajęczyna stylów <InfoTooltip text="Wykres 5 osi (0–100): Agresja = zabójstwa+asysty na minutę, Farmienie = CS/min, Wizja = wynik wizji, Walki = KP% (udział w zabójstwach drużyny), Carry = różnica KDA wygrane vs porażki." /></p>
           <div className="w-48 h-48 mt-1">
             {playstyleRadar && <RadarChart data={playstyleRadar} />}
           </div>
@@ -328,7 +359,7 @@ function AnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoad
       {/* Coaching Tips */}
       {coachingTips?.length > 0 && (
         <div className="glass-panel p-4">
-          <p className="section-title"><GraduationCap className="w-3.5 h-3.5 text-primary" /> Plan poprawy</p>
+          <p className="section-title"><GraduationCap className="w-3.5 h-3.5 text-primary" /> Plan poprawy <InfoTooltip text="Spersonalizowane porady treningowe wygenerowane przez silnik analizy na podstawie Twoich najsłabszych wskaźników wydajności. Skupienie się na tych punktach da najszybszy wzrost rangi." /></p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {coachingTips.map((tip: string, i: number) => (
               <div key={i} className="flex items-start gap-2.5 stat-card">
@@ -343,7 +374,7 @@ function AnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoad
       {/* Champion Recommendations */}
       {championRecommendations?.length > 0 && (
         <div className="glass-panel p-4">
-          <p className="section-title"><Star className="w-3.5 h-3.5 text-yellow-400" /> Rekomendowane postacie</p>
+          <p className="section-title"><Star className="w-3.5 h-3.5 text-yellow-400" /> Rekomendowane postacie <InfoTooltip text="Bohaterowie dobrani do Twojego stylu gry. Silnik analizy porównuje Twój archetyp (agresja, farmienie, wizja, walki drużynowe) z profilem każdej postaci i wybiera najlepiej pasujące." /></p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {championRecommendations.map((rec: any, i: number) => (
               <div key={i} className="stat-card flex items-start gap-3">
@@ -363,7 +394,7 @@ function AnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoad
 
       {/* Metrics Grid */}
       <div className="glass-panel p-4">
-        <p className="section-title"><BarChart3 className="w-3.5 h-3.5 text-primary" /> Wskaźniki wydajności</p>
+        <p className="section-title"><BarChart3 className="w-3.5 h-3.5 text-primary" /> Wskaźniki wydajności <InfoTooltip text="11 wskaźników obliczanych z ostatnich 20 meczy: KDA, KP% (udział w zabójstwach), CS/min, obrażenia/min, udział w obrażeniach drużyny, multikille, wizja, efektywność złota, przeżywalność, konsekwencja, potencjał carry. Wartości 0–100 skalowane do wzorca Twojej rangi." /></p>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
           {metrics?.map((m: any, i: number) => {
             const pct = Math.min(100, (m.value / m.maxValue) * 100);
@@ -389,7 +420,7 @@ function AnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoad
       {/* Bottom Row: Game Length + Damage + Best/Worst */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="glass-panel p-4">
-          <p className="section-title"><Timer className="w-3.5 h-3.5 text-primary" /> Długość meczu</p>
+          <p className="section-title"><Timer className="w-3.5 h-3.5 text-primary" /> Długość meczu <InfoTooltip text="Wyniki podzielone na 3 kategorie: krótkie (<25 min), średnie (25–35 min), długie (>35 min). Pokazuje w jakich typach gier osiągasz najlepsze wyniki — pomocne przy wyborze bohaterów z silnym early lub late game." /></p>
           <div className="space-y-2">
             {[performanceByGameLength?.short, performanceByGameLength?.medium, performanceByGameLength?.long].map((gl: any, i: number) => {
               if (!gl || gl.gamesPlayed === 0) return null;
@@ -411,7 +442,7 @@ function AnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoad
         </div>
 
         <div className="glass-panel p-4">
-          <p className="section-title"><Layers className="w-3.5 h-3.5 text-primary" /> Typ obrażeń</p>
+          <p className="section-title"><Layers className="w-3.5 h-3.5 text-primary" /> Typ obrażeń <InfoTooltip text="Rozkład procentowy zadanych obrażeń: fizyczne (AD — postacie atakujące), magiczne (AP — postacie magii), prawdziwe (penetrują pancerz i odporność magiczną — np. Garen, Vayne). Odzwierciedla rodzaj granych bohaterów." /></p>
           {damageTypeBreakdown && (
             <div className="space-y-3">
               {[
@@ -471,7 +502,7 @@ function AnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoad
       {/* Critical Mistakes */}
       {criticalMistakes?.length > 0 && (
         <div className="glass-panel p-4 border-red-900/15">
-          <p className="section-title"><XCircle className="w-3.5 h-3.5 text-red-400" /> Krytyczne błędy</p>
+          <p className="section-title"><XCircle className="w-3.5 h-3.5 text-red-400" /> Krytyczne błędy <InfoTooltip text="Najczęściej powtarzające się szkodliwe nawyki wykryte w Twoich meczach: nadmierna liczba śmierci, słabe farmienie, brak wizji i inne. Wyeliminowanie tych nawyków da najszybszy wzrost rangi." /></p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {criticalMistakes.map((m: string, i: number) => (
               <div key={i} className="flex items-start gap-2 text-xs text-foreground/80 stat-card bg-red-950/10 border-red-900/20">
@@ -484,7 +515,7 @@ function AnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoad
 
       {/* Champion Breakdown Table */}
       <div className="glass-panel p-4 overflow-hidden">
-        <p className="section-title"><Swords className="w-3.5 h-3.5 text-primary" /> Wyniki na bohaterach</p>
+        <p className="section-title"><Swords className="w-3.5 h-3.5 text-primary" /> Wyniki na bohaterach <InfoTooltip text="Statystyki z ostatnich 20 meczy pogrupowane po bohaterach. KDA = (Zabójstwa+Asysty)/Śmierci. KP% = udział w zabójstwach drużyny. CS/min = minionki na minutę. Dmg% = Twój procent obrażeń całej drużyny. Wynik = ogólna ocena 0–100." /></p>
         <div className="overflow-x-auto">
           <table className="w-full text-left min-w-[700px]">
             <thead>
@@ -619,7 +650,7 @@ export default function Profile() {
           {/* Sidebar */}
           <aside className="lg:col-span-3 space-y-4">
             <div>
-              <p className="section-title"><Trophy className="w-3.5 h-3.5 text-primary" /> Rang</p>
+              <p className="section-title"><Trophy className="w-3.5 h-3.5 text-primary" /> Rang <InfoTooltip align="right" text="Twoja liga rankingowa Solo/Duo i Flex. LP (League Points) to punkty do awansu — po 100 LP promujesz do wyższego podziału. WR% = procent wygranych gier w tej kolejce." /></p>
               <div className="space-y-2">
                 {isLoadingRanked ? <div className="stat-card h-20 animate-pulse" /> : (<><RankedCard entry={soloQ} />{flexQ && <RankedCard entry={flexQ} />}</>)}
                 {!isLoadingAnalysis && analysis?.predictedTier && (
@@ -644,7 +675,7 @@ export default function Profile() {
             </div>
 
             <div>
-              <p className="section-title"><Target className="w-3.5 h-3.5 text-primary" /> Mistrzostwo</p>
+              <p className="section-title"><Target className="w-3.5 h-3.5 text-primary" /> Mistrzostwo <InfoTooltip align="right" text="Oficjalny system Riot Games pokazujący ile gier zagrałeś danym bohaterem. Lv. 7 = najwyższy poziom mistrzostwa. Liczba po prawej (K) = tysiące punktów mistrzostwa zdobytych łącznie." /></p>
               <div className="glass-panel p-2 space-y-0.5">
                 {isLoadingMastery ? (
                   Array(3).fill(0).map((_, i) => <div key={i} className="h-10 bg-muted/30 rounded animate-pulse" />)
@@ -668,7 +699,7 @@ export default function Profile() {
             </div>
 
             <div>
-              <p className="section-title"><Shield className="w-3.5 h-3.5 text-primary" /> Ostatnie mecze</p>
+              <p className="section-title"><Shield className="w-3.5 h-3.5 text-primary" /> Ostatnie mecze <InfoTooltip align="right" text="10 ostatnich gier rankingowych. W/L = wynik meczu. K/D/A = Zabójstwa/Śmierci/Asysty. CS = zabite minionki. Mała ikona na portrecie = bohater przeciwnika z Twojej linii. Liczba z prawej = OP Score (0–10): ogólna ocena Twojej wydajności w meczu." /></p>
               <div className="space-y-1.5">
                 {isLoadingMatches ? (
                   Array(5).fill(0).map((_, i) => <div key={i} className="h-14 bg-muted/20 rounded-lg animate-pulse" />)
