@@ -1,40 +1,40 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800&family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&display=swap');
 @import "tailwindcss";
 
 @theme inline {
   --font-display: 'Cinzel', serif;
   --font-sans: 'Inter', sans-serif;
 
-  --color-background: hsl(222, 47%, 5%);
-  --color-foreground: hsl(40, 30%, 90%);
-  
-  --color-primary: hsl(42, 60%, 55%);
-  --color-primary-foreground: hsl(222, 47%, 5%);
-  
-  --color-secondary: hsl(200, 70%, 40%);
-  --color-secondary-foreground: hsl(0, 0%, 100%);
-  
-  --color-card: hsl(222, 40%, 8%);
-  --color-card-foreground: hsl(40, 30%, 90%);
-  --color-card-border: hsl(42, 60%, 55%, 0.12);
-  
-  --color-muted: hsl(222, 30%, 12%);
-  --color-muted-foreground: hsl(215, 20%, 55%);
-  
-  --color-accent: hsl(42, 60%, 55%, 0.08);
-  --color-accent-foreground: hsl(42, 60%, 65%);
-  
-  --color-destructive: hsl(350, 70%, 50%);
-  --color-destructive-foreground: hsl(0, 0%, 100%);
-  
-  --color-border: hsl(222, 30%, 14%);
-  --color-input: hsl(222, 40%, 10%);
-  --color-ring: hsl(42, 60%, 55%);
+  --color-background: hsl(228, 32%, 4%);
+  --color-foreground: hsl(215, 20%, 90%);
 
-  --color-win: hsl(152, 60%, 45%);
-  --color-loss: hsl(350, 60%, 48%);
-  --color-win-bg: hsl(152, 60%, 45%, 0.08);
-  --color-loss-bg: hsl(350, 60%, 48%, 0.08);
+  --color-primary: hsl(42, 92%, 58%);
+  --color-primary-foreground: hsl(228, 32%, 4%);
+
+  --color-secondary: hsl(262, 80%, 62%);
+  --color-secondary-foreground: hsl(0, 0%, 100%);
+
+  --color-card: hsl(228, 35%, 7%);
+  --color-card-foreground: hsl(215, 20%, 90%);
+  --color-card-border: rgba(255,255,255,0.055);
+
+  --color-muted: hsl(224, 28%, 11%);
+  --color-muted-foreground: hsl(215, 18%, 46%);
+
+  --color-accent: rgba(139,92,246,0.08);
+  --color-accent-foreground: hsl(262, 80%, 72%);
+
+  --color-destructive: hsl(350, 72%, 52%);
+  --color-destructive-foreground: hsl(0, 0%, 100%);
+
+  --color-border: rgba(255,255,255,0.055);
+  --color-input: hsl(228, 35%, 9%);
+  --color-ring: hsl(42, 92%, 58%);
+
+  --color-win: hsl(152, 62%, 45%);
+  --color-loss: hsl(350, 62%, 50%);
+  --color-win-bg: rgba(34,197,94,0.055);
+  --color-loss-bg: rgba(239,68,68,0.055);
 }
 
 :root {
@@ -44,6 +44,10 @@
 @layer base {
   body {
     @apply bg-background text-foreground antialiased font-sans min-h-screen;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 10% 10%, rgba(139,92,246,0.05) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 90% 90%, rgba(30,64,175,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 30% at 50% 50%, rgba(202,138,4,0.03) 0%, transparent 60%);
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -51,30 +55,185 @@
     @apply font-bold tracking-wider;
   }
 
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { @apply bg-background; }
-  ::-webkit-scrollbar-thumb { @apply bg-border rounded-full; }
-  ::-webkit-scrollbar-thumb:hover { @apply bg-muted-foreground/40; }
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.16); }
 }
 
 @layer utilities {
   .glass-panel {
-    @apply bg-card/60 border border-border rounded-xl;
+    background: rgba(13,18,38,0.65);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 14px;
+    backdrop-filter: blur(12px);
   }
-  
+
+  .glass-panel-sm {
+    background: rgba(13,18,38,0.5);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px;
+    backdrop-filter: blur(8px);
+  }
+
   .stat-card {
-    @apply bg-card/40 border border-border/60 rounded-lg p-3;
+    background: rgba(255,255,255,0.025);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px;
+    padding: 0.75rem;
+    transition: background 0.15s;
+  }
+
+  .stat-card:hover {
+    background: rgba(255,255,255,0.04);
   }
 
   .section-title {
-    @apply text-sm font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-2 mb-3;
+    @apply text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground flex items-center gap-2 mb-3;
   }
-  
+
   .text-gradient-gold {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-yellow-200;
+    background: linear-gradient(135deg, hsl(42,92%,58%), hsl(38,100%,78%), hsl(42,80%,55%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-purple {
+    background: linear-gradient(135deg, #a78bfa, #c4b5fd);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 
   .metric-bar {
-    @apply w-full h-1.5 bg-muted/60 rounded-full overflow-hidden;
+    @apply w-full h-1 rounded-full overflow-hidden;
+    background: rgba(255,255,255,0.06);
+  }
+
+  .glow-gold {
+    box-shadow: 0 0 24px rgba(202,138,4,0.18), 0 0 48px rgba(202,138,4,0.07);
+  }
+
+  .glow-purple {
+    box-shadow: 0 0 24px rgba(139,92,246,0.18), 0 0 48px rgba(139,92,246,0.07);
+  }
+
+  .glow-green {
+    box-shadow: 0 0 20px rgba(34,197,94,0.15);
+  }
+
+  .gradient-border-gold {
+    position: relative;
+    z-index: 0;
+  }
+  .gradient-border-gold::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, rgba(202,138,4,0.4), rgba(139,92,246,0.15), transparent 60%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  .mobile-tab-bar {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 12px;
+  }
+
+  .mobile-tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 8px 4px;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    transition: all 0.18s;
+    border: 1px solid transparent;
+  }
+
+  .mobile-tab-active {
+    background: rgba(202,138,4,0.1);
+    color: hsl(42,92%,65%);
+    border-color: rgba(202,138,4,0.2);
+  }
+
+  .mobile-tab-inactive {
+    color: rgba(148,163,184,0.7);
+  }
+
+  .mobile-tab-inactive:hover {
+    color: rgba(148,163,184,1);
+    background: rgba(255,255,255,0.03);
+  }
+
+  .rank-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .badge-win {
+    background: rgba(34,197,94,0.1);
+    color: hsl(152,62%,50%);
+    border: 1px solid rgba(34,197,94,0.2);
+  }
+
+  .badge-loss {
+    background: rgba(239,68,68,0.1);
+    color: hsl(350,62%,60%);
+    border: 1px solid rgba(239,68,68,0.2);
+  }
+
+  .shimmer {
+    background: linear-gradient(
+      105deg,
+      transparent 30%,
+      rgba(255,255,255,0.04) 50%,
+      transparent 70%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  .pulse-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: hsl(152,62%,45%);
+    box-shadow: 0 0 0 0 rgba(34,197,94,0.5);
+    animation: pulse-ring 1.8s infinite;
+  }
+
+  @keyframes pulse-ring {
+    0% { box-shadow: 0 0 0 0 rgba(34,197,94,0.5); }
+    70% { box-shadow: 0 0 0 8px rgba(34,197,94,0); }
+    100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
   }
 }

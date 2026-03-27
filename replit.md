@@ -56,7 +56,9 @@ React + Vite frontend for "Nexus Sight" — a League of Legends player stats che
 
 - Pages: Home (search), Profile (player stats with analysis)
 - Uses `@workspace/api-client-react` hooks for all API calls
-- Dark gaming aesthetic with glass-panel styling, framer-motion animations
+- Dark gaming aesthetic with glassmorphism cards, animated orb backgrounds, framer-motion animations
+- Responsive design: mobile tab navigation (Analiza / Rang / Mecze) switches content on small screens; desktop keeps 9/3 grid layout
+- New CSS utilities: glass-panel-sm, glow-gold, glow-purple, gradient-border-gold, pulse-dot, shimmer, mobile-tab-bar/tab/active/inactive, badge-win/badge-loss, text-gradient-purple, rank-badge
 - Data Dragon 14.24.1 for champion/item images
 - Profile page: professional dashboard layout (9/3 grid), compact header with rank inline, sidebar (rank cards, predicted tier card, champion mastery, match history with opScore + opponent icon overlay), main area (deep analysis with sparkline charts, coaching tips, champion recommendations, damage/game-length breakdowns, live game banner, playstyle radar chart pentagon)
 - Analysis section: playstyle archetype panel + SVG radar chart (aggression/farming/vision/teamfighting/carry axes), strengths/weaknesses in 3-column grid

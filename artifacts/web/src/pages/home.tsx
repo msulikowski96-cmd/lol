@@ -1,10 +1,50 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { Search, ChevronRight, Swords } from "lucide-react";
+import { Search, ChevronRight, Swords, BarChart3, Zap, Shield, Users } from "lucide-react";
 
 const REGIONS = [
   "EUW1", "NA1", "KR", "EUN1", "BR1", "LA1", "LA2", "OC1", "TR1", "RU", "JP1", "PH2", "SG2", "TW2", "TH2", "VN2"
+];
+
+const FEATURES = [
+  {
+    icon: BarChart3,
+    title: "Głęboka analiza",
+    desc: "11 wskaźników wydajności, archetyp stylu gry i pajęczyna statystyk",
+    color: "text-violet-400",
+    bg: "rgba(139,92,246,0.08)",
+    border: "rgba(139,92,246,0.15)",
+  },
+  {
+    icon: Zap,
+    title: "Live w meczu",
+    desc: "Wykrywa aktywną grę i pokazuje skład obu drużyn w czasie rzeczywistym",
+    color: "text-green-400",
+    bg: "rgba(34,197,94,0.08)",
+    border: "rgba(34,197,94,0.15)",
+  },
+  {
+    icon: Shield,
+    title: "Historia meczy",
+    desc: "Ostatnie gry z KDA, OP Score i ikoną bohatera naprzeciwko",
+    color: "text-yellow-400",
+    bg: "rgba(202,138,4,0.08)",
+    border: "rgba(202,138,4,0.15)",
+  },
+  {
+    icon: Users,
+    title: "Szacowana ranga",
+    desc: "AI oblicza rzeczywistą rangę gracza na podstawie stylu gry",
+    color: "text-blue-400",
+    bg: "rgba(59,130,246,0.08)",
+    border: "rgba(59,130,246,0.15)",
+  },
+];
+
+const QUICK_SEARCH = [
+  { name: "Faker", tag: "T1", region: "KR" },
+  { name: "Caps", tag: "EUW", region: "EUW1" },
 ];
 
 export default function Home() {
@@ -16,99 +56,187 @@ export default function Home() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (!gameName || !tagLine) return;
-    
     const cleanName = encodeURIComponent(gameName.trim());
-    const cleanTag = encodeURIComponent(tagLine.trim().replace(/^#/, ''));
-    
+    const cleanTag = encodeURIComponent(tagLine.trim().replace(/^#/, ""));
     setLocation(`/profile/${region}/${cleanName}/${cleanTag}`);
+  };
+
+  const handleQuick = (q: typeof QUICK_SEARCH[number]) => {
+    setLocation(`/profile/${q.region}/${encodeURIComponent(q.name)}/${q.tag}`);
   };
 
   return (
     <div className="min-h-screen relative flex flex-col items-center justify-center px-4 overflow-hidden">
-      <div className="absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-background/80 z-10" />
-        <img 
-          src={`${import.meta.env.BASE_URL}images/hero-bg.png`} 
-          alt="Hextech Atmosphere" 
-          className="w-full h-full object-cover opacity-60 mix-blend-screen"
+
+      {/* Background */}
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        <div className="absolute inset-0 bg-background/75 z-10" />
+        <img
+          src={`${import.meta.env.BASE_URL}images/hero-bg.png`}
+          alt=""
+          className="w-full h-full object-cover opacity-50 mix-blend-screen"
+        />
+
+        {/* Animated orbs */}
+        <motion.div
+          animate={{ x: [0, 30, 0], y: [0, -20, 0], scale: [1, 1.1, 1] }}
+          transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full pointer-events-none z-5"
+          style={{ background: "radial-gradient(circle, rgba(139,92,246,0.12) 0%, transparent 70%)" }}
+        />
+        <motion.div
+          animate={{ x: [0, -20, 0], y: [0, 30, 0], scale: [1, 1.08, 1] }}
+          transition={{ duration: 18, repeat: Infinity, ease: "easeInOut", delay: 3 }}
+          className="absolute -bottom-32 -right-32 w-[600px] h-[600px] rounded-full pointer-events-none z-5"
+          style={{ background: "radial-gradient(circle, rgba(30,64,175,0.1) 0%, transparent 70%)" }}
+        />
+        <motion.div
+          animate={{ x: [0, 15, 0], y: [0, -15, 0] }}
+          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 6 }}
+          className="absolute top-1/3 right-1/4 w-[300px] h-[300px] rounded-full pointer-events-none z-5"
+          style={{ background: "radial-gradient(circle, rgba(202,138,4,0.06) 0%, transparent 70%)" }}
         />
       </div>
 
-      <div className="z-10 w-full max-w-3xl flex flex-col items-center">
+      <div className="z-10 w-full max-w-2xl flex flex-col items-center">
+
+        {/* Hero */}
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
+          initial={{ opacity: 0, y: -24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          className="text-center mb-12"
+          transition={{ duration: 0.7, ease: "easeOut" }}
+          className="text-center mb-10"
         >
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <Swords className="w-10 h-10 text-primary" />
-            <h1 className="text-5xl md:text-7xl text-gradient-gold">NEXUS SIGHT</h1>
+          <div className="flex items-center justify-center gap-3 mb-5">
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center glow-gold"
+              style={{ background: "linear-gradient(135deg, rgba(202,138,4,0.2), rgba(202,138,4,0.05))", border: "1px solid rgba(202,138,4,0.3)" }}>
+              <Swords className="w-6 h-6 text-primary" />
+            </div>
+            <h1 className="text-5xl md:text-6xl tracking-[0.12em] text-gradient-gold">NEXUS SIGHT</h1>
           </div>
-          <p className="text-muted-foreground text-lg md:text-xl font-light tracking-wide max-w-xl mx-auto">
-            Odkryj statystyki graczy, analizuj historie meczy i zwiaduj przeciwnika na Summoner's Rift.
+          <p className="text-muted-foreground text-base md:text-lg font-light leading-relaxed max-w-lg mx-auto">
+            Odkryj statystyki graczy League of Legends — analiza stylu gry, historia meczy i szacowana ranga AI.
           </p>
         </motion.div>
 
-        <motion.form 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
+        {/* Search Form */}
+        <motion.form
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, delay: 0.18 }}
           onSubmit={handleSearch}
-          className="w-full glass-panel rounded-2xl p-2 pl-4 flex flex-col md:flex-row items-center gap-2 focus-within:ring-2 focus-within:ring-primary/50 transition-all duration-300 hover:shadow-primary/10"
+          className="w-full mb-5"
+          style={{
+            background: "rgba(13,18,38,0.7)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: "16px",
+            backdropFilter: "blur(16px)",
+            boxShadow: "0 20px 60px rgba(0,0,0,0.4), 0 0 0 1px rgba(202,138,4,0.05)",
+            padding: "8px",
+          }}
         >
-          <div className="flex w-full md:w-auto items-center">
-            <select
-              value={region}
-              onChange={(e) => setRegion(e.target.value)}
-              className="bg-transparent text-foreground border-none focus:ring-0 cursor-pointer font-medium outline-none py-3"
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            {/* Region */}
+            <div className="sm:border-r sm:border-white/[0.07] sm:pr-3 sm:mr-1">
+              <select
+                value={region}
+                onChange={(e) => setRegion(e.target.value)}
+                className="w-full sm:w-auto bg-transparent text-foreground/90 border-none focus:ring-0 cursor-pointer font-semibold outline-none py-3 px-3 text-sm appearance-none"
+                style={{ color: "hsl(42,92%,65%)" }}
+              >
+                {REGIONS.map(r => (
+                  <option key={r} value={r} className="bg-[#0d1228] text-white">{r}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Name + Tag */}
+            <div className="flex flex-1 items-center gap-1 px-2">
+              <Search className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <input
+                type="text"
+                placeholder="Nazwa gracza"
+                value={gameName}
+                onChange={(e) => setGameName(e.target.value)}
+                className="flex-1 bg-transparent border-none text-foreground placeholder:text-muted-foreground/60 focus:ring-0 outline-none py-3 px-2 text-base min-w-0"
+                required
+              />
+              <span className="text-muted-foreground/40 font-light text-lg select-none">#</span>
+              <input
+                type="text"
+                placeholder="TAG"
+                value={tagLine}
+                onChange={(e) => setTagLine(e.target.value)}
+                className="w-20 bg-transparent border-none text-foreground placeholder:text-muted-foreground/60 focus:ring-0 outline-none py-3 px-2 text-base"
+                required
+              />
+            </div>
+
+            {/* Submit */}
+            <button
+              type="submit"
+              className="sm:w-auto flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl font-bold font-display tracking-widest uppercase text-sm group transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+              style={{
+                background: "linear-gradient(135deg, hsl(42,92%,52%), hsl(38,85%,44%))",
+                color: "hsl(228,32%,4%)",
+                boxShadow: "0 4px 20px rgba(202,138,4,0.25)",
+              }}
             >
-              {REGIONS.map(r => (
-                <option key={r} value={r} className="bg-card text-foreground">{r}</option>
-              ))}
-            </select>
-            <div className="w-px h-8 bg-border mx-3 hidden md:block" />
+              Szukaj
+              <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+            </button>
           </div>
-
-          <div className="flex-1 flex w-full items-center">
-            <Search className="w-5 h-5 text-muted-foreground ml-2 mr-3" />
-            <input
-              type="text"
-              placeholder="Nazwa gracza"
-              value={gameName}
-              onChange={(e) => setGameName(e.target.value)}
-              className="w-full bg-transparent border-none text-foreground placeholder:text-muted-foreground focus:ring-0 outline-none py-3 text-lg"
-              required
-            />
-            <span className="text-muted-foreground font-light text-xl mx-1">#</span>
-            <input
-              type="text"
-              placeholder="TAG"
-              value={tagLine}
-              onChange={(e) => setTagLine(e.target.value)}
-              className="w-24 bg-transparent border-none text-foreground placeholder:text-muted-foreground focus:ring-0 outline-none py-3 text-lg"
-              required
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="w-full md:w-auto mt-2 md:mt-0 px-8 py-4 rounded-xl bg-gradient-to-r from-primary to-yellow-600 text-primary-foreground font-bold font-display tracking-widest uppercase hover:opacity-90 transition-opacity flex items-center justify-center group"
-          >
-            Szukaj
-            <ChevronRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-          </button>
         </motion.form>
 
-        <motion.div 
+        {/* Quick search */}
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.8 }}
-          className="mt-12 flex gap-4 text-sm text-muted-foreground/60"
+          transition={{ delay: 0.45 }}
+          className="flex flex-wrap items-center justify-center gap-2 mb-12"
         >
-          <span>Regiony: EUW, NA, KR i inne</span>
-          <span>•</span>
-          <span>Dane na żywo z API</span>
+          <span className="text-[11px] text-muted-foreground/50 uppercase tracking-wider">Szybki podgląd:</span>
+          {QUICK_SEARCH.map(q => (
+            <button
+              key={q.name}
+              onClick={() => handleQuick(q)}
+              className="text-[11px] px-3 py-1.5 rounded-full transition-all hover:scale-105"
+              style={{
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                color: "rgba(148,163,184,0.8)",
+              }}
+            >
+              {q.name}<span className="text-muted-foreground/40">#{q.tag}</span>
+            </button>
+          ))}
+        </motion.div>
+
+        {/* Feature cards */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.55, duration: 0.5 }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full"
+        >
+          {FEATURES.map((f, i) => (
+            <motion.div
+              key={f.title}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 + i * 0.07 }}
+              className="flex flex-col items-center text-center gap-2.5 px-3 py-4 rounded-xl"
+              style={{ background: f.bg, border: `1px solid ${f.border}` }}
+            >
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: f.bg }}>
+                <f.icon className={`w-4 h-4 ${f.color}`} />
+              </div>
+              <div>
+                <p className="text-[11px] font-bold text-foreground/90 tracking-wide">{f.title}</p>
+                <p className="text-[10px] text-muted-foreground leading-relaxed mt-0.5">{f.desc}</p>
+              </div>
+            </motion.div>
+          ))}
         </motion.div>
       </div>
     </div>

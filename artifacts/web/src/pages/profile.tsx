@@ -10,7 +10,7 @@ import {
   ChevronUp, ChevronDown, Check, AlertTriangle,
   Brain, Zap, BookOpen, XCircle,
   Wifi, Clock, Star, GraduationCap, Timer,
-  Layers, ArrowUpRight, ArrowDownRight, Info
+  Layers, ArrowUpRight, ArrowDownRight, Info, Users
 } from "lucide-react";
 import {
   useSearchSummoner,
@@ -209,22 +209,33 @@ function MatchRow({ match, index }: { match: any; index: number }) {
 function RankedCard({ entry }: { entry: any }) {
   const tier = entry?.tier ?? "UNRANKED";
   const wr = entry ? Math.round((entry.wins / (entry.wins + entry.losses)) * 100) : 0;
+  const queueLabel = entry?.queueType === "RANKED_SOLO_5x5" ? "Solo / Duo" : entry?.queueType === "RANKED_FLEX_SR" ? "Flex 5v5" : "Rankingowe";
+  const wrBarColor = wr >= 55 ? "#22c55e" : wr >= 50 ? "#eab308" : "#ef4444";
   return (
-    <div className="stat-card flex items-center gap-3">
-      <img src={`https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-shared-components/global/default/${tier.toLowerCase()}.png`}
-        alt={tier} className="w-14 h-14 object-contain flex-shrink-0" onError={(e) => { e.currentTarget.style.display = "none"; }} />
-      <div className="flex-1 min-w-0">
-        <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
-          {entry?.queueType === "RANKED_SOLO_5x5" ? "Solo/Duo" : entry?.queueType === "RANKED_FLEX_SR" ? "Flex" : "Rankingowe"}
-        </p>
-        <p className="font-display text-base text-gradient-gold">{tier} {entry?.rank}</p>
-        {entry && (
-          <div className="flex items-center gap-2 text-xs mt-0.5">
-            <span className="text-foreground font-semibold">{entry.leaguePoints} LP</span>
-            <span className="text-muted-foreground">{entry.wins}W {entry.losses}L</span>
-            <span className={`font-semibold ${wr >= 50 ? "text-win" : "text-loss"}`}>{wr}%</span>
-          </div>
-        )}
+    <div className="relative overflow-hidden rounded-xl border border-white/[0.07] p-3 gradient-border-gold"
+      style={{ background: "linear-gradient(135deg, rgba(202,138,4,0.06) 0%, rgba(13,18,38,0.8) 100%)" }}>
+      <div className="flex items-center gap-3">
+        <div className="relative flex-shrink-0">
+          <img src={`https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-shared-components/global/default/${tier.toLowerCase()}.png`}
+            alt={tier} className="w-14 h-14 object-contain drop-shadow-lg" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[9px] text-muted-foreground uppercase tracking-[0.15em] font-semibold mb-0.5">{queueLabel}</p>
+          <p className="font-display text-sm leading-tight text-gradient-gold">{tier}{entry?.rank ? ` ${entry.rank}` : ""}</p>
+          {entry && (
+            <>
+              <div className="flex items-center gap-2 text-xs mt-1">
+                <span className="text-foreground font-bold">{entry.leaguePoints} <span className="text-muted-foreground font-normal text-[10px]">LP</span></span>
+                <span className="text-muted-foreground text-[10px]">·</span>
+                <span className="text-muted-foreground text-[10px]">{entry.wins}W {entry.losses}L</span>
+                <span className={`font-bold text-[10px] ml-auto ${wr >= 50 ? "text-win" : "text-loss"}`}>{wr}%</span>
+              </div>
+              <div className="mt-1.5 w-full h-1 rounded-full overflow-hidden bg-white/[0.06]">
+                <div className="h-full rounded-full transition-all" style={{ width: `${wr}%`, background: wrBarColor, opacity: 0.7 }} />
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -571,11 +582,20 @@ function AnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoad
   );
 }
 
+type MobileTab = "analiza" | "rang" | "mecze";
+
+const MOBILE_TABS: { id: MobileTab; label: string; icon: React.ElementType }[] = [
+  { id: "analiza", label: "Analiza", icon: BarChart3 },
+  { id: "rang", label: "Rang", icon: Trophy },
+  { id: "mecze", label: "Mecze", icon: Shield },
+];
+
 export default function Profile() {
   const params = useParams();
   const region = params.region as string;
   const gameName = decodeURIComponent(params.gameName || "");
   const tagLine = decodeURIComponent(params.tagLine || "");
+  const [mobileTab, setMobileTab] = useState<MobileTab>("analiza");
 
   const { data: profile, isLoading: isLoadingProfile, error: profileError } = useSearchSummoner({ region, gameName, tagLine });
   const puuid = profile?.puuid ?? "";
@@ -605,33 +625,62 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen pb-16">
+
       {/* Header */}
-      <header className="border-b border-border/50 bg-card/20">
-        <div className="max-w-7xl mx-auto px-4 py-5 flex items-center gap-5">
-          <Link href="/" className="text-muted-foreground hover:text-primary transition mr-1">
+      <header className="relative border-b overflow-hidden" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ background: "linear-gradient(135deg, rgba(202,138,4,0.04) 0%, transparent 50%, rgba(139,92,246,0.04) 100%)" }} />
+        <div className="absolute inset-x-0 bottom-0 h-px"
+          style={{ background: "linear-gradient(90deg, transparent, rgba(202,138,4,0.25), transparent)" }} />
+
+        <div className="relative max-w-7xl mx-auto px-4 py-4 sm:py-5 flex items-center gap-4">
+          <Link href="/" className="text-muted-foreground hover:text-primary transition-colors flex-shrink-0 p-1.5 rounded-lg hover:bg-white/[0.05]">
             <ChevronLeft className="w-5 h-5" />
           </Link>
+
           <div className="relative flex-shrink-0">
-            <img src={`${DD}/profileicon/${profile?.profileIconId}.png`} alt=""
-              className="w-16 h-16 rounded-xl border-2 border-primary/30 object-cover" />
-            <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 bg-card border border-border px-2 py-0.5 rounded text-[10px] font-bold">{profile?.summonerLevel}</span>
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden glow-gold"
+              style={{ border: "1.5px solid rgba(202,138,4,0.3)", boxShadow: "0 0 20px rgba(202,138,4,0.12)" }}>
+              <img src={`${DD}/profileicon/${profile?.profileIconId}.png`} alt="" className="w-full h-full object-cover" />
+            </div>
+            <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 text-[9px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
+              style={{ background: "rgba(13,18,38,0.95)", border: "1px solid rgba(202,138,4,0.2)", color: "hsl(42,92%,65%)" }}>
+              Lv. {profile?.summonerLevel}
+            </span>
           </div>
+
           <div className="flex-1 min-w-0">
-            <div className="flex items-baseline gap-2 flex-wrap">
-              <h1 className="text-2xl font-bold text-white tracking-tight">{profile?.gameName}</h1>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight leading-none">{profile?.gameName}</h1>
               <span className="text-sm text-muted-foreground font-sans font-normal">#{profile?.tagLine}</span>
-              <span className="text-[10px] bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded font-bold tracking-widest uppercase">{region}</span>
+              <span className="text-[9px] px-2 py-0.5 rounded font-bold tracking-widest uppercase flex-shrink-0"
+                style={{ background: "rgba(202,138,4,0.1)", color: "hsl(42,92%,65%)", border: "1px solid rgba(202,138,4,0.2)" }}>
+                {region}
+              </span>
               {liveGame && (
-                <span className="text-[10px] bg-green-500/10 text-green-400 border border-green-500/20 px-2 py-0.5 rounded font-bold tracking-wider flex items-center gap-1 animate-pulse">
-                  <Wifi className="w-2.5 h-2.5" /> LIVE
+                <span className="text-[9px] px-2 py-0.5 rounded font-bold tracking-wider flex items-center gap-1.5 flex-shrink-0"
+                  style={{ background: "rgba(34,197,94,0.1)", color: "hsl(152,62%,50%)", border: "1px solid rgba(34,197,94,0.2)" }}>
+                  <span className="pulse-dot" />
+                  LIVE
                 </span>
               )}
             </div>
             {!isLoadingRanked && (
-              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                {soloQ && <span>Solo/Duo: <span className="text-foreground font-semibold">{soloQ.tier} {soloQ.rank} {soloQ.leaguePoints} LP</span></span>}
-                {flexQ && <span>Flex: <span className="text-foreground font-semibold">{flexQ.tier} {flexQ.rank} {flexQ.leaguePoints} LP</span></span>}
-                {!soloQ && !flexQ && <span>Unranked</span>}
+              <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground flex-wrap">
+                {soloQ && (
+                  <span className="flex items-center gap-1">
+                    <Trophy className="w-3 h-3 text-primary/50" />
+                    <span className="text-foreground/80 font-semibold">{soloQ.tier} {soloQ.rank}</span>
+                    <span className="text-muted-foreground/60">{soloQ.leaguePoints} LP</span>
+                  </span>
+                )}
+                {flexQ && (
+                  <span className="flex items-center gap-1">
+                    <Users className="w-3 h-3 text-muted-foreground/40" />
+                    <span className="text-muted-foreground/70">{flexQ.tier} {flexQ.rank}</span>
+                  </span>
+                )}
+                {!soloQ && !flexQ && <span className="text-muted-foreground/50">Unranked</span>}
               </div>
             )}
           </div>
@@ -641,29 +690,57 @@ export default function Profile() {
       <div className="max-w-7xl mx-auto px-4 mt-5">
         {liveGame && <LiveGameBanner data={liveGame} />}
 
+        {/* Mobile tab navigation */}
+        <div className="lg:hidden mb-4 sticky top-0 z-30 py-2"
+          style={{ background: "linear-gradient(180deg, hsl(228,32%,4%) 80%, transparent)" }}>
+          <div className="mobile-tab-bar">
+            {MOBILE_TABS.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setMobileTab(tab.id)}
+                className={`mobile-tab ${mobileTab === tab.id ? "mobile-tab-active" : "mobile-tab-inactive"}`}
+              >
+                <tab.icon className="w-3.5 h-3.5" />
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
           {/* Main Content */}
-          <div className="lg:col-span-9">
+          <div className={`lg:col-span-9 ${mobileTab !== "analiza" ? "hidden lg:block" : ""}`}>
             <AnalysisSection data={analysis} isLoading={isLoadingAnalysis} recentMatches={matches} />
           </div>
 
           {/* Sidebar */}
-          <aside className="lg:col-span-3 space-y-4">
-            <div>
-              <p className="section-title"><Trophy className="w-3.5 h-3.5 text-primary" /> Rang <InfoTooltip align="right" text="Twoja liga rankingowa Solo/Duo i Flex. LP (League Points) to punkty do awansu — po 100 LP promujesz do wyższego podziału. WR% = procent wygranych gier w tej kolejce." /></p>
+          <aside className={`lg:col-span-3 space-y-4 ${mobileTab === "analiza" ? "hidden lg:flex lg:flex-col" : ""}`}>
+
+            {/* Rang + Predicted */}
+            <div className={mobileTab === "mecze" ? "hidden lg:block" : ""}>
+              <p className="section-title">
+                <Trophy className="w-3.5 h-3.5 text-primary" /> Rang
+                <InfoTooltip align="right" text="Twoja liga rankingowa Solo/Duo i Flex. LP (League Points) to punkty do awansu — po 100 LP promujesz do wyższego podziału. WR% = procent wygranych gier w tej kolejce." />
+              </p>
               <div className="space-y-2">
-                {isLoadingRanked ? <div className="stat-card h-20 animate-pulse" /> : (<><RankedCard entry={soloQ} />{flexQ && <RankedCard entry={flexQ} />}</>)}
+                {isLoadingRanked
+                  ? <div className="h-20 rounded-xl animate-pulse" style={{ background: "rgba(255,255,255,0.03)" }} />
+                  : <><RankedCard entry={soloQ} />{flexQ && <RankedCard entry={flexQ} />}</>
+                }
                 {!isLoadingAnalysis && analysis?.predictedTier && (
-                  <div className="stat-card border-primary/20 bg-primary/5">
-                    <p className="text-[10px] uppercase tracking-widest text-primary font-bold mb-1.5 flex items-center gap-1">
-                      <Brain className="w-3 h-3" /> Szacowana ranga
+                  <div className="rounded-xl p-3 relative overflow-hidden" style={{
+                    background: "linear-gradient(135deg, rgba(139,92,246,0.08), rgba(13,18,38,0.8))",
+                    border: "1px solid rgba(139,92,246,0.2)",
+                  }}>
+                    <p className="text-[9px] uppercase tracking-[0.15em] font-bold mb-2 flex items-center gap-1" style={{ color: "#a78bfa" }}>
+                      <Brain className="w-3 h-3" /> Szacowana ranga AI
                     </p>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2.5">
                       <img src={`https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-shared-components/global/default/${analysis.predictedTier.tier.toLowerCase()}.png`}
-                        alt={analysis.predictedTier.tier} className="w-10 h-10 object-contain"
+                        alt={analysis.predictedTier.tier} className="w-11 h-11 object-contain drop-shadow"
                         onError={(e) => { e.currentTarget.style.display = "none"; }} />
                       <div>
-                        <p className="text-sm font-bold text-gradient-gold">
+                        <p className="text-sm font-bold text-gradient-purple">
                           {analysis.predictedTier.tier} {analysis.predictedTier.division}
                         </p>
                         <p className="text-[10px] text-muted-foreground">~{analysis.predictedTier.lp} LP · {analysis.predictedTier.confidence}</p>
@@ -674,40 +751,49 @@ export default function Profile() {
               </div>
             </div>
 
-            <div>
-              <p className="section-title"><Target className="w-3.5 h-3.5 text-primary" /> Mistrzostwo <InfoTooltip align="right" text="Oficjalny system Riot Games pokazujący ile gier zagrałeś danym bohaterem. Lv. 7 = najwyższy poziom mistrzostwa. Liczba po prawej (K) = tysiące punktów mistrzostwa zdobytych łącznie." /></p>
+            {/* Mastery */}
+            <div className={mobileTab === "mecze" ? "hidden lg:block" : ""}>
+              <p className="section-title">
+                <Target className="w-3.5 h-3.5 text-primary" /> Mistrzostwo
+                <InfoTooltip align="right" text="Oficjalny system Riot Games pokazujący ile gier zagrałeś danym bohaterem. Lv. 7 = najwyższy poziom mistrzostwa. Liczba po prawej (K) = tysiące punktów mistrzostwa zdobytych łącznie." />
+              </p>
               <div className="glass-panel p-2 space-y-0.5">
-                {isLoadingMastery ? (
-                  Array(3).fill(0).map((_, i) => <div key={i} className="h-10 bg-muted/30 rounded animate-pulse" />)
-                ) : mastery?.length === 0 ? (
-                  <p className="text-xs text-muted-foreground text-center py-3">Brak danych</p>
-                ) : (
-                  mastery?.map((ch: any, i: number) => (
-                    <div key={i} className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/20 transition-colors">
-                      <span className="text-[10px] text-muted-foreground font-mono w-3">{i + 1}</span>
-                      <img src={`${DD}/champion/${ch.championName}.png`} alt="" className="w-8 h-8 rounded-lg border border-border"
-                        onError={(e) => { e.currentTarget.src = FALLBACK_ICON; }} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-white truncate">{ch.championName}</p>
-                        <p className="text-[10px] text-muted-foreground">Lv. {ch.championLevel}</p>
+                {isLoadingMastery
+                  ? Array(3).fill(0).map((_, i) => <div key={i} className="h-10 rounded-lg animate-pulse" style={{ background: "rgba(255,255,255,0.03)" }} />)
+                  : mastery?.length === 0
+                    ? <p className="text-xs text-muted-foreground text-center py-3">Brak danych</p>
+                    : mastery?.map((ch: any, i: number) => (
+                      <div key={i} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-white/[0.03] transition-colors cursor-default">
+                        <span className="text-[10px] text-muted-foreground/50 font-mono w-3 text-right">{i + 1}</span>
+                        <img src={`${DD}/champion/${ch.championName}.png`} alt="" className="w-8 h-8 rounded-lg"
+                          style={{ border: "1px solid rgba(255,255,255,0.08)" }}
+                          onError={(e) => { e.currentTarget.src = FALLBACK_ICON; }} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-white/90 truncate">{ch.championName}</p>
+                          <p className="text-[10px] text-muted-foreground">Lv. {ch.championLevel}</p>
+                        </div>
+                        <span className="text-[10px] font-bold font-mono" style={{ color: "hsl(42,92%,62%)" }}>
+                          {(ch.championPoints / 1000).toFixed(0)}K
+                        </span>
                       </div>
-                      <span className="text-[10px] font-mono text-primary">{(ch.championPoints / 1000).toFixed(0)}K</span>
-                    </div>
-                  ))
-                )}
+                    ))
+                }
               </div>
             </div>
 
-            <div>
-              <p className="section-title"><Shield className="w-3.5 h-3.5 text-primary" /> Ostatnie mecze <InfoTooltip align="right" text="10 ostatnich gier rankingowych. W/L = wynik meczu. K/D/A = Zabójstwa/Śmierci/Asysty. CS = zabite minionki. Mała ikona na portrecie = bohater przeciwnika z Twojej linii. Liczba z prawej = OP Score (0–10): ogólna ocena Twojej wydajności w meczu." /></p>
+            {/* Match History */}
+            <div className={mobileTab === "rang" ? "hidden lg:block" : ""}>
+              <p className="section-title">
+                <Shield className="w-3.5 h-3.5 text-primary" /> Ostatnie mecze
+                <InfoTooltip align="right" text="10 ostatnich gier rankingowych. W/L = wynik meczu. K/D/A = Zabójstwa/Śmierci/Asysty. CS = zabite minionki. Mała ikona na portrecie = bohater przeciwnika z Twojej linii. Liczba z prawej = OP Score (0–10): ogólna ocena Twojej wydajności w meczu." />
+              </p>
               <div className="space-y-1.5">
-                {isLoadingMatches ? (
-                  Array(5).fill(0).map((_, i) => <div key={i} className="h-14 bg-muted/20 rounded-lg animate-pulse" />)
-                ) : matches?.length === 0 ? (
-                  <p className="text-xs text-muted-foreground text-center py-3">Brak historii</p>
-                ) : (
-                  matches?.map((m: any, i: number) => <MatchRow key={m.matchId} match={m} index={i} />)
-                )}
+                {isLoadingMatches
+                  ? Array(5).fill(0).map((_, i) => <div key={i} className="h-14 rounded-lg animate-pulse" style={{ background: "rgba(255,255,255,0.025)" }} />)
+                  : matches?.length === 0
+                    ? <p className="text-xs text-muted-foreground text-center py-3">Brak historii</p>
+                    : matches?.map((m: any, i: number) => <MatchRow key={m.matchId} match={m} index={i} />)
+                }
               </div>
             </div>
           </aside>
