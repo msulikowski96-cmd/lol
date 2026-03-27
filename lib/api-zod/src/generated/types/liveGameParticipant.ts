@@ -15,5 +15,8 @@ export interface LiveGameParticipant {
   teamId: number;
   spell1Id: number;
   spell2Id: number;
+  rankedTier: string;
+  rankedDivision: string;
+  rankedLP: number;
   perks: LiveGameParticipantPerks;
 }

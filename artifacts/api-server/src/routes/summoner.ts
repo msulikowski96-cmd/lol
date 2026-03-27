@@ -379,6 +379,28 @@ router.get("/:puuid/live", async (req, res) => {
     const champData = (await champRes.json()) as { data: Record<string, { key: string; name: string }> };
     const champById: Record<string, string> = {};
     for (const [name, champ] of Object.entries(champData.data)) { champById[champ.key] = name; }
+    // Fetch ranked data for all participants in parallel
+    const rankedByPuuid: Record<string, { tier: string; division: string; lp: number }> = {};
+    await Promise.allSettled(
+      (liveData.participants ?? []).map(async (p: any) => {
+        if (!p.puuid) return;
+        try {
+          const rUrl = `https://${regionLower}.api.riotgames.com/lol/league/v4/entries/by-puuid/${p.puuid}`;
+          const rRes = await fetch(rUrl, { headers: { "X-Riot-Token": RIOT_API_KEY } });
+          if (!rRes.ok) return;
+          const entries = (await rRes.json()) as any[];
+          const soloq = entries.find((e: any) => e.queueType === "RANKED_SOLO_5x5");
+          if (soloq) {
+            rankedByPuuid[p.puuid] = {
+              tier: soloq.tier ?? "UNRANKED",
+              division: soloq.rank ?? "",
+              lp: soloq.leaguePoints ?? 0,
+            };
+          }
+        } catch { /* ignore individual failures */ }
+      })
+    );
+
     const participants = (liveData.participants ?? []).map((p: any) => ({
       puuid: p.puuid ?? "",
       summonerName: p.riotId ?? p.summonerName ?? "Nieznany",
@@ -387,6 +409,9 @@ router.get("/:puuid/live", async (req, res) => {
       teamId: p.teamId ?? 0,
       spell1Id: p.spell1Id ?? 0,
       spell2Id: p.spell2Id ?? 0,
+      rankedTier: rankedByPuuid[p.puuid]?.tier ?? "UNRANKED",
+      rankedDivision: rankedByPuuid[p.puuid]?.division ?? "",
+      rankedLP: rankedByPuuid[p.puuid]?.lp ?? 0,
       perks: { perkIds: p.perks?.perkIds ?? [], perkStyle: p.perks?.perkStyle ?? 0, perkSubStyle: p.perks?.perkSubStyle ?? 0 },
     }));
     const bans = (liveData.bannedChampions ?? []).map((b: any) => ({

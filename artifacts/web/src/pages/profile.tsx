@@ -90,6 +90,23 @@ const SPELL_IMG: Record<number, string> = {
   39: "SummonerSnowURFSnowball_Mark", 2: "SummonerOldRecall",
 };
 
+const RUNE_STYLE_ICON: Record<number, string> = {
+  8000: "7201_Precision", 8100: "7200_Domination",
+  8200: "7202_Sorcery", 8300: "7203_Whimsy", 8400: "7204_Resolve",
+};
+
+const TIER_COLOR: Record<string, string> = {
+  CHALLENGER: "#F4C874", GRANDMASTER: "#E84057", MASTER: "#9D5FDB",
+  DIAMOND: "#576BCE", EMERALD: "#2AD8A4", PLATINUM: "#22A6B3",
+  GOLD: "#C8AA6E", SILVER: "#A0A8BC", BRONZE: "#8D6845", IRON: "#6B6B6B",
+};
+
+const TIER_ABBR: Record<string, string> = {
+  CHALLENGER: "C", GRANDMASTER: "GM", MASTER: "M",
+  DIAMOND: "D", EMERALD: "E", PLATINUM: "P",
+  GOLD: "G", SILVER: "S", BRONZE: "B", IRON: "I",
+};
+
 function LiveGameBanner({ data, selfPuuid }: { data: any; selfPuuid?: string }) {
   if (!data) return null;
 
@@ -115,6 +132,35 @@ function LiveGameBanner({ data, selfPuuid }: { data: any; selfPuuid?: string }) 
     const name = SPELL_IMG[id];
     if (!name) return <div className="w-4 h-4 rounded bg-muted/30" />;
     return <img src={`${DD}/spell/${name}.png`} alt={name} className="w-4 h-4 rounded border border-black/30" onError={(e) => { e.currentTarget.style.display = "none"; }} />;
+  }
+
+  function RuneStyleIcon({ styleId, size = 14 }: { styleId: number; size?: number }) {
+    const name = RUNE_STYLE_ICON[styleId];
+    if (!name) return <div style={{ width: size, height: size }} className="rounded-full bg-muted/20" />;
+    return (
+      <img
+        src={`https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/${name}.png`}
+        alt=""
+        style={{ width: size, height: size }}
+        className="rounded-full"
+        onError={(e) => { e.currentTarget.style.display = "none"; }}
+      />
+    );
+  }
+
+  function RankBadge({ tier, division }: { tier: string; division: string }) {
+    const color = TIER_COLOR[tier] ?? "#6B6B6B";
+    const abbr = TIER_ABBR[tier] ?? "?";
+    const showDiv = !["CHALLENGER", "GRANDMASTER", "MASTER"].includes(tier) && division;
+    return (
+      <div
+        className="flex-shrink-0 flex items-center justify-center rounded text-[8px] font-extrabold leading-none"
+        style={{ color, border: `1px solid ${color}40`, background: `${color}12`, minWidth: 22, height: 16, padding: "0 3px" }}
+        title={tier + (showDiv ? ` ${division}` : "")}
+      >
+        {abbr}{showDiv ? ` ${division}` : ""}
+      </div>
+    );
   }
 
   function BanRow({ bans, color }: { bans: any[]; color: string }) {
@@ -172,16 +218,28 @@ function LiveGameBanner({ data, selfPuuid }: { data: any; selfPuuid?: string }) 
                 const isSelf = pl.puuid === selfPuuid;
                 return (
                   <div key={i} className={`flex items-center gap-1.5 px-1.5 py-1 rounded-lg transition-colors ${isSelf ? (color === "blue" ? "bg-blue-500/10 ring-1 ring-blue-500/25" : "bg-red-500/10 ring-1 ring-red-500/25") : "hover:bg-white/[0.03]"}`}>
+                    {/* Champion icon */}
                     <img src={`${DD}/champion/${pl.championName}.png`} alt={pl.championName}
                       className="w-7 h-7 rounded-md border flex-shrink-0"
                       style={{ borderColor: color === "blue" ? "rgba(59,130,246,0.2)" : "rgba(239,68,68,0.2)" }}
                       onError={(e) => { e.currentTarget.src = FALLBACK_ICON; }} />
+                    {/* Name + champion */}
                     <div className="flex-1 min-w-0">
                       <p className={`text-[10px] truncate font-medium leading-tight ${isSelf ? (color === "blue" ? "text-blue-300" : "text-red-300") : "text-foreground/80"}`}>
                         {isSelf ? "▶ " : ""}{pl.summonerName}
                       </p>
                       <p className="text-[9px] text-muted-foreground/60 truncate leading-tight">{pl.championName}</p>
                     </div>
+                    {/* Rank badge */}
+                    {pl.rankedTier && pl.rankedTier !== "UNRANKED" && (
+                      <RankBadge tier={pl.rankedTier} division={pl.rankedDivision ?? ""} />
+                    )}
+                    {/* Rune path icons */}
+                    <div className="flex flex-col gap-0.5 flex-shrink-0">
+                      <RuneStyleIcon styleId={pl.perks?.perkStyle ?? 0} size={14} />
+                      <RuneStyleIcon styleId={pl.perks?.perkSubStyle ?? 0} size={12} />
+                    </div>
+                    {/* Summoner spells */}
                     <div className="flex flex-col gap-0.5 flex-shrink-0">
                       <SpellIcon id={pl.spell1Id} />
                       <SpellIcon id={pl.spell2Id} />

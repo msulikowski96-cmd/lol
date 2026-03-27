@@ -738,6 +738,12 @@ components:
           type: number
         spell2Id:
           type: number
+        rankedTier:
+          type: string
+        rankedDivision:
+          type: string
+        rankedLP:
+          type: number
         perks:
           type: object
           properties:
@@ -761,6 +767,9 @@ components:
         - teamId
         - spell1Id
         - spell2Id
+        - rankedTier
+        - rankedDivision
+        - rankedLP
         - perks
     LiveGameBan:
       type: object

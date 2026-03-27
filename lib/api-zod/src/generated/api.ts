@@ -325,6 +325,9 @@ export const GetLiveGameResponse = zod.object({
       teamId: zod.number(),
       spell1Id: zod.number(),
       spell2Id: zod.number(),
+      rankedTier: zod.string(),
+      rankedDivision: zod.string(),
+      rankedLP: zod.number(),
       perks: zod.object({
         perkIds: zod.array(zod.number()),
         perkStyle: zod.number(),
