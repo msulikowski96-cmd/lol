@@ -762,6 +762,22 @@ components:
         - spell1Id
         - spell2Id
         - perks
+    LiveGameBan:
+      type: object
+      properties:
+        championId:
+          type: number
+        championName:
+          type: string
+        teamId:
+          type: number
+        pickTurn:
+          type: number
+      required:
+        - championId
+        - championName
+        - teamId
+        - pickTurn
     LiveGame:
       type: object
       properties:
@@ -779,6 +795,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/LiveGameParticipant"
+        bans:
+          type: array
+          items:
+            $ref: "#/components/schemas/LiveGameBan"
       required:
         - gameId
         - gameMode
@@ -786,6 +806,7 @@ components:
         - gameLength
         - mapId
         - participants
+        - bans
     PlayerAnalysis:
       type: object
       properties:

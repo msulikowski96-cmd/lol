@@ -213,6 +213,13 @@ export interface LiveGameParticipant {
   perks: LiveGameParticipantPerks;
 }
 
+export interface LiveGameBan {
+  championId: number;
+  championName: string;
+  teamId: number;
+  pickTurn: number;
+}
+
 export interface LiveGame {
   gameId: number;
   gameMode: string;
@@ -220,6 +227,7 @@ export interface LiveGame {
   gameLength: number;
   mapId: number;
   participants: LiveGameParticipant[];
+  bans: LiveGameBan[];
 }
 
 export type PlayerAnalysisRoleDistribution = { [key: string]: number };

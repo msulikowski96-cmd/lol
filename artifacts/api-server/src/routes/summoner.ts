@@ -381,10 +381,16 @@ router.get("/:puuid/live", async (req, res) => {
       spell2Id: p.spell2Id ?? 0,
       perks: { perkIds: p.perks?.perkIds ?? [], perkStyle: p.perks?.perkStyle ?? 0, perkSubStyle: p.perks?.perkSubStyle ?? 0 },
     }));
+    const bans = (liveData.bannedChampions ?? []).map((b: any) => ({
+      championId: b.championId ?? -1,
+      championName: b.championId && b.championId > 0 ? (champById[String(b.championId)] ?? "Nieznany") : "Brak",
+      teamId: b.teamId ?? 0,
+      pickTurn: b.pickTurn ?? 0,
+    }));
     const result = {
       gameId: liveData.gameId ?? 0, gameMode: liveData.gameMode ?? "CLASSIC",
       gameType: liveData.gameType ?? "MATCHED_GAME", gameLength: liveData.gameLength ?? 0,
-      mapId: liveData.mapId ?? 0, participants,
+      mapId: liveData.mapId ?? 0, participants, bans,
     };
     const validated = GetLiveGameResponse.parse(result);
     res.json(validated);

@@ -22,6 +22,7 @@ export * from "./getSummonerMatchesParams";
 export * from "./getSummonerRankedParams";
 export * from "./healthStatus";
 export * from "./liveGame";
+export * from "./liveGameBan";
 export * from "./liveGameParticipant";
 export * from "./liveGameParticipantPerks";
 export * from "./matchOpponent";

@@ -5,6 +5,7 @@
  * LoL Stats Checker API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { LiveGameBan } from "./liveGameBan";
 import type { LiveGameParticipant } from "./liveGameParticipant";
 
 export interface LiveGame {
@@ -14,4 +15,5 @@ export interface LiveGame {
   gameLength: number;
   mapId: number;
   participants: LiveGameParticipant[];
+  bans: LiveGameBan[];
 }

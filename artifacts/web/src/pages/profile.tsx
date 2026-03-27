@@ -82,41 +82,126 @@ function SparklineChart({ matches }: { matches: any[] }) {
   );
 }
 
-function LiveGameBanner({ data }: { data: any }) {
+const SPELL_IMG: Record<number, string> = {
+  1: "SummonerBoost", 3: "SummonerExhaust", 4: "SummonerFlash",
+  6: "SummonerHaste", 7: "SummonerHeal", 11: "SummonerSmite",
+  12: "SummonerTeleport", 13: "SummonerMana", 14: "SummonerDot",
+  21: "SummonerBarrier", 32: "SummonerSnowball", 55: "SummonerPoroRecall",
+  39: "SummonerSnowURFSnowball_Mark", 2: "SummonerOldRecall",
+};
+
+function LiveGameBanner({ data, selfPuuid }: { data: any; selfPuuid?: string }) {
   if (!data) return null;
-  const t1 = data.participants?.filter((p: any) => p.teamId === 100) ?? [];
-  const t2 = data.participants?.filter((p: any) => p.teamId === 200) ?? [];
-  const mins = Math.floor((data.gameLength ?? 0) / 60);
-  const secs = (data.gameLength ?? 0) % 60;
-  return (
-    <div className="glass-panel bg-green-950/10 border-green-500/20 p-4 mb-5">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          <span className="text-sm font-bold text-green-400 uppercase tracking-wider">W meczu</span>
-        </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Clock className="w-3 h-3" />{mins}:{secs.toString().padStart(2, "0")}
-          <span className="bg-muted/40 px-1.5 py-0.5 rounded text-[10px]">{data.gameMode}</span>
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        {[{ p: t1, c: "blue" }, { p: t2, c: "red" }].map(({ p, c }) => (
-          <div key={c} className="space-y-1">
-            <p className={`text-[10px] uppercase tracking-widest font-bold ${c === "blue" ? "text-blue-400" : "text-red-400"} mb-1`}>
-              {c === "blue" ? "Niebiescy" : "Czerwoni"}
-            </p>
-            {p.map((pl: any, i: number) => (
-              <div key={i} className="flex items-center gap-1.5 text-xs">
-                <img src={`${DD}/champion/${pl.championName}.png`} alt="" className="w-5 h-5 rounded-full" onError={(e) => { e.currentTarget.style.display = "none"; }} />
-                <span className="text-foreground/70 truncate flex-1">{pl.summonerName}</span>
-                <span className="text-muted-foreground text-[10px]">{pl.championName}</span>
+
+  const [elapsed, setElapsed] = useState<number>(data.gameLength ?? 0);
+  useEffect(() => {
+    setElapsed(data.gameLength ?? 0);
+    const id = setInterval(() => setElapsed(s => s + 1), 1000);
+    return () => clearInterval(id);
+  }, [data.gameLength]);
+
+  const t1 = (data.participants ?? []).filter((p: any) => p.teamId === 100);
+  const t2 = (data.participants ?? []).filter((p: any) => p.teamId === 200);
+  const b1 = (data.bans ?? []).filter((b: any) => b.teamId === 100).sort((a: any, b: any) => a.pickTurn - b.pickTurn);
+  const b2 = (data.bans ?? []).filter((b: any) => b.teamId === 200).sort((a: any, b: any) => a.pickTurn - b.pickTurn);
+
+  const fmt = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
+
+  const modeLabel: Record<string, string> = {
+    CLASSIC: "Rankingowa", ARAM: "ARAM", URF: "URF", ONEFORALL: "OFA", TUTORIAL: "Tutorial",
+  };
+
+  function SpellIcon({ id }: { id: number }) {
+    const name = SPELL_IMG[id];
+    if (!name) return <div className="w-4 h-4 rounded bg-muted/30" />;
+    return <img src={`${DD}/spell/${name}.png`} alt={name} className="w-4 h-4 rounded border border-black/30" onError={(e) => { e.currentTarget.style.display = "none"; }} />;
+  }
+
+  function BanRow({ bans, color }: { bans: any[]; color: string }) {
+    if (!bans.length) return null;
+    return (
+      <div className="flex items-center gap-1 flex-wrap">
+        {bans.map((b: any, i: number) => (
+          <div key={i} title={b.championName === "Brak" ? "Brak bana" : b.championName}
+            className={`relative rounded overflow-hidden ${b.championName === "Brak" ? "opacity-30" : ""}`}>
+            {b.championName !== "Brak" ? (
+              <>
+                <img src={`${DD}/champion/${b.championName}.png`} alt={b.championName}
+                  className="w-6 h-6 object-cover grayscale opacity-60" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                <div className={`absolute inset-0 ${color === "blue" ? "bg-blue-950/40" : "bg-red-950/40"}`} />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-white/60 text-[8px] font-bold">✕</span>
+                </div>
+              </>
+            ) : (
+              <div className="w-6 h-6 rounded bg-white/[0.04] border border-white/[0.06] flex items-center justify-center">
+                <span className="text-muted-foreground/30 text-[9px]">?</span>
               </div>
-            ))}
+            )}
           </div>
         ))}
       </div>
-    </div>
+    );
+  }
+
+  return (
+    <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl overflow-hidden mb-5 border"
+      style={{ background: "linear-gradient(135deg, rgba(21,128,61,0.08) 0%, rgba(13,18,38,0.9) 100%)", borderColor: "rgba(34,197,94,0.2)" }}>
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: "rgba(34,197,94,0.12)", background: "rgba(21,128,61,0.07)" }}>
+        <div className="flex items-center gap-2.5">
+          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
+          <span className="text-sm font-bold text-green-400 tracking-wide">LIVE</span>
+          <span className="text-[10px] px-2 py-0.5 rounded font-medium" style={{ background: "rgba(255,255,255,0.06)", color: "rgba(148,163,184,0.8)" }}>
+            {modeLabel[data.gameMode] ?? data.gameMode}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 font-mono text-sm font-bold text-green-300">
+          <Clock className="w-3.5 h-3.5" />
+          {fmt(elapsed)}
+        </div>
+      </div>
+
+      {/* Teams */}
+      <div className="grid grid-cols-2 divide-x" style={{ divideColor: "rgba(255,255,255,0.05)" }}>
+        {[{ participants: t1, bans: b1, color: "blue", label: "Niebiescy" }, { participants: t2, bans: b2, color: "red", label: "Czerwoni" }].map(({ participants, bans, color, label }) => (
+          <div key={color} className="p-3">
+            <p className={`text-[9px] uppercase tracking-[0.18em] font-bold mb-2 ${color === "blue" ? "text-blue-400" : "text-red-400"}`}>{label}</p>
+            <div className="space-y-1.5">
+              {participants.map((pl: any, i: number) => {
+                const isSelf = pl.puuid === selfPuuid;
+                return (
+                  <div key={i} className={`flex items-center gap-1.5 px-1.5 py-1 rounded-lg transition-colors ${isSelf ? (color === "blue" ? "bg-blue-500/10 ring-1 ring-blue-500/25" : "bg-red-500/10 ring-1 ring-red-500/25") : "hover:bg-white/[0.03]"}`}>
+                    <img src={`${DD}/champion/${pl.championName}.png`} alt={pl.championName}
+                      className="w-7 h-7 rounded-md border flex-shrink-0"
+                      style={{ borderColor: color === "blue" ? "rgba(59,130,246,0.2)" : "rgba(239,68,68,0.2)" }}
+                      onError={(e) => { e.currentTarget.src = FALLBACK_ICON; }} />
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-[10px] truncate font-medium leading-tight ${isSelf ? (color === "blue" ? "text-blue-300" : "text-red-300") : "text-foreground/80"}`}>
+                        {isSelf ? "▶ " : ""}{pl.summonerName}
+                      </p>
+                      <p className="text-[9px] text-muted-foreground/60 truncate leading-tight">{pl.championName}</p>
+                    </div>
+                    <div className="flex flex-col gap-0.5 flex-shrink-0">
+                      <SpellIcon id={pl.spell1Id} />
+                      <SpellIcon id={pl.spell2Id} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Bans */}
+            {bans.length > 0 && (
+              <div className="mt-2.5 pt-2 border-t" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+                <p className="text-[8px] uppercase tracking-widest text-muted-foreground/40 mb-1.5">Bany</p>
+                <BanRow bans={bans} color={color} />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </motion.div>
   );
 }
 
@@ -727,7 +812,7 @@ export default function Profile() {
   const { data: matches, isLoading: isLoadingMatches } = useGetSummonerMatches(puuid, { region, count: matchCount }, { query: { enabled: !!puuid } });
   const { data: mastery, isLoading: isLoadingMastery } = useGetSummonerMastery(puuid, { region, count: 5 }, { query: { enabled: !!puuid } });
   const { data: analysis, isLoading: isLoadingAnalysis } = useGetSummonerAnalysis(puuid, { region, count: 20 }, { query: { enabled: !!puuid } });
-  const { data: liveGame } = useGetLiveGame(puuid, { region, summonerId }, { query: { enabled: !!puuid, retry: false } });
+  const { data: liveGame } = useGetLiveGame(puuid, { region, summonerId }, { query: { enabled: !!puuid, retry: false, refetchInterval: 60000 } });
 
   useEffect(() => {
     if (profile?.gameName) pushHistory(profile.gameName, profile.tagLine ?? tagLine, region);
@@ -832,7 +917,7 @@ export default function Profile() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 mt-5">
-        {liveGame && <LiveGameBanner data={liveGame} />}
+        {liveGame && <LiveGameBanner data={liveGame} selfPuuid={puuid} />}
 
         {/* Mobile tab navigation */}
         <div className="lg:hidden mb-4 sticky top-0 z-30 py-2"

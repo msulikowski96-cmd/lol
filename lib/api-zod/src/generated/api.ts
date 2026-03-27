@@ -332,4 +332,12 @@ export const GetLiveGameResponse = zod.object({
       }),
     }),
   ),
+  bans: zod.array(
+    zod.object({
+      championId: zod.number(),
+      championName: zod.string(),
+      teamId: zod.number(),
+      pickTurn: zod.number(),
+    }),
+  ),
 });
