@@ -1,4 +1,5 @@
 import { useParams, Link, useLocation } from "wouter";
+import { DD, SPELL_IMG, RUNE_STYLE_ICON, TIER_COLOR } from "../lib/constants";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
@@ -24,7 +25,6 @@ import {
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 const ROLE_EMOJI: Record<string, string> = { Top: "⚔️", Jungler: "🌿", Mid: "✨", ADC: "🏹", Support: "🛡️", Nieznana: "❓" };
-const DD = "https://ddragon.leagueoflegends.com/cdn/14.24.1/img";
 const FALLBACK_ICON = "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png";
 
 function InfoTooltip({ text, align = "left" }: { text: string; align?: "left" | "right" }) {
@@ -83,24 +83,6 @@ function SparklineChart({ matches }: { matches: any[] }) {
   );
 }
 
-const SPELL_IMG: Record<number, string> = {
-  1: "SummonerBoost", 3: "SummonerExhaust", 4: "SummonerFlash",
-  6: "SummonerHaste", 7: "SummonerHeal", 11: "SummonerSmite",
-  12: "SummonerTeleport", 13: "SummonerMana", 14: "SummonerDot",
-  21: "SummonerBarrier", 32: "SummonerSnowball", 55: "SummonerPoroRecall",
-  39: "SummonerSnowURFSnowball_Mark", 2: "SummonerOldRecall",
-};
-
-const RUNE_STYLE_ICON: Record<number, string> = {
-  8000: "7201_Precision", 8100: "7200_Domination",
-  8200: "7202_Sorcery", 8300: "7203_Whimsy", 8400: "7204_Resolve",
-};
-
-const TIER_COLOR: Record<string, string> = {
-  CHALLENGER: "#F4C874", GRANDMASTER: "#E84057", MASTER: "#9D5FDB",
-  DIAMOND: "#576BCE", EMERALD: "#2AD8A4", PLATINUM: "#22A6B3",
-  GOLD: "#C8AA6E", SILVER: "#A0A8BC", BRONZE: "#8D6845", IRON: "#6B6B6B",
-};
 
 const TIER_ABBR: Record<string, string> = {
   CHALLENGER: "C", GRANDMASTER: "GM", MASTER: "M",

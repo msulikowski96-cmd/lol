@@ -83,9 +83,11 @@ export default function Home() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (!gameName || !tagLine) return;
-    const cleanName = encodeURIComponent(gameName.trim());
-    const cleanTag = encodeURIComponent(tagLine.trim().replace(/^#/, ""));
-    setLocation(`/profile/${region}/${cleanName}/${cleanTag}`);
+    const name = gameName.trim();
+    const tag = tagLine.trim().replace(/^#/, "");
+    pushHistory(name, tag, region);
+    setHistory(loadHistory());
+    setLocation(`/profile/${region}/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`);
   };
 
   const handleQuick = (q: typeof QUICK_SEARCH[number]) => {

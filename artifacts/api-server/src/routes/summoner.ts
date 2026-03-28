@@ -41,7 +41,9 @@ async function riotFetch(url: string, req: any): Promise<Response> {
   if (!res.ok) {
     const text = await res.text();
     req.log.error({ url, status: res.status, body: text }, "Riot API error");
-    throw { status: res.status, message: text };
+    const err = new Error(text) as any;
+    err.status = res.status;
+    throw err;
   }
 
   return res;
@@ -315,15 +317,20 @@ router.get("/:puuid/mastery", async (req, res) => {
       lastPlayTime: number;
     }>;
 
-    // Get champion name from Data Dragon
     const ddVersion = "14.24.1";
-    const championsRes = await fetch(
-      `https://ddragon.leagueoflegends.com/cdn/${ddVersion}/data/en_US/champion.json`
-    );
-    const championsData = (await championsRes.json()) as { data: Record<string, { key: string; name: string }> };
     const championsByKey: Record<string, string> = {};
-    for (const [name, champ] of Object.entries(championsData.data)) {
-      championsByKey[champ.key] = name;
+    try {
+      const championsRes = await fetch(
+        `https://ddragon.leagueoflegends.com/cdn/${ddVersion}/data/en_US/champion.json`
+      );
+      if (championsRes.ok) {
+        const championsData = (await championsRes.json()) as { data: Record<string, { key: string; name: string }> };
+        for (const [name, champ] of Object.entries(championsData.data)) {
+          championsByKey[champ.key] = name;
+        }
+      }
+    } catch {
+      req.log.warn("Data Dragon champion fetch failed, using fallback names");
     }
 
     const mastery = data.map((entry) => ({

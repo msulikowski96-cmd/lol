@@ -7,33 +7,7 @@ import {
   useGetLiveGame,
 } from "@workspace/api-client-react";
 
-const DD = "https://ddragon.leagueoflegends.com/cdn/14.24.1/img";
-const FALLBACK_ICON = `${DD}/profileicon/29.png`;
-
-const SPELL_IMG: Record<number, string> = {
-  1: "SummonerBoost", 3: "SummonerExhaust", 4: "SummonerFlash",
-  6: "SummonerHaste", 7: "SummonerHeal", 11: "SummonerSmite",
-  12: "SummonerTeleport", 13: "SummonerMana", 14: "SummonerDot",
-  21: "SummonerBarrier", 32: "SummonerSnowball", 55: "SummonerPoroRecall",
-  39: "SummonerSnowURFSnowball_Mark", 2: "SummonerOldRecall",
-};
-
-const RUNE_STYLE_ICON: Record<number, string> = {
-  8000: "7201_Precision", 8100: "7200_Domination",
-  8200: "7202_Sorcery", 8300: "7203_Whimsy", 8400: "7204_Resolve",
-};
-
-const TIER_COLOR: Record<string, string> = {
-  CHALLENGER: "#F4C874", GRANDMASTER: "#E84057", MASTER: "#9D5FDB",
-  DIAMOND: "#576BCE", EMERALD: "#2AD8A4", PLATINUM: "#22A6B3",
-  GOLD: "#C8AA6E", SILVER: "#A0A8BC", BRONZE: "#8D6845", IRON: "#6B6B6B",
-};
-
-const TIER_LABEL: Record<string, string> = {
-  CHALLENGER: "Challenger", GRANDMASTER: "Grandmaster", MASTER: "Master",
-  DIAMOND: "Diament", EMERALD: "Szmaragd", PLATINUM: "Platyna",
-  GOLD: "Złoto", SILVER: "Srebro", BRONZE: "Brąz", IRON: "Żelazo",
-};
+import { DD, FALLBACK_ICON, SPELL_IMG, RUNE_STYLE_ICON, TIER_COLOR, TIER_LABEL } from "../lib/constants";
 
 const ROLE_ICONS = ["TOP", "JNG", "MID", "ADC", "SUP"];
 const ROLE_LABELS: Record<string, string> = {

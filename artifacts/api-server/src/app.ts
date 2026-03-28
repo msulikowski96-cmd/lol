@@ -35,7 +35,7 @@ app.use("/api", router);
 
 if (process.env.NODE_ENV === "production") {
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  const clientDist = path.resolve(__dirname, "..", "..", "web", "dist", "public");
+  const clientDist = path.resolve(__dirname, "..", "..", "web", "dist");
   app.use(express.static(clientDist));
   app.get("/{*splat}", (_req, res) => {
     res.sendFile(path.join(clientDist, "index.html"));
