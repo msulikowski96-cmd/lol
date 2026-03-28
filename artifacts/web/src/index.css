@@ -272,6 +272,13 @@
     background: rgba(255, 255, 255, 0.03);
   }
 
+  .mobile-tab-live {
+    background: rgba(34, 197, 94, 0.1);
+    color: hsl(152, 62%, 50%);
+    border-color: rgba(34, 197, 94, 0.25);
+    box-shadow: 0 0 12px rgba(34, 197, 94, 0.1);
+  }
+
   .rank-badge {
     display: inline-flex;
     align-items: center;

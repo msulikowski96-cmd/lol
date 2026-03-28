@@ -1,4 +1,4 @@
-import { useParams, Link } from "wouter";
+import { useParams, Link, useLocation } from "wouter";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
@@ -968,12 +968,13 @@ function AnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoad
   );
 }
 
-type MobileTab = "analiza" | "rang" | "mecze";
+type MobileTab = "analiza" | "rang" | "mecze" | "live";
 
 const MOBILE_TABS: { id: MobileTab; label: string; icon: React.ElementType }[] = [
   { id: "analiza", label: "Analiza", icon: BarChart3 },
   { id: "rang", label: "Rang", icon: Trophy },
   { id: "mecze", label: "Mecze", icon: Shield },
+  { id: "live", label: "Live", icon: Wifi },
 ];
 
 function pushHistory(gameName: string, tagLine: string, region: string) {
@@ -994,9 +995,18 @@ export default function Profile() {
   const region = params.region as string;
   const gameName = decodeURIComponent(params.gameName || "");
   const tagLine = decodeURIComponent(params.tagLine || "");
+  const [, navigate] = useLocation();
   const [mobileTab, setMobileTab] = useState<MobileTab>("analiza");
   const [matchCount, setMatchCount] = useState(10);
   const [shareState, setShareState] = useState<"idle" | "copied">("idle");
+
+  const handleTabClick = (tabId: MobileTab) => {
+    if (tabId === "live") {
+      navigate(`/live/${region}/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`);
+      return;
+    }
+    setMobileTab(tabId);
+  };
 
   const { data: profile, isLoading: isLoadingProfile, error: profileError } = useSearchSummoner({ region, gameName, tagLine });
   const puuid = profile?.puuid ?? "";
@@ -1135,9 +1145,10 @@ export default function Profile() {
             {MOBILE_TABS.map(tab => (
               <button
                 key={tab.id}
-                onClick={() => setMobileTab(tab.id)}
-                className={`mobile-tab ${mobileTab === tab.id ? "mobile-tab-active" : "mobile-tab-inactive"}`}
+                onClick={() => handleTabClick(tab.id)}
+                className={`mobile-tab ${tab.id === "live" ? (liveGame ? "mobile-tab-live" : "mobile-tab-inactive") : (mobileTab === tab.id ? "mobile-tab-active" : "mobile-tab-inactive")}`}
               >
+                {tab.id === "live" && liveGame && <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />}
                 <tab.icon className="w-3.5 h-3.5" />
                 {tab.label}
               </button>
@@ -1153,6 +1164,22 @@ export default function Profile() {
 
           {/* Sidebar */}
           <aside className={`lg:col-span-3 space-y-4 ${mobileTab === "analiza" ? "hidden lg:flex lg:flex-col" : ""}`}>
+
+            {/* Live Game Button (desktop) */}
+            <Link to={`/live/${region}/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`}>
+              <div className="hidden lg:flex items-center gap-2.5 px-3.5 py-2.5 cursor-pointer transition-all hover:brightness-110"
+                style={{
+                  background: liveGame ? "rgba(34,197,94,0.08)" : "rgba(0,212,255,0.04)",
+                  border: liveGame ? "1px solid rgba(34,197,94,0.2)" : "1px solid rgba(0,212,255,0.08)",
+                }}>
+                {liveGame && <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse flex-shrink-0" />}
+                <Wifi className="w-3.5 h-3.5 flex-shrink-0" style={{ color: liveGame ? "#4ade80" : "rgba(0,212,255,0.5)" }} />
+                <span className="text-[10px] font-bold uppercase tracking-[0.15em] flex-1" style={{ fontFamily: "'Rajdhani',sans-serif", color: liveGame ? "#4ade80" : "rgba(0,212,255,0.6)" }}>
+                  {liveGame ? "W GRZE — ZOBACZ MECZ" : "LIVE GAME"}
+                </span>
+                <ChevronRight className="w-3 h-3" style={{ color: liveGame ? "#4ade80" : "rgba(0,212,255,0.3)" }} />
+              </div>
+            </Link>
 
             {/* Rang + Predicted */}
             <div className={mobileTab === "mecze" ? "hidden lg:block" : ""}>
