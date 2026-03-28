@@ -594,7 +594,7 @@ function AnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoad
           </div>
         </div>
 
-        <div className="glass-panel overflow-hidden">
+        <div className="glass-panel">
           <div className="p-3 border-b border-border/30">
             <p className="text-[10px] uppercase tracking-widest font-bold text-green-500 flex items-center gap-1"><Check className="w-3 h-3" /> Mocne strony</p>
             <ul className="mt-2 space-y-1">
@@ -660,7 +660,7 @@ function AnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoad
                   <span className="text-xs font-medium text-white truncate">{m.name}</span>
                   <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${tc}`}>{m.rating}</span>
                 </div>
-                <p className="text-[10px] text-muted-foreground leading-snug mb-2 line-clamp-1">{m.description}</p>
+                <p className="text-[10px] text-muted-foreground leading-snug mb-2">{m.description}</p>
                 <div className="flex items-center gap-2">
                   <div className="metric-bar flex-1"><div className={`h-full ${c} rounded-full`} style={{ width: `${pct}%` }} /></div>
                   <span className="text-[10px] font-mono text-muted-foreground w-6 text-right">{m.value}</span>
@@ -893,7 +893,7 @@ function AnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoad
       )}
 
       {/* Champion Breakdown Table */}
-      <div className="glass-panel p-4 overflow-hidden">
+      <div className="glass-panel p-4">
         <p className="section-title"><Swords className="w-3.5 h-3.5 text-primary" /> Wyniki na bohaterach <InfoTooltip text="Statystyki z ostatnich 20 meczy pogrupowane po bohaterach. KDA = (Zabójstwa+Asysty)/Śmierci. KP% = udział w zabójstwach drużyny. CS/min = minionki na minutę. Dmg% = Twój procent obrażeń całej drużyny. Wynik = ogólna ocena 0–100." /></p>
         <div className="overflow-x-auto">
           <table className="w-full text-left min-w-[700px]">
