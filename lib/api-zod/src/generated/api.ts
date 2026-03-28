@@ -362,6 +362,8 @@ export const GetLiveGameResponse = zod.object({
       rankedTier: zod.string(),
       rankedDivision: zod.string(),
       rankedLP: zod.number(),
+      rankedWins: zod.number(),
+      rankedLosses: zod.number(),
       perks: zod.object({
         perkIds: zod.array(zod.number()),
         perkStyle: zod.number(),

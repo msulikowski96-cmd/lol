@@ -6,6 +6,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Profile from "@/pages/profile";
 import Promo from "@/pages/promo";
+import LiveGame from "@/pages/live";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -23,6 +24,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/promo" component={Promo} />
       <Route path="/profile/:region/:gameName/:tagLine" component={Profile} />
+      <Route path="/live/:region/:gameName/:tagLine" component={LiveGame} />
       <Route component={NotFound} />
     </Switch>
   );

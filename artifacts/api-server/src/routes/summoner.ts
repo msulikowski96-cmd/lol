@@ -369,8 +369,7 @@ router.get("/:puuid/live", async (req, res) => {
       }
     }
     if (!liveRes.ok) {
-      if (liveRes.status === 404) { res.status(404).json({ error: "not_in_game", message: "Gracz nie jest teraz w meczu" }); }
-      else { res.status(500).json({ error: "riot_api_error", message: "Failed to fetch live game" }); }
+      res.status(404).json({ error: "not_in_game", message: "Gracz nie jest teraz w meczu" });
       return;
     }
     const liveData = (await liveRes.json()) as any;
@@ -380,7 +379,7 @@ router.get("/:puuid/live", async (req, res) => {
     const champById: Record<string, string> = {};
     for (const [name, champ] of Object.entries(champData.data)) { champById[champ.key] = name; }
     // Fetch ranked data for all participants in parallel
-    const rankedByPuuid: Record<string, { tier: string; division: string; lp: number }> = {};
+    const rankedByPuuid: Record<string, { tier: string; division: string; lp: number; wins: number; losses: number }> = {};
     await Promise.allSettled(
       (liveData.participants ?? []).map(async (p: any) => {
         if (!p.puuid) return;
@@ -395,6 +394,8 @@ router.get("/:puuid/live", async (req, res) => {
               tier: soloq.tier ?? "UNRANKED",
               division: soloq.rank ?? "",
               lp: soloq.leaguePoints ?? 0,
+              wins: soloq.wins ?? 0,
+              losses: soloq.losses ?? 0,
             };
           }
         } catch { /* ignore individual failures */ }
@@ -412,6 +413,8 @@ router.get("/:puuid/live", async (req, res) => {
       rankedTier: rankedByPuuid[p.puuid]?.tier ?? "UNRANKED",
       rankedDivision: rankedByPuuid[p.puuid]?.division ?? "",
       rankedLP: rankedByPuuid[p.puuid]?.lp ?? 0,
+      rankedWins: rankedByPuuid[p.puuid]?.wins ?? 0,
+      rankedLosses: rankedByPuuid[p.puuid]?.losses ?? 0,
       perks: { perkIds: p.perks?.perkIds ?? [], perkStyle: p.perks?.perkStyle ?? 0, perkSubStyle: p.perks?.perkSubStyle ?? 0 },
     }));
     const bans = (liveData.bannedChampions ?? []).map((b: any) => ({

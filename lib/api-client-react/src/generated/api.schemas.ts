@@ -213,6 +213,8 @@ export interface LiveGameParticipant {
   rankedTier: string;
   rankedDivision: string;
   rankedLP: number;
+  rankedWins: number;
+  rankedLosses: number;
   perks: LiveGameParticipantPerks;
 }
 

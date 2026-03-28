@@ -1094,11 +1094,13 @@ export default function Profile() {
                 {shareState === "copied" ? "Skopiowano!" : "Udostępnij"}
               </button>
               {liveGame && (
-                <span className="text-[9px] px-2 py-0.5 rounded-[3px] font-bold tracking-wider flex items-center gap-1.5 flex-shrink-0"
-                  style={{ background: "rgba(34,197,94,0.1)", color: "hsl(152,62%,50%)", border: "1px solid rgba(34,197,94,0.2)", fontFamily: "'Rajdhani',sans-serif" }}>
-                  <span className="pulse-dot" />
-                  LIVE
-                </span>
+                <Link to={`/live/${region}/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`}>
+                  <span className="text-[9px] px-2 py-0.5 rounded-[3px] font-bold tracking-wider flex items-center gap-1.5 flex-shrink-0 cursor-pointer hover:brightness-125 transition-all"
+                    style={{ background: "rgba(34,197,94,0.1)", color: "hsl(152,62%,50%)", border: "1px solid rgba(34,197,94,0.2)", fontFamily: "'Rajdhani',sans-serif" }}>
+                    <span className="pulse-dot" />
+                    LIVE — ZOBACZ MECZ
+                  </span>
+                </Link>
               )}
             </div>
             {!isLoadingRanked && (

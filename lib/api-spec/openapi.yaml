@@ -744,6 +744,10 @@ components:
           type: string
         rankedLP:
           type: number
+        rankedWins:
+          type: number
+        rankedLosses:
+          type: number
         perks:
           type: object
           properties:
@@ -770,6 +774,8 @@ components:
         - rankedTier
         - rankedDivision
         - rankedLP
+        - rankedWins
+        - rankedLosses
         - perks
     LiveGameBan:
       type: object
