@@ -358,9 +358,7 @@ router.get("/:puuid/live", async (req, res) => {
     // Try PUUID-based spectator endpoint first (Riot API v5 preferred)
     const liveByPuuidUrl = `https://${regionLower}.api.riotgames.com/lol/spectator/v5/active-games/by-puuid/${puuid}`;
     let liveRes = await fetch(liveByPuuidUrl, { headers: { "X-Riot-Token": RIOT_API_KEY } });
-    req.log.info({ url: liveByPuuidUrl, status: liveRes.status }, "Spectator v5 by-puuid response");
 
-    // Fall back to summonerId-based endpoint if PUUID endpoint unavailable
     if (!liveRes.ok && liveRes.status !== 404) {
       let sId = summonerId;
       if (!sId) {
@@ -370,16 +368,13 @@ router.get("/:puuid/live", async (req, res) => {
           const summoner = (await summonerRes.json()) as { id: string };
           sId = summoner.id;
         }
-        req.log.info({ summonerUrl, hasSummonerId: !!sId }, "Summoner lookup for spectator fallback");
       }
       if (sId) {
         const liveByIdUrl = `https://${regionLower}.api.riotgames.com/lol/spectator/v5/active-games/by-summoner/${sId}`;
         liveRes = await fetch(liveByIdUrl, { headers: { "X-Riot-Token": RIOT_API_KEY } });
-        req.log.info({ url: liveByIdUrl, status: liveRes.status }, "Spectator v5 by-summoner response");
       }
     }
     if (!liveRes.ok) {
-      req.log.info({ finalStatus: liveRes.status }, "Spectator final status - not in game");
       res.status(404).json({ error: "not_in_game", message: "Gracz nie jest teraz w meczu" });
       return;
     }
