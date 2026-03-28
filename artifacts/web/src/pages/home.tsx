@@ -31,37 +31,33 @@ const FEATURES = [
     icon: BarChart3,
     title: "Głęboka analiza",
     desc: "12 wskaźników, archetyp stylu gry, early game, obiektywy, wskaźnik tiltu",
-    color: "hsl(196,100%,55%)",
-    glow: "rgba(0,212,255,0.15)",
-    border: "rgba(0,212,255,0.14)",
-    bg: "rgba(0,212,255,0.04)",
+    color: "hsl(200,90%,35%)",
+    border: "hsl(200,50%,82%)",
+    bg: "hsl(200,50%,97%)",
   },
   {
     icon: Zap,
     title: "Live w meczu",
     desc: "Aktywna gra w czasie rzeczywistym — rangi, runy, czarownie i bany",
-    color: "hsl(142,68%,50%)",
-    glow: "rgba(34,197,94,0.15)",
-    border: "rgba(34,197,94,0.14)",
-    bg: "rgba(34,197,94,0.04)",
+    color: "hsl(152,55%,35%)",
+    border: "hsl(152,40%,78%)",
+    bg: "hsl(152,45%,97%)",
   },
   {
     icon: Shield,
     title: "Historia meczy",
     desc: "KDA, OP Score, skład drużyn i porównanie z oponentem z lane",
-    color: "hsl(45,95%,58%)",
-    glow: "rgba(202,138,4,0.15)",
-    border: "rgba(202,138,4,0.14)",
-    bg: "rgba(202,138,4,0.04)",
+    color: "hsl(42,80%,42%)",
+    border: "hsl(42,50%,78%)",
+    bg: "hsl(42,50%,97%)",
   },
   {
     icon: Users,
     title: "Szacowana ranga",
     desc: "Algorytm AI oblicza realną rangę gracza na podstawie stylu gry",
-    color: "hsl(258,80%,68%)",
-    glow: "rgba(139,92,246,0.15)",
-    border: "rgba(139,92,246,0.14)",
-    bg: "rgba(139,92,246,0.04)",
+    color: "hsl(258,60%,50%)",
+    border: "hsl(258,40%,82%)",
+    bg: "hsl(258,50%,97%)",
   },
 ];
 
@@ -97,38 +93,18 @@ export default function Home() {
   return (
     <div className="min-h-screen relative flex flex-col items-center justify-center px-4 overflow-hidden">
 
-      {/* Background */}
       <div className="absolute inset-0 z-0 overflow-hidden">
-        <div className="absolute inset-0 grid-bg opacity-60" />
+        <div className="absolute inset-0 grid-bg opacity-40" />
         <div className="absolute inset-0 bg-background/70 z-5" />
         <img
           src={`${import.meta.env.BASE_URL}images/hero-bg.png`}
           alt=""
-          className="w-full h-full object-cover opacity-30 mix-blend-screen"
-        />
-        <motion.div
-          animate={{ x: [0, 40, 0], y: [0, -30, 0], scale: [1, 1.15, 1] }}
-          transition={{ duration: 16, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full pointer-events-none z-5"
-          style={{ background: "radial-gradient(circle, rgba(0,180,220,0.1) 0%, transparent 65%)" }}
-        />
-        <motion.div
-          animate={{ x: [0, -25, 0], y: [0, 35, 0], scale: [1, 1.1, 1] }}
-          transition={{ duration: 20, repeat: Infinity, ease: "easeInOut", delay: 4 }}
-          className="absolute -bottom-40 -right-40 w-[700px] h-[700px] rounded-full pointer-events-none z-5"
-          style={{ background: "radial-gradient(circle, rgba(88,28,220,0.09) 0%, transparent 65%)" }}
-        />
-        <motion.div
-          animate={{ opacity: [0.5, 0.9, 0.5] }}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-px h-32 pointer-events-none z-5"
-          style={{ background: "linear-gradient(to bottom, transparent, rgba(0,212,255,0.3), transparent)" }}
+          className="w-full h-full object-cover opacity-10"
         />
       </div>
 
       <div className="z-10 w-full max-w-2xl flex flex-col items-center">
 
-        {/* Logo */}
         <motion.div
           initial={{ opacity: 0, y: -28 }}
           animate={{ opacity: 1, y: 0 }}
@@ -139,12 +115,12 @@ export default function Home() {
             <div className="relative">
               <div className="w-14 h-14 flex items-center justify-center"
                 style={{
-                  background: "linear-gradient(135deg, rgba(0,212,255,0.12), rgba(0,150,220,0.06))",
-                  border: "1px solid rgba(0,212,255,0.25)",
+                  background: "hsl(200,50%,96%)",
+                  border: "1px solid hsl(200,50%,78%)",
                   borderRadius: "8px",
-                  boxShadow: "0 0 24px rgba(0,212,255,0.2), inset 0 0 20px rgba(0,212,255,0.06)",
+                  boxShadow: "0 2px 12px rgba(0,130,180,0.1)",
                 }}>
-                <Activity className="w-7 h-7" style={{ color: "hsl(196,100%,55%)" }} />
+                <Activity className="w-7 h-7" style={{ color: "hsl(200,90%,35%)" }} />
               </div>
               <div className="corner-accent corner-accent-tl" />
               <div className="corner-accent corner-accent-br" />
@@ -165,7 +141,6 @@ export default function Home() {
           </p>
         </motion.div>
 
-        {/* Search */}
         <motion.form
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
@@ -176,32 +151,31 @@ export default function Home() {
           <div
             className="flex flex-col sm:flex-row items-stretch sm:items-center gap-0 overflow-hidden"
             style={{
-              background: "rgba(5,10,22,0.85)",
-              border: focused ? "1px solid rgba(0,212,255,0.3)" : "1px solid rgba(0,212,255,0.12)",
-              borderRadius: "8px",
-              backdropFilter: "blur(20px)",
+              background: "white",
+              border: focused ? "1px solid hsl(200,60%,65%)" : "1px solid hsl(220,15%,85%)",
+              borderRadius: "10px",
               boxShadow: focused
-                ? "0 0 0 3px rgba(0,212,255,0.08), 0 24px 60px rgba(0,0,0,0.5)"
-                : "0 24px 60px rgba(0,0,0,0.4)",
+                ? "0 0 0 3px rgba(0,130,180,0.08), 0 8px 30px rgba(0,0,0,0.08)"
+                : "0 4px 20px rgba(0,0,0,0.06)",
               transition: "all 0.2s",
               padding: "6px",
             }}
           >
-            <div className="border-b sm:border-b-0 sm:border-r border-white/[0.06] pb-2 sm:pb-0 sm:pr-3 sm:mr-2 mb-2 sm:mb-0">
+            <div className="border-b sm:border-b-0 sm:border-r border-border pb-2 sm:pb-0 sm:pr-3 sm:mr-2 mb-2 sm:mb-0">
               <select
                 value={region}
                 onChange={(e) => setRegion(e.target.value)}
                 onFocus={() => setFocused(true)}
                 onBlur={() => setFocused(false)}
                 className="w-full sm:w-auto bg-transparent border-none focus:ring-0 cursor-pointer outline-none py-3 px-3 text-sm font-semibold appearance-none"
-                style={{ color: "hsl(196,100%,62%)", fontFamily: "'Rajdhani',sans-serif", fontWeight: 700, letterSpacing: "0.08em" }}
+                style={{ color: "hsl(200,90%,35%)", fontFamily: "'Rajdhani',sans-serif", fontWeight: 700, letterSpacing: "0.08em" }}
               >
                 {REGIONS.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
             </div>
 
             <div className="flex flex-1 items-center gap-1 px-2">
-              <Search className="w-4 h-4 flex-shrink-0" style={{ color: "rgba(0,212,255,0.5)" }} />
+              <Search className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Nazwa gracza"
@@ -226,14 +200,13 @@ export default function Home() {
               />
             </div>
 
-            <button type="submit" className="search-btn flex items-center justify-center gap-2 px-7 py-3.5 rounded-[4px] text-sm group">
+            <button type="submit" className="search-btn flex items-center justify-center gap-2 px-7 py-3.5 rounded-[6px] text-sm group">
               SZUKAJ
               <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
             </button>
           </div>
         </motion.form>
 
-        {/* History / Quick Search */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -243,7 +216,7 @@ export default function Home() {
           {history.length > 0 ? (
             <div>
               <div className="flex items-center gap-2 mb-2.5">
-                <Clock className="w-3 h-3" style={{ color: "rgba(0,212,255,0.4)" }} />
+                <Clock className="w-3 h-3 text-muted-foreground" />
                 <span className="data-label">Ostatnio wyszukiwani</span>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -254,17 +227,17 @@ export default function Home() {
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.85 }}
-                      className="flex items-center gap-0 rounded-[4px] overflow-hidden"
-                      style={{ background: "rgba(0,212,255,0.04)", border: "1px solid rgba(0,212,255,0.1)" }}
+                      className="flex items-center gap-0 rounded-[6px] overflow-hidden"
+                      style={{ background: "white", border: "1px solid hsl(220,15%,88%)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
                     >
                       <button
                         onClick={() => setLocation(`/profile/${h.region}/${encodeURIComponent(h.gameName)}/${encodeURIComponent(h.tagLine)}`)}
-                        className="text-[11px] px-3 py-1.5 text-left transition-colors"
-                        style={{ color: "rgba(148,163,184,0.85)", fontFamily: "'Rajdhani',sans-serif", fontWeight: 600 }}
+                        className="text-[11px] px-3 py-1.5 text-left transition-colors hover:bg-muted"
+                        style={{ color: "hsl(220,10%,46%)", fontFamily: "'Rajdhani',sans-serif", fontWeight: 600 }}
                       >
-                        <span className="font-bold text-foreground/80">{h.gameName}</span>
-                        <span style={{ color: "rgba(0,212,255,0.5)" }}>#{h.tagLine}</span>
-                        <span className="ml-2 text-[9px] tracking-wider" style={{ color: "rgba(0,212,255,0.4)" }}>{h.region}</span>
+                        <span className="font-bold text-foreground">{h.gameName}</span>
+                        <span className="text-primary">#{h.tagLine}</span>
+                        <span className="ml-2 text-[9px] tracking-wider text-muted-foreground">{h.region}</span>
                       </button>
                       <button
                         onClick={() => {
@@ -272,7 +245,7 @@ export default function Home() {
                           setHistory(updated);
                           saveHistory(updated);
                         }}
-                        className="pr-2.5 pl-1 text-muted-foreground/30 hover:text-red-400 transition-colors"
+                        className="pr-2.5 pl-1 text-muted-foreground/40 hover:text-red-500 transition-colors"
                       >
                         <X className="w-3 h-3" />
                       </button>
@@ -288,23 +261,23 @@ export default function Home() {
                 <button
                   key={q.name}
                   onClick={() => handleQuick(q)}
-                  className="text-[11px] px-3 py-1.5 rounded-[4px] transition-all hover:scale-105"
+                  className="text-[11px] px-3 py-1.5 rounded-[6px] transition-all hover:scale-105"
                   style={{
-                    background: "rgba(0,212,255,0.04)",
-                    border: "1px solid rgba(0,212,255,0.12)",
-                    color: "rgba(148,163,184,0.8)",
+                    background: "white",
+                    border: "1px solid hsl(220,15%,88%)",
+                    color: "hsl(220,10%,46%)",
                     fontFamily: "'Rajdhani',sans-serif",
                     fontWeight: 600,
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
                   }}
                 >
-                  {q.name}<span style={{ color: "rgba(0,212,255,0.45)" }}>#{q.tag}</span>
+                  {q.name}<span className="text-primary">#{q.tag}</span>
                 </button>
               ))}
             </div>
           )}
         </motion.div>
 
-        {/* Features */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -321,17 +294,15 @@ export default function Home() {
               style={{
                 background: f.bg,
                 border: `1px solid ${f.border}`,
-                borderRadius: "8px",
+                borderRadius: "10px",
               }}
             >
-              <div className="absolute top-0 left-0 right-0 h-px"
-                style={{ background: `linear-gradient(90deg, transparent, ${f.glow.replace('0.15','0.5')}, transparent)` }} />
-              <div className="w-8 h-8 rounded-[4px] flex items-center justify-center"
-                style={{ background: f.bg, border: `1px solid ${f.border}` }}>
+              <div className="w-8 h-8 rounded-[6px] flex items-center justify-center"
+                style={{ background: "white", border: `1px solid ${f.border}` }}>
                 <f.icon className="w-4 h-4" style={{ color: f.color }} />
               </div>
               <div>
-                <p className="text-[11px] font-bold text-foreground/95 tracking-wide mb-1"
+                <p className="text-[11px] font-bold tracking-wide mb-1"
                   style={{ fontFamily: "'Rajdhani',sans-serif", letterSpacing: "0.06em", color: f.color }}>
                   {f.title}
                 </p>
@@ -341,18 +312,17 @@ export default function Home() {
           ))}
         </motion.div>
 
-        {/* Bottom tagline */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.9 }}
           className="mt-8 flex items-center gap-3"
         >
-          <div className="h-px flex-1 max-w-16" style={{ background: "linear-gradient(to right, transparent, rgba(0,212,255,0.2))" }} />
-          <span className="text-[10px] tracking-[0.3em] uppercase" style={{ color: "rgba(0,212,255,0.35)", fontFamily: "'Rajdhani',sans-serif" }}>
+          <div className="h-px flex-1 max-w-16" style={{ background: "linear-gradient(to right, transparent, hsl(220,15%,85%))" }} />
+          <span className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground/50" style={{ fontFamily: "'Rajdhani',sans-serif" }}>
             Powered by Riot API
           </span>
-          <div className="h-px flex-1 max-w-16" style={{ background: "linear-gradient(to left, transparent, rgba(0,212,255,0.2))" }} />
+          <div className="h-px flex-1 max-w-16" style={{ background: "linear-gradient(to left, transparent, hsl(220,15%,85%))" }} />
         </motion.div>
       </div>
     </div>

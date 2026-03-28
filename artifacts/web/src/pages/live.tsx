@@ -24,18 +24,18 @@ function formatTime(seconds: number) {
 
 function SpellIcon({ id, size = 24 }: { id: number; size?: number }) {
   const name = SPELL_IMG[id];
-  if (!name) return <div style={{ width: size, height: size }} className="bg-black/40 border border-white/5" />;
+  if (!name) return <div style={{ width: size, height: size }} className="bg-muted border border-border" />;
   return (
     <img src={`${DD}/spell/${name}.png`} alt={name}
       style={{ width: size, height: size }}
-      className="border border-black/40"
+      className="border border-border"
       onError={(e) => { e.currentTarget.style.display = "none"; }} />
   );
 }
 
 function RuneIcon({ styleId, size = 20 }: { styleId: number; size?: number }) {
   const name = RUNE_STYLE_ICON[styleId];
-  if (!name) return <div style={{ width: size, height: size }} className="rounded-full bg-white/5" />;
+  if (!name) return <div style={{ width: size, height: size }} className="rounded-full bg-muted" />;
   return (
     <img
       src={`https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/${name}.png`}
@@ -46,17 +46,17 @@ function RuneIcon({ styleId, size = 20 }: { styleId: number; size?: number }) {
 
 function WinrateBar({ wins, losses }: { wins: number; losses: number }) {
   const total = wins + losses;
-  if (total === 0) return <span className="text-[10px] text-white/30">Brak gier</span>;
+  if (total === 0) return <span className="text-[10px] text-muted-foreground">Brak gier</span>;
   const wr = (wins / total) * 100;
   return (
     <div className="flex items-center gap-2 w-full">
-      <div className="flex-1 h-1.5 bg-red-500/30 overflow-hidden" style={{ borderRadius: 1 }}>
-        <div className="h-full bg-cyan-400/70" style={{ width: `${wr}%` }} />
+      <div className="flex-1 h-1.5 bg-loss/20 overflow-hidden" style={{ borderRadius: 1 }}>
+        <div className="h-full bg-primary/70" style={{ width: `${wr}%` }} />
       </div>
-      <span className="text-[10px] font-bold tabular-nums" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: wr >= 50 ? "#00d4ff" : "#ef4444" }}>
+      <span className="text-[10px] font-bold tabular-nums" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: wr >= 50 ? "hsl(200,90%,35%)" : "hsl(350,65%,48%)" }}>
         {wr.toFixed(0)}%
       </span>
-      <span className="text-[9px] text-white/30 tabular-nums" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+      <span className="text-[9px] text-muted-foreground tabular-nums" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
         {wins}W {losses}L
       </span>
     </div>
@@ -69,14 +69,14 @@ function RankDisplay({ tier, division, lp }: { tier: string; division: string; l
   const showDiv = !["CHALLENGER", "GRANDMASTER", "MASTER", "UNRANKED"].includes(tier) && division;
 
   if (tier === "UNRANKED") {
-    return <span className="text-[10px] text-white/25 font-medium">Unranked</span>;
+    return <span className="text-[10px] text-muted-foreground font-medium">Unranked</span>;
   }
 
   return (
     <div className="flex items-center gap-1.5">
       <div
-        className="flex items-center justify-center text-[9px] font-black tracking-wide px-1.5 py-0.5"
-        style={{ color, border: `1px solid ${color}50`, background: `${color}15`, minWidth: 28 }}
+        className="flex items-center justify-center text-[9px] font-black tracking-wide px-1.5 py-0.5 rounded"
+        style={{ color, border: `1px solid ${color}40`, background: `${color}12`, minWidth: 28 }}
       >
         {label.substring(0, 1)}{showDiv ? division : ""}
       </div>
@@ -88,11 +88,10 @@ function RankDisplay({ tier, division, lp }: { tier: string; division: string; l
 }
 
 function PlayerRow({ player, side, isSelf, position, region }: { player: any; side: "blue" | "red"; isSelf: boolean; position: number; region: string }) {
-  const borderColor = side === "blue" ? "rgba(59,130,246,0.2)" : "rgba(239,68,68,0.2)";
-  const highlightBg = side === "blue" ? "rgba(59,130,246,0.08)" : "rgba(239,68,68,0.08)";
-  const sideAccent = side === "blue" ? "#3B82F6" : "#EF4444";
+  const borderColor = side === "blue" ? "hsl(220,60%,85%)" : "hsl(350,50%,85%)";
+  const highlightBg = side === "blue" ? "hsl(220,60%,96%)" : "hsl(350,50%,97%)";
+  const sideAccent = side === "blue" ? "#2563EB" : "#DC2626";
   const total = (player.rankedWins ?? 0) + (player.rankedLosses ?? 0);
-  const wr = total > 0 ? ((player.rankedWins ?? 0) / total * 100) : 0;
   const riotId = player.summonerName ?? "";
   const parts = riotId.split("#");
   const pName = parts[0] ?? riotId;
@@ -103,7 +102,7 @@ function PlayerRow({ player, side, isSelf, position, region }: { player: any; si
       initial={{ opacity: 0, x: side === "blue" ? -12 : 12 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: position * 0.05 }}
-      className="group relative flex items-center gap-3 px-3 py-2.5 transition-colors"
+      className="group relative flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-muted/50"
       style={{
         background: isSelf ? highlightBg : "transparent",
         borderLeft: side === "blue" ? `2px solid ${isSelf ? sideAccent : "transparent"}` : "none",
@@ -114,7 +113,7 @@ function PlayerRow({ player, side, isSelf, position, region }: { player: any; si
         <img
           src={`${DD}/champion/${player.championName}.png`}
           alt={player.championName}
-          className="w-10 h-10 border"
+          className="w-10 h-10 rounded border"
           style={{ borderColor }}
           onError={(e) => { e.currentTarget.src = FALLBACK_ICON; }}
         />
@@ -126,20 +125,20 @@ function PlayerRow({ player, side, isSelf, position, region }: { player: any; si
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          {isSelf && <span className="text-[9px] font-bold px-1 py-px" style={{ background: `${sideAccent}25`, color: sideAccent, border: `1px solid ${sideAccent}40` }}>TY</span>}
+          {isSelf && <span className="text-[9px] font-bold px-1 py-px rounded" style={{ background: `${sideAccent}15`, color: sideAccent, border: `1px solid ${sideAccent}30` }}>TY</span>}
           {pName && pTag ? (
             <Link to={`/profile/${region}/${encodeURIComponent(pName)}/${encodeURIComponent(pTag)}`}>
-              <span className="text-xs font-bold truncate cursor-pointer hover:underline" style={{ color: isSelf ? sideAccent : "rgba(255,255,255,0.85)", fontFamily: "'Barlow Condensed', sans-serif" }}>
-                {pName}<span className="text-white/30">#{pTag}</span>
+              <span className="text-xs font-bold truncate cursor-pointer hover:underline" style={{ color: isSelf ? sideAccent : "hsl(220,25%,20%)", fontFamily: "'Barlow Condensed', sans-serif" }}>
+                {pName}<span className="text-muted-foreground">#{pTag}</span>
               </span>
             </Link>
           ) : (
-            <span className="text-xs font-bold truncate" style={{ color: isSelf ? sideAccent : "rgba(255,255,255,0.85)", fontFamily: "'Barlow Condensed', sans-serif" }}>
+            <span className="text-xs font-bold truncate" style={{ color: isSelf ? sideAccent : "hsl(220,25%,20%)", fontFamily: "'Barlow Condensed', sans-serif" }}>
               {riotId}
             </span>
           )}
         </div>
-        <p className="text-[10px] text-white/40 truncate">{player.championName}</p>
+        <p className="text-[10px] text-muted-foreground truncate">{player.championName}</p>
       </div>
 
       <div className="flex items-center gap-1 flex-shrink-0">
@@ -161,25 +160,25 @@ function PlayerRow({ player, side, isSelf, position, region }: { player: any; si
 
 function BansList({ bans, side }: { bans: any[]; side: "blue" | "red" }) {
   if (!bans.length) return null;
-  const color = side === "blue" ? "rgba(59,130,246,0.12)" : "rgba(239,68,68,0.12)";
+  const color = side === "blue" ? "rgba(37,99,235,0.08)" : "rgba(220,38,38,0.08)";
   return (
-    <div className="flex items-center gap-1.5 px-3 py-2">
-      <span className="text-[8px] uppercase tracking-[0.2em] text-white/25 font-bold mr-1" style={{ fontFamily: "'Rajdhani', sans-serif" }}>BANY</span>
+    <div className="flex items-center gap-1.5 px-3 py-2 border-t border-border">
+      <span className="text-[8px] uppercase tracking-[0.2em] text-muted-foreground font-bold mr-1" style={{ fontFamily: "'Rajdhani', sans-serif" }}>BANY</span>
       {bans.map((b: any, i: number) => (
         <div key={i} title={b.championName === "Brak" ? "Brak bana" : b.championName}
-          className="relative overflow-hidden" style={{ width: 28, height: 28 }}>
+          className="relative overflow-hidden rounded" style={{ width: 28, height: 28 }}>
           {b.championName !== "Brak" ? (
             <>
               <img src={`${DD}/champion/${b.championName}.png`} alt={b.championName}
                 className="w-full h-full object-cover grayscale opacity-40" onError={(e) => { e.currentTarget.style.display = "none"; }} />
               <div className="absolute inset-0" style={{ background: color }} />
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-red-400/70 text-xs font-bold">✕</span>
+                <span className="text-red-500/70 text-xs font-bold">✕</span>
               </div>
             </>
           ) : (
-            <div className="w-full h-full bg-white/[0.03] border border-white/[0.05] flex items-center justify-center">
-              <span className="text-white/15 text-[9px]">—</span>
+            <div className="w-full h-full bg-muted border border-border flex items-center justify-center">
+              <span className="text-muted-foreground/40 text-[9px]">—</span>
             </div>
           )}
         </div>
@@ -202,7 +201,7 @@ function TeamAvgRank(participants: any[]) {
 }
 
 function TeamPanel({ participants, bans, side, selfPuuid, region }: { participants: any[]; bans: any[]; side: "blue" | "red"; selfPuuid?: string; region: string }) {
-  const color = side === "blue" ? "#3B82F6" : "#EF4444";
+  const color = side === "blue" ? "#2563EB" : "#DC2626";
   const label = side === "blue" ? "NIEBIESCY" : "CZERWONI";
   const avg = TeamAvgRank(participants);
   const totalWins = participants.reduce((s, p) => s + (p.rankedWins ?? 0), 0);
@@ -213,9 +212,9 @@ function TeamPanel({ participants, bans, side, selfPuuid, region }: { participan
 
   return (
     <div className="flex-1 min-w-0">
-      <div className="flex items-center justify-between px-3 py-2 border-b" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border">
         <div className="flex items-center gap-2">
-          <div className="w-1 h-4" style={{ background: color }} />
+          <div className="w-1 h-4 rounded-full" style={{ background: color }} />
           <span className="text-[10px] font-black uppercase tracking-[0.25em]" style={{ color, fontFamily: "'Rajdhani', sans-serif" }}>{label}</span>
         </div>
         <div className="flex items-center gap-3">
@@ -223,14 +222,14 @@ function TeamPanel({ participants, bans, side, selfPuuid, region }: { participan
             Śr. {avg.label}
           </span>
           {totalGames > 0 && (
-            <span className="text-[9px] tabular-nums" style={{ color: teamWr >= 50 ? "#00d4ff" : "#ef4444", fontFamily: "'Barlow Condensed', sans-serif" }}>
+            <span className="text-[9px] tabular-nums" style={{ color: teamWr >= 50 ? "hsl(200,90%,35%)" : "hsl(350,65%,48%)", fontFamily: "'Barlow Condensed', sans-serif" }}>
               {teamWr.toFixed(0)}% WR
             </span>
           )}
         </div>
       </div>
 
-      <div className="divide-y" style={{ borderColor: "rgba(255,255,255,0.03)" }}>
+      <div className="divide-y divide-border/50">
         {participants.map((p: any, i: number) => (
           <PlayerRow key={i} player={p} side={side} isSelf={p.puuid === selfPuuid} position={i} region={region} />
         ))}
@@ -244,23 +243,23 @@ function TeamPanel({ participants, bans, side, selfPuuid, region }: { participan
 function NotInGameView({ gameName, tagLine, region }: { gameName: string; tagLine: string; region: string }) {
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center justify-center py-20 px-4">
-      <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-        <Eye className="w-7 h-7 text-white/20" />
+      <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-muted border border-border">
+        <Eye className="w-7 h-7 text-muted-foreground" />
       </div>
-      <h2 className="text-lg font-bold text-white/60 mb-1" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+      <h2 className="text-lg font-bold text-foreground/60 mb-1" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
         GRACZ NIE JEST W MECZU
       </h2>
-      <p className="text-sm text-white/30 mb-6">
+      <p className="text-sm text-muted-foreground mb-6">
         {gameName}#{tagLine} aktualnie nie gra na serwerze {region}
       </p>
-      <p className="text-[10px] text-white/20 mb-6 flex items-center gap-1.5">
+      <p className="text-[10px] text-muted-foreground/60 mb-6 flex items-center gap-1.5">
         <RefreshCw className="w-3 h-3" />
         Automatyczne sprawdzanie co 15 sekund
       </p>
       <Link to={`/profile/${region}/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`}>
-        <span className="text-xs font-bold px-4 py-2 cursor-pointer transition-colors" style={{
-          background: "rgba(0,212,255,0.08)", border: "1px solid rgba(0,212,255,0.2)",
-          color: "#00d4ff", fontFamily: "'Rajdhani', sans-serif"
+        <span className="text-xs font-bold px-4 py-2 rounded-lg cursor-pointer transition-colors" style={{
+          background: "hsl(200,50%,96%)", border: "1px solid hsl(200,50%,78%)",
+          color: "hsl(200,90%,35%)", fontFamily: "'Rajdhani', sans-serif"
         }}>
           ZOBACZ PROFIL <ChevronRight className="w-3 h-3 inline" />
         </span>
@@ -310,25 +309,23 @@ export default function LiveGame() {
   const b2 = useMemo(() => (inGame ? ((liveGame as any).bans ?? []).filter((b: any) => b.teamId === 200) : []), [liveGame, inGame]);
 
   return (
-    <div className="min-h-screen" style={{ background: "hsl(218,60%,3%)" }}>
-      <div className="grid-bg" style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }} />
+    <div className="min-h-screen bg-background">
+      <div className="grid-bg" style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", opacity: 0.3 }} />
 
       <div className="relative z-10 max-w-5xl mx-auto px-3 py-4 sm:px-6">
         <div className="flex items-center gap-3 mb-5">
           <Link to={`/profile/${region}/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`}>
-            <span className="w-8 h-8 flex items-center justify-center cursor-pointer transition-colors" style={{ border: "1px solid rgba(0,212,255,0.15)", color: "#00d4ff" }}>
+            <span className="w-8 h-8 flex items-center justify-center cursor-pointer transition-colors rounded-lg border border-border text-primary hover:bg-muted">
               <ArrowLeft className="w-4 h-4" />
             </span>
           </Link>
           <div>
-            <h1 className="text-lg font-black tracking-wide" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: "#00d4ff" }}>
+            <h1 className="text-lg font-black tracking-wide text-primary" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
               LIVE GAME
             </h1>
-            <p className="text-[11px] text-white/40">
-              {gameName}<span className="text-white/20">#{tagLine}</span>
-              <span className="ml-2 text-[9px] px-1.5 py-0.5 font-bold" style={{ background: "rgba(0,212,255,0.08)", border: "1px solid rgba(0,212,255,0.15)", color: "#00d4ff", fontFamily: "'Rajdhani', sans-serif" }}>
-                {region}
-              </span>
+            <p className="text-[11px] text-muted-foreground">
+              {gameName}<span className="text-muted-foreground/50">#{tagLine}</span>
+              <span className="ml-2 tag-chip">{region}</span>
             </p>
           </div>
 
@@ -336,14 +333,14 @@ export default function LiveGame() {
             <div className="ml-auto flex items-center gap-3">
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-[10px] font-bold text-green-400 uppercase tracking-wider" style={{ fontFamily: "'Rajdhani', sans-serif" }}>W GRZE</span>
+                <span className="text-[10px] font-bold text-green-600 uppercase tracking-wider" style={{ fontFamily: "'Rajdhani', sans-serif" }}>W GRZE</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="text-[9px] font-medium px-2 py-0.5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)" }}>
+                <span className="text-[9px] font-medium px-2 py-0.5 rounded bg-muted border border-border text-muted-foreground">
                   {GAME_MODE_LABEL[(liveGame as any)?.gameMode] ?? (liveGame as any)?.gameMode}
                 </span>
               </div>
-              <div className="flex items-center gap-1 font-mono text-sm font-bold" style={{ color: "#00d4ff" }}>
+              <div className="flex items-center gap-1 font-mono text-sm font-bold text-primary">
                 <Clock className="w-3.5 h-3.5" />
                 {formatTime(elapsed)}
               </div>
@@ -354,26 +351,26 @@ export default function LiveGame() {
         <AnimatePresence mode="wait">
           {summonerError ? (
             <motion.div key="summoner-error" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center justify-center py-20 px-4">
-              <AlertTriangle className="w-10 h-10 text-red-400/60 mb-3" />
-              <h2 className="text-lg font-bold text-white/60 mb-1" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>NIE ZNALEZIONO GRACZA</h2>
-              <p className="text-sm text-white/30">{gameName}#{tagLine} nie istnieje na serwerze {region}</p>
+              <AlertTriangle className="w-10 h-10 text-destructive/60 mb-3" />
+              <h2 className="text-lg font-bold text-foreground/60 mb-1" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>NIE ZNALEZIONO GRACZA</h2>
+              <p className="text-sm text-muted-foreground">{gameName}#{tagLine} nie istnieje na serwerze {region}</p>
             </motion.div>
           ) : isSummonerLoading || (isFetching && !liveGame && status !== "error") ? (
             <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center justify-center py-20">
-              <RefreshCw className="w-6 h-6 text-cyan-400 animate-spin mb-3" />
-              <p className="text-sm text-white/40">Szukam meczu...</p>
+              <RefreshCw className="w-6 h-6 text-primary animate-spin mb-3" />
+              <p className="text-sm text-muted-foreground">Szukam meczu...</p>
             </motion.div>
           ) : !inGame ? (
             <NotInGameView key="not-in-game" gameName={gameName} tagLine={tagLine} region={region} />
           ) : (
             <motion.div key="game" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-              <div className="overflow-hidden" style={{ background: "rgba(5,10,22,0.8)", border: "1px solid rgba(0,212,255,0.08)" }}>
-                <div className="flex divide-x" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
+              <div className="overflow-hidden rounded-xl bg-card border border-border shadow-sm">
+                <div className="flex divide-x divide-border">
                   <TeamPanel participants={t1} bans={b1} side="blue" selfPuuid={puuid} region={region} />
 
-                  <div className="hidden sm:flex flex-col items-center justify-center px-3 py-2" style={{ minWidth: 48, background: "rgba(0,0,0,0.3)" }}>
-                    <Swords className="w-4 h-4 text-white/15 mb-1" />
-                    <span className="text-[8px] text-white/15 font-bold tracking-widest" style={{ fontFamily: "'Rajdhani', sans-serif" }}>VS</span>
+                  <div className="hidden sm:flex flex-col items-center justify-center px-3 py-2 bg-muted" style={{ minWidth: 48 }}>
+                    <Swords className="w-4 h-4 text-muted-foreground/40 mb-1" />
+                    <span className="text-[8px] text-muted-foreground/40 font-bold tracking-widest" style={{ fontFamily: "'Rajdhani', sans-serif" }}>VS</span>
                   </div>
 
                   <TeamPanel participants={t2} bans={b2} side="red" selfPuuid={puuid} region={region} />
@@ -387,21 +384,21 @@ export default function LiveGame() {
                   { label: "Mapa", value: (liveGame as any)?.mapId === 11 ? "Summoner's Rift" : (liveGame as any)?.mapId === 12 ? "Howling Abyss" : `Mapa ${(liveGame as any)?.mapId}`, icon: Eye },
                   { label: "Bany", value: `${b1.length + b2.length} / 10`, icon: AlertTriangle },
                 ].map((stat, i) => (
-                  <div key={i} className="px-3 py-2.5" style={{ background: "rgba(5,10,22,0.6)", border: "1px solid rgba(0,212,255,0.06)" }}>
+                  <div key={i} className="px-3 py-2.5 rounded-lg bg-card border border-border shadow-sm">
                     <div className="flex items-center gap-1.5 mb-1">
-                      <stat.icon className="w-3 h-3 text-cyan-500/40" />
-                      <span className="text-[9px] uppercase tracking-[0.2em] text-white/25 font-bold" style={{ fontFamily: "'Rajdhani', sans-serif" }}>{stat.label}</span>
+                      <stat.icon className="w-3 h-3 text-primary/50" />
+                      <span className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground font-bold" style={{ fontFamily: "'Rajdhani', sans-serif" }}>{stat.label}</span>
                     </div>
-                    <span className="text-sm font-bold" style={{ color: "#00d4ff", fontFamily: "'Barlow Condensed', sans-serif" }}>{stat.value}</span>
+                    <span className="text-sm font-bold text-primary" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>{stat.value}</span>
                   </div>
                 ))}
               </div>
 
-              <div className="mt-4 px-3 py-2 flex items-center justify-between" style={{ background: "rgba(5,10,22,0.4)", border: "1px solid rgba(255,255,255,0.03)" }}>
-                <span className="text-[9px] text-white/20 flex items-center gap-1.5">
+              <div className="mt-4 px-3 py-2 flex items-center justify-between rounded-lg bg-card border border-border">
+                <span className="text-[9px] text-muted-foreground flex items-center gap-1.5">
                   <RefreshCw className="w-3 h-3" /> Automatyczne odświeżanie co 15s
                 </span>
-                <button onClick={() => refetch()} className="text-[10px] font-bold px-3 py-1 transition-colors cursor-pointer" style={{ color: "#00d4ff", background: "rgba(0,212,255,0.06)", border: "1px solid rgba(0,212,255,0.15)", fontFamily: "'Rajdhani', sans-serif" }}>
+                <button onClick={() => refetch()} className="text-[10px] font-bold px-3 py-1 rounded-md transition-colors cursor-pointer text-primary bg-primary/5 border border-primary/20 hover:bg-primary/10" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
                   ODŚWIEŻ
                 </button>
               </div>

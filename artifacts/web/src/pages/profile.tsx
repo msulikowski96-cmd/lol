@@ -48,7 +48,7 @@ function InfoTooltip({ text, align = "left" }: { text: string; align?: "left" | 
             exit={{ opacity: 0, y: -3, scale: 0.97 }}
             transition={{ duration: 0.12 }}
             className={`absolute top-5 z-[100] w-64 text-[11px] text-foreground/85 leading-relaxed shadow-2xl pointer-events-none ${align === "right" ? "right-0" : "left-0"}`}
-            style={{ background: "rgba(5,10,22,0.98)", border: "1px solid rgba(0,212,255,0.15)", borderRadius: "6px", padding: "10px 12px" }}
+            style={{ background: "white", border: "1px solid hsl(220,15%,88%)", borderRadius: "8px", padding: "10px 12px", boxShadow: "0 4px 16px rgba(0,0,0,0.1)" }}
           >
             {text}
           </motion.span>
@@ -72,12 +72,12 @@ function SparklineChart({ matches }: { matches: any[] }) {
     <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-full" preserveAspectRatio="none">
       <defs>
         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="rgba(0,212,255,0.18)" />
-          <stop offset="100%" stopColor="rgba(0,212,255,0)" />
+          <stop offset="0%" stopColor="rgba(0,130,180,0.15)" />
+          <stop offset="100%" stopColor="rgba(0,130,180,0)" />
         </linearGradient>
       </defs>
       <path d={`${d} L ${pts[pts.length - 1].x} ${h} L ${pts[0].x} ${h} Z`} fill={`url(#${gradientId})`} />
-      <path d={d} fill="none" stroke="rgba(0,212,255,0.55)" strokeWidth="1.5" />
+      <path d={d} fill="none" stroke="hsl(200,90%,38%)" strokeWidth="1.5" />
       {pts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="2.5" fill={p.win ? "#22c55e" : "#ef4444"} />)}
     </svg>
   );
@@ -114,7 +114,7 @@ function LiveGameBanner({ data, selfPuuid }: { data: any; selfPuuid?: string }) 
   function SpellIcon({ id }: { id: number }) {
     const name = SPELL_IMG[id];
     if (!name) return <div className="w-4 h-4 rounded bg-muted/30" />;
-    return <img src={`${DD}/spell/${name}.png`} alt={name} className="w-4 h-4 rounded border border-black/30" onError={(e) => { e.currentTarget.style.display = "none"; }} />;
+    return <img src={`${DD}/spell/${name}.png`} alt={name} className="w-4 h-4 rounded border border-border" onError={(e) => { e.currentTarget.style.display = "none"; }} />;
   }
 
   function RuneStyleIcon({ styleId, size = 14 }: { styleId: number; size?: number }) {
@@ -157,13 +157,13 @@ function LiveGameBanner({ data, selfPuuid }: { data: any; selfPuuid?: string }) 
               <>
                 <img src={`${DD}/champion/${b.championName}.png`} alt={b.championName}
                   className="w-6 h-6 object-cover grayscale opacity-60" onError={(e) => { e.currentTarget.style.display = "none"; }} />
-                <div className={`absolute inset-0 ${color === "blue" ? "bg-blue-950/40" : "bg-red-950/40"}`} />
+                <div className={`absolute inset-0 ${color === "blue" ? "bg-blue-100/60" : "bg-red-100/60"}`} />
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-white/60 text-[8px] font-bold">✕</span>
+                  <span className="text-foreground/60 text-[8px] font-bold">✕</span>
                 </div>
               </>
             ) : (
-              <div className="w-6 h-6 rounded bg-white/[0.04] border border-white/[0.06] flex items-center justify-center">
+              <div className="w-6 h-6 rounded bg-muted border border-border flex items-center justify-center">
                 <span className="text-muted-foreground/30 text-[9px]">?</span>
               </div>
             )}
@@ -175,24 +175,24 @@ function LiveGameBanner({ data, selfPuuid }: { data: any; selfPuuid?: string }) 
 
   return (
     <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl overflow-hidden mb-5 border"
-      style={{ background: "linear-gradient(135deg, rgba(21,128,61,0.08) 0%, rgba(13,18,38,0.9) 100%)", borderColor: "rgba(34,197,94,0.2)" }}>
+      style={{ background: "linear-gradient(135deg, hsl(152,50%,96%) 0%, white 100%)", borderColor: "hsl(152,40%,82%)" }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: "rgba(34,197,94,0.12)", background: "rgba(21,128,61,0.07)" }}>
+      <div className="flex items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: "hsl(152,40%,88%)", background: "hsl(152,45%,97%)" }}>
         <div className="flex items-center gap-2.5">
           <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
-          <span className="text-sm font-bold text-green-400 tracking-wide">LIVE</span>
-          <span className="text-[10px] px-2 py-0.5 rounded font-medium" style={{ background: "rgba(255,255,255,0.06)", color: "rgba(148,163,184,0.8)" }}>
+          <span className="text-sm font-bold text-green-600 tracking-wide">LIVE</span>
+          <span className="text-[10px] px-2 py-0.5 rounded font-medium" style={{ background: "hsl(152,40%,93%)", color: "hsl(220,10%,46%)" }}>
             {modeLabel[data.gameMode] ?? data.gameMode}
           </span>
         </div>
-        <div className="flex items-center gap-1.5 font-mono text-sm font-bold text-green-300">
+        <div className="flex items-center gap-1.5 font-mono text-sm font-bold text-green-600">
           <Clock className="w-3.5 h-3.5" />
           {fmt(elapsed)}
         </div>
       </div>
 
       {/* Teams */}
-      <div className="grid grid-cols-2 divide-x" style={{ divideColor: "rgba(255,255,255,0.05)" }}>
+      <div className="grid grid-cols-2 divide-x divide-border">
         {[{ participants: t1, bans: b1, color: "blue", label: "Niebiescy" }, { participants: t2, bans: b2, color: "red", label: "Czerwoni" }].map(({ participants, bans, color, label }) => (
           <div key={color} className="p-3">
             <p className={`text-[9px] uppercase tracking-[0.18em] font-bold mb-2 ${color === "blue" ? "text-blue-400" : "text-red-400"}`}>{label}</p>
@@ -200,7 +200,7 @@ function LiveGameBanner({ data, selfPuuid }: { data: any; selfPuuid?: string }) 
               {participants.map((pl: any, i: number) => {
                 const isSelf = pl.puuid === selfPuuid;
                 return (
-                  <div key={i} className={`flex items-center gap-1.5 px-1.5 py-1 rounded-lg transition-colors ${isSelf ? (color === "blue" ? "bg-blue-500/10 ring-1 ring-blue-500/25" : "bg-red-500/10 ring-1 ring-red-500/25") : "hover:bg-white/[0.03]"}`}>
+                  <div key={i} className={`flex items-center gap-1.5 px-1.5 py-1 rounded-lg transition-colors ${isSelf ? (color === "blue" ? "bg-blue-50 ring-1 ring-blue-200" : "bg-red-50 ring-1 ring-red-200") : "hover:bg-muted"}`}>
                     {/* Champion icon */}
                     <img src={`${DD}/champion/${pl.championName}.png`} alt={pl.championName}
                       className="w-7 h-7 rounded-md border flex-shrink-0"
@@ -208,7 +208,7 @@ function LiveGameBanner({ data, selfPuuid }: { data: any; selfPuuid?: string }) 
                       onError={(e) => { e.currentTarget.src = FALLBACK_ICON; }} />
                     {/* Name + champion */}
                     <div className="flex-1 min-w-0">
-                      <p className={`text-[10px] truncate font-medium leading-tight ${isSelf ? (color === "blue" ? "text-blue-300" : "text-red-300") : "text-foreground/80"}`}>
+                      <p className={`text-[10px] truncate font-medium leading-tight ${isSelf ? (color === "blue" ? "text-blue-700" : "text-red-700") : "text-foreground/80"}`}>
                         {isSelf ? "▶ " : ""}{pl.summonerName}
                       </p>
                       <p className="text-[9px] text-muted-foreground/60 truncate leading-tight">{pl.championName}</p>
@@ -234,7 +234,7 @@ function LiveGameBanner({ data, selfPuuid }: { data: any; selfPuuid?: string }) 
 
             {/* Bans */}
             {bans.length > 0 && (
-              <div className="mt-2.5 pt-2 border-t" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+              <div className="mt-2.5 pt-2 border-t border-border">
                 <p className="text-[8px] uppercase tracking-widest text-muted-foreground/40 mb-1.5">Bany</p>
                 <BanRow bans={bans} color={color} />
               </div>
@@ -280,18 +280,18 @@ function RadarChart({ data }: { data: { aggression: number; farming: number; vis
     <svg viewBox="0 0 200 200" className="w-full h-full">
       {gridLevels.map((lvl) => {
         const gPts = pts(Array(5).fill(lvl));
-        return <path key={lvl} d={toPath(gPts)} fill="none" stroke="rgba(0,212,255,0.08)" strokeWidth="1" />;
+        return <path key={lvl} d={toPath(gPts)} fill="none" stroke="hsl(220,15%,88%)" strokeWidth="1" />;
       })}
       {axisEndPts.map((p, i) => (
-        <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="rgba(0,212,255,0.12)" strokeWidth="1" />
+        <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="hsl(220,15%,85%)" strokeWidth="1" />
       ))}
-      <path d={toPath(dataPts)} fill="rgba(0,212,255,0.12)" stroke="rgba(0,212,255,0.6)" strokeWidth="1.5" />
-      {dataPts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="3" fill="hsl(196,100%,50%)" />)}
+      <path d={toPath(dataPts)} fill="rgba(0,130,180,0.12)" stroke="hsl(200,90%,38%)" strokeWidth="1.5" />
+      {dataPts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="3" fill="hsl(200,90%,38%)" />)}
       {labelPts.map((p, i) => (
         <text key={i} x={p.x} y={p.y} textAnchor="middle" dominantBaseline="middle"
-          className="fill-muted-foreground" style={{ fontSize: "9px", fill: "rgba(148,163,184,0.9)", fontFamily: "inherit" }}>
+          className="fill-muted-foreground" style={{ fontSize: "9px", fill: "hsl(220,10%,46%)", fontFamily: "inherit" }}>
           {labels[i].label}
-          <tspan x={p.x} dy="10" style={{ fontSize: "8px", fill: "rgba(0,212,255,0.9)", fontWeight: "bold" }}>
+          <tspan x={p.x} dy="10" style={{ fontSize: "8px", fill: "hsl(200,90%,35%)", fontWeight: "bold" }}>
             {Math.round((data as any)[labels[i].key])}
           </tspan>
         </text>
@@ -305,7 +305,7 @@ function MatchParticipantRow({ p, isSelf }: { p: any; isSelf: boolean }) {
   const dmgK = Math.round(p.totalDamageDealt / 1000);
   const goldK = (p.goldEarned / 1000).toFixed(1);
   return (
-    <div className={`flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors ${isSelf ? (p.win ? "bg-win/10 ring-1 ring-win/30" : "bg-loss/10 ring-1 ring-loss/30") : "hover:bg-white/[0.03]"}`}>
+    <div className={`flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors ${isSelf ? (p.win ? "bg-win/10 ring-1 ring-win/30" : "bg-loss/10 ring-1 ring-loss/30") : "hover:bg-muted"}`}>
       <img
         src={`${DD}/champion/${p.championName}.png`}
         alt={p.championName}
@@ -349,7 +349,7 @@ function MatchRow({ match, index, selfPuuid }: { match: any; index: number; self
         onClick={() => hasParticipants && setExpanded(v => !v)}
         className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border-l-2 transition-colors
           ${w ? "border-l-win bg-win-bg/30" : "border-l-loss bg-loss-bg/30"}
-          ${hasParticipants ? "cursor-pointer hover:bg-muted/20" : ""}
+          ${hasParticipants ? "cursor-pointer hover:bg-muted" : ""}
           ${expanded ? (w ? "rounded-b-none" : "rounded-b-none") : ""}`}
       >
         <div className="relative flex-shrink-0">
@@ -391,7 +391,7 @@ function MatchRow({ match, index, selfPuuid }: { match: any; index: number; self
           >
             <div className={`border border-t-0 rounded-b-lg px-3 pb-3 pt-2 ${w ? "border-win/20 bg-win/5" : "border-loss/20 bg-loss/5"}`}>
               {/* Header row */}
-              <div className="flex items-center gap-2 px-2 pb-1.5 mb-1 border-b border-white/[0.06]">
+              <div className="flex items-center gap-2 px-2 pb-1.5 mb-1 border-b border-border">
                 <div className="w-7 flex-shrink-0" />
                 <div className="flex-1" />
                 <span className="text-[9px] text-muted-foreground/50 uppercase tracking-wider w-16 text-center flex-shrink-0">KDA</span>
@@ -448,10 +448,11 @@ function RankedCard({ entry }: { entry: any }) {
   return (
     <div className="relative overflow-hidden p-3 gradient-border-cyan"
       style={{
-        background: "rgba(5,10,22,0.85)",
-        border: "1px solid rgba(0,212,255,0.1)",
+        background: "white",
+        border: "1px solid hsl(220,15%,88%)",
         borderRadius: "8px",
-        borderLeft: `2px solid ${tierColor}`,
+        borderLeft: `3px solid ${tierColor}`,
+        boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
       }}>
       <div className="flex items-center gap-3">
         <div className="relative flex-shrink-0">
@@ -473,7 +474,7 @@ function RankedCard({ entry }: { entry: any }) {
                 <span className="text-muted-foreground text-[10px]">{entry.wins}W {entry.losses}L</span>
                 <span className={`font-bold text-[10px] ml-auto ${wr >= 50 ? "text-win" : "text-loss"}`}>{wr}%</span>
               </div>
-              <div className="mt-1.5 w-full h-0.5 rounded-full overflow-hidden" style={{ background: "rgba(0,212,255,0.08)" }}>
+              <div className="mt-1.5 w-full h-0.5 rounded-full overflow-hidden" style={{ background: "hsl(220,15%,90%)" }}>
                 <div className="h-full rounded-full transition-all" style={{ width: `${wr}%`, background: wrBarColor, opacity: 0.8 }} />
               </div>
             </>
@@ -571,7 +572,7 @@ function AnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoad
               <Brain className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h4 className="font-display text-sm text-white">{playstyleArchetype}</h4>
+              <h4 className="font-display text-sm text-foreground">{playstyleArchetype}</h4>
               <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">{playstyleDescription}</p>
             </div>
           </div>
@@ -636,7 +637,7 @@ function AnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoad
                   className="w-11 h-11 rounded-lg border border-border flex-shrink-0"
                   onError={(e) => { e.currentTarget.style.display = "none"; }} />
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-white">{rec.championName}</p>
+                  <p className="text-sm font-semibold text-foreground">{rec.championName}</p>
                   <p className="text-[10px] text-primary leading-snug">{rec.playstyleMatch}</p>
                   <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">{rec.reason}</p>
                 </div>
@@ -657,7 +658,7 @@ function AnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoad
             return (
               <div key={i} className="stat-card">
                 <div className="flex justify-between items-center mb-1">
-                  <span className="text-xs font-medium text-white truncate">{m.name}</span>
+                  <span className="text-xs font-medium text-foreground truncate">{m.name}</span>
                   <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${tc}`}>{m.rating}</span>
                 </div>
                 <p className="text-[10px] text-muted-foreground leading-snug mb-2">{m.description}</p>
@@ -682,7 +683,7 @@ function AnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoad
               return (
                 <div key={i} className="stat-card flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-semibold text-white">{gl.label}</p>
+                    <p className="text-xs font-semibold text-foreground">{gl.label}</p>
                     <p className="text-[10px] text-muted-foreground">{gl.gamesPlayed} meczy</p>
                   </div>
                   <div className="text-right">
@@ -723,13 +724,13 @@ function AnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoad
 
         <div className="space-y-3">
           {bestGame && (
-            <div className="stat-card border-green-900/30 bg-green-950/10">
+            <div className="stat-card border-green-200 bg-green-50">
               <p className="text-[10px] uppercase tracking-widest text-green-400 font-bold flex items-center gap-1 mb-2"><Award className="w-3 h-3" /> Najlepszy mecz</p>
               <div className="flex items-center gap-2.5">
                 <img src={`${DD}/champion/${bestGame.championName}.png`} alt="" className="w-10 h-10 rounded-lg border border-border"
                   onError={(e) => { e.currentTarget.style.display = "none"; }} />
                 <div>
-                  <p className="text-sm font-semibold text-white">{bestGame.championName}</p>
+                  <p className="text-sm font-semibold text-foreground">{bestGame.championName}</p>
                   <p className="text-xs font-mono text-green-400">{bestGame.kills}/{bestGame.deaths}/{bestGame.assists} <span className="text-muted-foreground">({bestGame.kda} KDA)</span></p>
                 </div>
                 <span className="ml-auto text-xs font-bold text-green-400">{bestGame.performanceScore}</span>
@@ -737,13 +738,13 @@ function AnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoad
             </div>
           )}
           {worstGame && (
-            <div className="stat-card border-red-900/30 bg-red-950/10">
+            <div className="stat-card border-red-200 bg-red-50">
               <p className="text-[10px] uppercase tracking-widest text-red-400 font-bold flex items-center gap-1 mb-2"><AlertTriangle className="w-3 h-3" /> Najgorszy mecz</p>
               <div className="flex items-center gap-2.5">
                 <img src={`${DD}/champion/${worstGame.championName}.png`} alt="" className="w-10 h-10 rounded-lg border border-border"
                   onError={(e) => { e.currentTarget.style.display = "none"; }} />
                 <div>
-                  <p className="text-sm font-semibold text-white">{worstGame.championName}</p>
+                  <p className="text-sm font-semibold text-foreground">{worstGame.championName}</p>
                   <p className="text-xs font-mono text-red-400">{worstGame.kills}/{worstGame.deaths}/{worstGame.assists} <span className="text-muted-foreground">({worstGame.kda} KDA)</span></p>
                 </div>
                 <span className="ml-auto text-xs font-bold text-red-400">{worstGame.performanceScore}</span>
@@ -755,11 +756,11 @@ function AnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoad
 
       {/* Critical Mistakes */}
       {criticalMistakes?.length > 0 && (
-        <div className="glass-panel p-4 border-red-900/15">
+        <div className="glass-panel p-4 border-red-200">
           <p className="section-title"><XCircle className="w-3.5 h-3.5 text-red-400" /> Krytyczne błędy <InfoTooltip text="Najczęściej powtarzające się szkodliwe nawyki wykryte w Twoich meczach: nadmierna liczba śmierci, słabe farmienie, brak wizji i inne. Wyeliminowanie tych nawyków da najszybszy wzrost rangi." /></p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {criticalMistakes.map((m: string, i: number) => (
-              <div key={i} className="flex items-start gap-2 text-xs text-foreground/80 stat-card bg-red-950/10 border-red-900/20">
+              <div key={i} className="flex items-start gap-2 text-xs text-foreground/80 stat-card bg-red-50 border-red-200">
                 <AlertTriangle className="w-3.5 h-3.5 text-red-400 mt-0.5 flex-shrink-0" />{m}
               </div>
             ))}
@@ -823,7 +824,7 @@ function AnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoad
                   { label: "⚡ Kradz.", val: objectiveStats.avgObjectivesStolen.toFixed(2) },
                 ].map((item, i) => (
                   <div key={i} className="text-center stat-card py-2 px-1">
-                    <p className="text-xs font-bold text-white">{item.val}</p>
+                    <p className="text-xs font-bold text-foreground">{item.val}</p>
                     <p className="text-[9px] text-muted-foreground leading-tight">{item.label}</p>
                   </div>
                 ))}
@@ -865,7 +866,7 @@ function AnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoad
 
           {/* Tilt Indicator */}
           {tiltIndicator && (
-            <div className={`glass-panel p-4 ${tiltIndicator.isTilted ? "border-orange-900/20" : ""}`}>
+            <div className={`glass-panel p-4 ${tiltIndicator.isTilted ? "border-orange-200" : ""}`}>
               <p className="section-title"><Flame className="w-3.5 h-3.5 text-orange-400" /> Wskaźnik tiltu <InfoTooltip text="Mierzy jak bardzo Twoja gra pogarsza się po seriach porażek. Wysoki tilt = duży spadek KDA i jakości decyzji podczas strat z rzędu. Kluczowy wskaźnik zdrowia psychicznego w rankingach." /></p>
               <div className="flex items-center gap-3 mb-3">
                 <div className="relative w-14 h-14 flex-shrink-0">
@@ -918,7 +919,7 @@ function AnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoad
                       <div className="flex items-center gap-2">
                         <img src={`${DD}/champion/${ch.championName}.png`} alt="" className="w-6 h-6 rounded-full border border-border"
                           onError={(e) => { e.currentTarget.src = FALLBACK_ICON; }} />
-                        <span className="text-xs font-semibold text-white">{ch.championName}</span>
+                        <span className="text-xs font-semibold text-foreground">{ch.championName}</span>
                       </div>
                     </td>
                     <td className="py-2 px-2 text-center text-xs font-mono">{ch.gamesPlayed}</td>
@@ -1045,31 +1046,28 @@ export default function Profile() {
     <div className="min-h-screen pb-16">
 
       {/* Header */}
-      <header className="relative border-b overflow-hidden" style={{ borderColor: "rgba(0,212,255,0.08)" }}>
-        <div className="absolute inset-0 pointer-events-none grid-bg opacity-40" />
-        <div className="absolute inset-0 pointer-events-none"
-          style={{ background: "linear-gradient(135deg, rgba(0,180,220,0.05) 0%, transparent 50%, rgba(88,28,220,0.04) 100%)" }} />
-        <div className="absolute inset-x-0 bottom-0 h-px"
-          style={{ background: "linear-gradient(90deg, transparent, rgba(0,212,255,0.3), transparent)" }} />
+      <header className="relative border-b border-border overflow-hidden bg-white">
+        <div className="absolute inset-0 pointer-events-none grid-bg opacity-30" />
 
         <div className="relative max-w-7xl mx-auto px-4 py-4 sm:py-5 flex items-center gap-4">
-          <Link href="/" className="text-muted-foreground hover:text-primary transition-colors flex-shrink-0 p-1.5 rounded-[4px] hover:bg-white/[0.05]"
-            style={{ border: "1px solid rgba(0,212,255,0.1)" }}>
+          <Link href="/" className="text-muted-foreground hover:text-primary transition-colors flex-shrink-0 p-1.5 rounded-[4px] hover:bg-muted"
+            style={{ border: "1px solid hsl(220,15%,88%)" }}>
             <ChevronLeft className="w-5 h-5" />
           </Link>
 
           <div className="relative flex-shrink-0">
             <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-[8px] overflow-hidden"
-              style={{ border: "1.5px solid rgba(0,212,255,0.25)", boxShadow: "0 0 20px rgba(0,212,255,0.14), 0 0 0 0 rgba(0,212,255,0)" }}>
+              style={{ border: "1.5px solid hsl(200,50%,75%)", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
               <img src={`${DD}/profileicon/${profile?.profileIconId}.png`} alt="" className="w-full h-full object-cover" />
             </div>
             <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 text-[9px] font-bold px-2 py-0.5 rounded-[3px] whitespace-nowrap"
               style={{
-                background: "rgba(5,10,22,0.98)",
-                border: "1px solid rgba(0,212,255,0.2)",
-                color: "hsl(196,100%,60%)",
+                background: "white",
+                border: "1px solid hsl(200,50%,78%)",
+                color: "hsl(200,90%,35%)",
                 fontFamily: "'Rajdhani',sans-serif",
                 letterSpacing: "0.05em",
+                boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
               }}>
               Lv. {profile?.summonerLevel}
             </span>
@@ -1077,8 +1075,8 @@ export default function Profile() {
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight leading-none"
-                style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, letterSpacing: "0.02em" }}>
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight leading-none"
+                style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, letterSpacing: "0.02em", color: "hsl(220,25%,12%)" }}>
                 {profile?.gameName}
               </h1>
               <span className="text-sm text-muted-foreground font-sans font-normal">#{profile?.tagLine}</span>
@@ -1088,8 +1086,8 @@ export default function Profile() {
                 title="Kopiuj link"
                 className="flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-[4px] transition-all flex-shrink-0"
                 style={shareState === "copied"
-                  ? { background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.25)", color: "#4ade80", fontFamily: "'Rajdhani',sans-serif", fontWeight: 700 }
-                  : { background: "rgba(0,212,255,0.04)", border: "1px solid rgba(0,212,255,0.1)", color: "rgba(148,163,184,0.7)", fontFamily: "'Rajdhani',sans-serif", fontWeight: 700 }}
+                  ? { background: "hsl(152,50%,95%)", border: "1px solid hsl(152,40%,78%)", color: "hsl(152,55%,35%)", fontFamily: "'Rajdhani',sans-serif", fontWeight: 700 }
+                  : { background: "hsl(220,15%,96%)", border: "1px solid hsl(220,15%,88%)", color: "hsl(220,10%,50%)", fontFamily: "'Rajdhani',sans-serif", fontWeight: 700 }}
               >
                 {shareState === "copied" ? <CheckCheck className="w-3 h-3" /> : <Share2 className="w-3 h-3" />}
                 {shareState === "copied" ? "Skopiowano!" : "Udostępnij"}
@@ -1097,7 +1095,7 @@ export default function Profile() {
               {liveGame && (
                 <Link to={`/live/${region}/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`}>
                   <span className="text-[9px] px-2 py-0.5 rounded-[3px] font-bold tracking-wider flex items-center gap-1.5 flex-shrink-0 cursor-pointer hover:brightness-125 transition-all"
-                    style={{ background: "rgba(34,197,94,0.1)", color: "hsl(152,62%,50%)", border: "1px solid rgba(34,197,94,0.2)", fontFamily: "'Rajdhani',sans-serif" }}>
+                    style={{ background: "hsl(152,50%,95%)", color: "hsl(152,55%,35%)", border: "1px solid hsl(152,40%,78%)", fontFamily: "'Rajdhani',sans-serif" }}>
                     <span className="pulse-dot" />
                     LIVE — ZOBACZ MECZ
                   </span>
@@ -1108,8 +1106,8 @@ export default function Profile() {
               <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground flex-wrap">
                 {soloQ && (
                   <span className="flex items-center gap-1.5">
-                    <Trophy className="w-3 h-3" style={{ color: "rgba(0,212,255,0.5)" }} />
-                    <span className="font-bold" style={{ color: "hsl(196,100%,65%)" }}>{soloQ.tier} {soloQ.rank}</span>
+                    <Trophy className="w-3 h-3 text-primary" />
+                    <span className="font-bold text-primary">{soloQ.tier} {soloQ.rank}</span>
                     <span className="text-muted-foreground/60">{soloQ.leaguePoints} LP</span>
                   </span>
                 )}
@@ -1131,7 +1129,7 @@ export default function Profile() {
 
         {/* Mobile tab navigation */}
         <div className="lg:hidden mb-4 sticky top-0 z-30 py-2"
-          style={{ background: "linear-gradient(180deg, hsl(218,60%,3%) 80%, transparent)" }}>
+          style={{ background: "linear-gradient(180deg, hsl(220,20%,97%) 80%, transparent)" }}>
           <div className="mobile-tab-bar">
             {MOBILE_TABS.map(tab => (
               <button
@@ -1158,17 +1156,17 @@ export default function Profile() {
 
             {/* Live Game Button (desktop) */}
             <Link to={`/live/${region}/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`}>
-              <div className="hidden lg:flex items-center gap-2.5 px-3.5 py-2.5 cursor-pointer transition-all hover:brightness-110"
+              <div className="hidden lg:flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg cursor-pointer transition-all hover:brightness-95"
                 style={{
-                  background: liveGame ? "rgba(34,197,94,0.08)" : "rgba(0,212,255,0.04)",
-                  border: liveGame ? "1px solid rgba(34,197,94,0.2)" : "1px solid rgba(0,212,255,0.08)",
+                  background: liveGame ? "hsl(152,50%,95%)" : "hsl(200,30%,97%)",
+                  border: liveGame ? "1px solid hsl(152,40%,78%)" : "1px solid hsl(220,15%,88%)",
                 }}>
                 {liveGame && <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse flex-shrink-0" />}
-                <Wifi className="w-3.5 h-3.5 flex-shrink-0" style={{ color: liveGame ? "#4ade80" : "rgba(0,212,255,0.5)" }} />
-                <span className="text-[10px] font-bold uppercase tracking-[0.15em] flex-1" style={{ fontFamily: "'Rajdhani',sans-serif", color: liveGame ? "#4ade80" : "rgba(0,212,255,0.6)" }}>
+                <Wifi className="w-3.5 h-3.5 flex-shrink-0" style={{ color: liveGame ? "hsl(152,55%,38%)" : "hsl(200,50%,55%)" }} />
+                <span className="text-[10px] font-bold uppercase tracking-[0.15em] flex-1" style={{ fontFamily: "'Rajdhani',sans-serif", color: liveGame ? "hsl(152,55%,35%)" : "hsl(200,50%,45%)" }}>
                   {liveGame ? "W GRZE — ZOBACZ MECZ" : "LIVE GAME"}
                 </span>
-                <ChevronRight className="w-3 h-3" style={{ color: liveGame ? "#4ade80" : "rgba(0,212,255,0.3)" }} />
+                <ChevronRight className="w-3 h-3" style={{ color: liveGame ? "hsl(152,55%,38%)" : "hsl(200,50%,70%)" }} />
               </div>
             </Link>
 
@@ -1180,15 +1178,15 @@ export default function Profile() {
               </p>
               <div className="space-y-2">
                 {isLoadingRanked
-                  ? <div className="h-20 rounded-xl animate-pulse" style={{ background: "rgba(255,255,255,0.03)" }} />
+                  ? <div className="h-20 rounded-xl animate-pulse" style={{ background: "hsl(220,15%,94%)" }} />
                   : <><RankedCard entry={soloQ} />{flexQ && <RankedCard entry={flexQ} />}</>
                 }
                 {!isLoadingAnalysis && analysis?.predictedTier && (
                   <div className="rounded-xl p-3 relative overflow-hidden" style={{
-                    background: "linear-gradient(135deg, rgba(139,92,246,0.08), rgba(13,18,38,0.8))",
-                    border: "1px solid rgba(139,92,246,0.2)",
+                    background: "linear-gradient(135deg, hsl(258,60%,96%), white)",
+                    border: "1px solid hsl(258,40%,82%)",
                   }}>
-                    <p className="text-[9px] uppercase tracking-[0.15em] font-bold mb-2 flex items-center gap-1" style={{ color: "#a78bfa" }}>
+                    <p className="text-[9px] uppercase tracking-[0.15em] font-bold mb-2 flex items-center gap-1" style={{ color: "hsl(258,60%,50%)" }}>
                       <Brain className="w-3 h-3" /> Szacowana ranga AI
                     </p>
                     <div className="flex items-center gap-2.5">
@@ -1215,20 +1213,20 @@ export default function Profile() {
               </p>
               <div className="glass-panel p-2 space-y-0.5">
                 {isLoadingMastery
-                  ? Array(3).fill(0).map((_, i) => <div key={i} className="h-10 rounded-lg animate-pulse" style={{ background: "rgba(255,255,255,0.03)" }} />)
+                  ? Array(3).fill(0).map((_, i) => <div key={i} className="h-10 rounded-lg animate-pulse" style={{ background: "hsl(220,15%,94%)" }} />)
                   : mastery?.length === 0
                     ? <p className="text-xs text-muted-foreground text-center py-3">Brak danych</p>
                     : mastery?.map((ch: any, i: number) => (
-                      <div key={i} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-white/[0.03] transition-colors cursor-default">
+                      <div key={i} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-muted transition-colors cursor-default">
                         <span className="text-[10px] text-muted-foreground/50 font-mono w-3 text-right">{i + 1}</span>
                         <img src={`${DD}/champion/${ch.championName}.png`} alt="" className="w-8 h-8 rounded-lg"
-                          style={{ border: "1px solid rgba(255,255,255,0.08)" }}
+                          style={{ border: "1px solid hsl(220,15%,88%)" }}
                           onError={(e) => { e.currentTarget.src = FALLBACK_ICON; }} />
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-white/90 truncate">{ch.championName}</p>
+                          <p className="text-xs font-semibold text-foreground/90 truncate">{ch.championName}</p>
                           <p className="text-[10px] text-muted-foreground">Lv. {ch.championLevel}</p>
                         </div>
-                        <span className="text-[10px] font-bold" style={{ color: "hsl(196,100%,55%)", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700 }}>
+                        <span className="text-[10px] font-bold" style={{ color: "hsl(200,90%,35%)", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700 }}>
                           {(ch.championPoints / 1000).toFixed(0)}K
                         </span>
                       </div>
@@ -1279,10 +1277,10 @@ export default function Profile() {
                               onError={(e) => { e.currentTarget.src = FALLBACK_ICON; }} />
                             <div className="flex-1 min-w-0">
                               <div className="flex justify-between mb-0.5">
-                                <span className="text-[10px] text-white/80 font-medium truncate">{name}</span>
+                                <span className="text-[10px] text-foreground/80 font-medium truncate">{name}</span>
                                 <span className={`text-[10px] font-mono font-bold ${wr >= 50 ? "text-win" : "text-loss"}`}>{wr}%</span>
                               </div>
-                              <div className="h-1 rounded-full overflow-hidden bg-white/[0.06]">
+                              <div className="h-1 rounded-full overflow-hidden bg-muted">
                                 <div className={`h-full rounded-full ${wr >= 50 ? "bg-win" : "bg-loss"}`} style={{ width: `${pct}%` }} />
                               </div>
                             </div>
@@ -1304,7 +1302,7 @@ export default function Profile() {
               </p>
               <div className="space-y-1.5">
                 {isLoadingMatches
-                  ? Array(5).fill(0).map((_, i) => <div key={i} className="h-14 rounded-lg animate-pulse" style={{ background: "rgba(255,255,255,0.025)" }} />)
+                  ? Array(5).fill(0).map((_, i) => <div key={i} className="h-14 rounded-lg animate-pulse" style={{ background: "hsl(220,15%,94%)" }} />)
                   : matches?.length === 0
                     ? <p className="text-xs text-muted-foreground text-center py-3">Brak historii</p>
                     : matches?.map((m: any, i: number) => <MatchRow key={m.matchId} match={m} index={i} selfPuuid={puuid} />)
@@ -1315,8 +1313,8 @@ export default function Profile() {
                   {matchCount < 30 && (
                     <button
                       onClick={() => setMatchCount(c => Math.min(c + 10, 30))}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs text-muted-foreground transition-all hover:text-primary hover:bg-white/[0.04]"
-                      style={{ border: "1px solid rgba(255,255,255,0.06)" }}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs text-muted-foreground transition-all hover:text-primary hover:bg-muted"
+                      style={{ border: "1px solid hsl(220,15%,88%)" }}
                     >
                       <ChevronRight className="w-3.5 h-3.5" />
                       Załaduj {Math.min(matchCount + 10, 30) - matchCount} więcej
@@ -1325,8 +1323,8 @@ export default function Profile() {
                   {matchCount > 10 && (
                     <button
                       onClick={() => setMatchCount(10)}
-                      className="py-2 px-3 rounded-lg text-xs text-muted-foreground/50 transition-all hover:text-muted-foreground hover:bg-white/[0.03]"
-                      style={{ border: "1px solid rgba(255,255,255,0.04)" }}
+                      className="py-2 px-3 rounded-lg text-xs text-muted-foreground/50 transition-all hover:text-muted-foreground hover:bg-muted"
+                      style={{ border: "1px solid hsl(220,15%,90%)" }}
                     >
                       Zwiń
                     </button>
