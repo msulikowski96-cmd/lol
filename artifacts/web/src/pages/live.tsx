@@ -9,10 +9,6 @@ import {
 
 import { DD, FALLBACK_ICON, SPELL_IMG, RUNE_STYLE_ICON, TIER_COLOR, TIER_LABEL } from "../lib/constants";
 
-const ROLE_ICONS = ["TOP", "JNG", "MID", "ADC", "SUP"];
-const ROLE_LABELS: Record<string, string> = {
-  TOP: "Top", JNG: "Jungler", MID: "Mid", ADC: "ADC", SUP: "Support",
-};
 
 const GAME_MODE_LABEL: Record<string, string> = {
   CLASSIC: "Rankingowa Solo/Duo", ARAM: "ARAM", URF: "URF",

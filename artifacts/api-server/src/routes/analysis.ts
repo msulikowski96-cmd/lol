@@ -199,7 +199,6 @@ function computeAnalysis(matches: MatchData[]) {
   const avgSoloKills = mean(soloKillArr);
   const firstBloodRate = (firstBloods / N) * 100;
   const avgTimeDeadPct = mean(timeDeadPct);
-  const avgSkillshotHitRate = mean(skillshotHitRate.filter((v) => v > 0));
   const avgGoldPerMin = mean(goldPerMin);
   const avgDragonKills = mean(validMatches.map((m) => m.dragonKills));
   const avgTurretKills = mean(validMatches.map((m) => m.turretKills));
@@ -207,7 +206,6 @@ function computeAnalysis(matches: MatchData[]) {
   const avgObjectivesStolen = mean(validMatches.map((m) => m.objectivesStolen));
   const avgBountyGold = mean(validMatches.map((m) => m.bountyGold));
   const avgMaxCsAdvantage = mean(validMatches.map((m) => m.maxCsAdvantage));
-  const avgTeamDamagePct = mean(validMatches.map((m) => m.teamDamagePct).filter((v) => v > 0));
   const avgTurretContrib = mean(turretContrib);
   const avgEnemyMissedCS = mean(validMatches.map((m) => m.enemyMissedCS));
 
@@ -261,12 +259,10 @@ function computeAnalysis(matches: MatchData[]) {
     [88, "S+"], [78, "S"], [68, "A"], [56, "B"], [44, "C"], [32, "D"], [0, "F"],
   ]);
 
-  const isSupport = ["Support", "Utility"].some((r) => {
-    const roleCounts: Record<string, number> = {};
-    for (const m of validMatches) roleCounts[m.teamPosition] = (roleCounts[m.teamPosition] ?? 0) + 1;
-    const primary = Object.entries(roleCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "";
-    return primary === "UTILITY";
-  });
+  const roleCounts: Record<string, number> = {};
+  for (const m of validMatches) roleCounts[m.teamPosition] = (roleCounts[m.teamPosition] ?? 0) + 1;
+  const primaryRole = Object.entries(roleCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "";
+  const isSupport = primaryRole === "UTILITY";
 
   const metrics = [
     {
@@ -500,14 +496,14 @@ function computeAnalysis(matches: MatchData[]) {
   else { playstyleArchetype = "Wszechstronny gracz"; playstyleDescription = `Zbalansowany profil bez wyraźnej specjalizacji. WR ${winRate.toFixed(0)}%, KDA ${avgKda.toFixed(2)}, KP ${avgKillParticipation.toFixed(0)}% — skupienie na jednym obszarze da przewagę.`; }
 
   const roleMap: Record<string, string> = { TOP: "Top", JUNGLE: "Jungler", MIDDLE: "Mid", BOTTOM: "ADC", UTILITY: "Support", "": "Nieznana" };
-  const roleCounts: Record<string, number> = {};
+  const displayRoleCounts: Record<string, number> = {};
   for (const m of validMatches) {
     const role = roleMap[m.teamPosition] ?? "Nieznana";
-    roleCounts[role] = (roleCounts[role] ?? 0) + 1;
+    displayRoleCounts[role] = (displayRoleCounts[role] ?? 0) + 1;
   }
-  const primaryRole = Object.entries(roleCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "Nieznana";
+  const displayPrimaryRole = Object.entries(displayRoleCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "Nieznana";
   const roleDistribution: Record<string, number> = {};
-  for (const [role, count] of Object.entries(roleCounts)) roleDistribution[role] = Math.round((count / N) * 100);
+  for (const [role, count] of Object.entries(displayRoleCounts)) roleDistribution[role] = Math.round((count / N) * 100);
 
   const streakType = validMatches[0]?.win ? "win" as const : "loss" as const;
   let streakCount = 0;
@@ -788,7 +784,7 @@ function computeAnalysis(matches: MatchData[]) {
     overallScore, overallRating, totalGamesAnalyzed: N, winRate: Math.round(winRate * 10) / 10,
     metrics, championBreakdown, formTrend, strengths, weaknesses,
     playstyleArchetype, playstyleDescription, criticalMistakes, gameplayPatterns,
-    primaryRole, roleDistribution, currentStreak, bestGame, worstGame,
+    primaryRole: displayPrimaryRole, roleDistribution, currentStreak, bestGame, worstGame,
     coachingTips, championRecommendations, performanceByGameLength, damageTypeBreakdown,
     predictedTier, playstyleRadar, lanePhaseStats, objectiveStats, deathAnalysis, tiltIndicator,
   };

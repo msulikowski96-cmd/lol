@@ -1013,6 +1013,15 @@ export default function Profile() {
     navigator.clipboard.writeText(window.location.href).then(() => {
       setShareState("copied");
       setTimeout(() => setShareState("idle"), 2000);
+    }).catch(() => {
+      const el = document.createElement("textarea");
+      el.value = window.location.href;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+      setShareState("copied");
+      setTimeout(() => setShareState("idle"), 2000);
     });
   };
 
