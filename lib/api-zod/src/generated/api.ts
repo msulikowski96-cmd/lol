@@ -330,6 +330,32 @@ export const GetSummonerAnalysisResponse = zod.object({
     lossStreakKdaDrop: zod.number(),
     isTilted: zod.boolean(),
   }),
+  winConditions: zod.object({
+    factors: zod.array(
+      zod.object({
+        factor: zod.string(),
+        winAvg: zod.number(),
+        lossAvg: zod.number(),
+        impact: zod.number(),
+        description: zod.string(),
+      }),
+    ),
+    summary: zod.string(),
+  }),
+  powerCurve: zod.object({
+    phases: zod.array(
+      zod.object({
+        phase: zod.string(),
+        label: zod.string(),
+        winRate: zod.number(),
+        avgKda: zod.number(),
+        avgPerformance: zod.number(),
+        gamesPlayed: zod.number(),
+      }),
+    ),
+    strongestPhase: zod.string(),
+    description: zod.string(),
+  }),
 });
 
 /**

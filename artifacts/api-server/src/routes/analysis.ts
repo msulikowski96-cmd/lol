@@ -153,6 +153,8 @@ function computeAnalysis(matches: MatchData[]) {
     objectiveStats: { avgTurretKills: 0, avgDragonKills: 0, avgObjectivesStolen: 0, avgInhibitorKills: 0, objectiveControlScore: 0, grade: "F", description: "Za mało danych." },
     deathAnalysis: { avgDeaths: 0, avgTimeDeadPct: 0, deathSpikeGames: 0, deathSpikeRate: 0, mostDeathsInGame: 0, avgBountyGold: 0, deathScore: 0, grade: "F", description: "Za mało danych." },
     tiltIndicator: { score: 0, description: "Za mało danych.", lossStreakKdaDrop: 0, isTilted: false },
+    winConditions: { factors: [], summary: "Za mało meczy do analizy warunków zwycięstwa." },
+    powerCurve: { phases: [], strongestPhase: "unknown", description: "Za mało meczy do analizy krzywej mocy." },
   };
   if (totalGames === 0) return empty;
 
@@ -780,6 +782,79 @@ function computeAnalysis(matches: MatchData[]) {
     isTilted,
   };
 
+  // ─── Win Condition Analysis ───
+  const winConditionFactors: { factor: string; winAvg: number; lossAvg: number; impact: number; description: string }[] = [];
+  if (winMatches.length >= 2 && lossMatches.length >= 2) {
+    const factorDefs: { key: string; label: string; extract: (m: MatchData) => number; unit: string; higherBetter: boolean }[] = [
+      { key: "cs_per_min", label: "CS / min", extract: (m) => m.gameDuration > 0 ? (m.cs / m.gameDuration) * 60 : 0, unit: "", higherBetter: true },
+      { key: "vision_score", label: "Wynik wizji / min", extract: (m) => m.gameDuration > 0 ? (m.visionScore / m.gameDuration) * 60 : 0, unit: "", higherBetter: true },
+      { key: "deaths", label: "Śmierci", extract: (m) => m.deaths, unit: "", higherBetter: false },
+      { key: "kill_participation", label: "Kill Participation %", extract: (m) => m.teamKills > 0 ? ((m.kills + m.assists) / m.teamKills) * 100 : 0, unit: "%", higherBetter: true },
+      { key: "damage_share", label: "Udział w obrażeniach %", extract: (m) => m.teamDamageDealt > 0 ? (m.totalDamageDealt / m.teamDamageDealt) * 100 : 0, unit: "%", higherBetter: true },
+      { key: "gold_per_min", label: "Złoto / min", extract: (m) => m.gameDuration > 0 ? (m.goldEarned / m.gameDuration) * 60 : 0, unit: "", higherBetter: true },
+      { key: "solo_kills", label: "Solo kille", extract: (m) => m.soloKills, unit: "", higherBetter: true },
+      { key: "wards_placed", label: "Wardy postawione", extract: (m) => m.wardsPlaced + m.controlWardsPlaced * 2, unit: "", higherBetter: true },
+      { key: "turret_kills", label: "Zniszczone wieże", extract: (m) => m.turretKills, unit: "", higherBetter: true },
+      { key: "damage_efficiency", label: "Efektywność obrażeń", extract: (m) => m.damageTaken > 0 ? m.totalDamageDealt / m.damageTaken : 1, unit: "x", higherBetter: true },
+    ];
+    for (const fd of factorDefs) {
+      const wAvg = mean(winMatches.map(fd.extract));
+      const lAvg = mean(lossMatches.map(fd.extract));
+      const diff = wAvg - lAvg;
+      const base = Math.max(Math.abs(wAvg), Math.abs(lAvg), 0.01);
+      const impactRaw = (diff / base) * 100;
+      const impact = fd.higherBetter ? impactRaw : -impactRaw;
+      if (Math.abs(impact) < 3) continue;
+      const rawDirection = diff > 0 ? "wyższy" : "niższy";
+      const desc = fd.higherBetter
+        ? `${fd.label} jest ${Math.abs(impactRaw).toFixed(0)}% ${rawDirection} w wygranych (${wAvg.toFixed(1)} vs ${lAvg.toFixed(1)})`
+        : `${fd.label} jest ${Math.abs(impactRaw).toFixed(0)}% ${diff < 0 ? "niższy" : "wyższy"} w wygranych (${wAvg.toFixed(1)} vs ${lAvg.toFixed(1)})`;
+      winConditionFactors.push({
+        factor: fd.label,
+        winAvg: Math.round(wAvg * 100) / 100,
+        lossAvg: Math.round(lAvg * 100) / 100,
+        impact: Math.round(impact),
+        description: desc,
+      });
+    }
+    winConditionFactors.sort((a, b) => Math.abs(b.impact) - Math.abs(a.impact));
+  }
+  const topFactor = winConditionFactors.length > 0 ? winConditionFactors[0] : null;
+  const wcSummary = topFactor
+    ? `Główny czynnik zwycięstw: ${topFactor.factor} (${topFactor.impact > 0 ? "+" : ""}${topFactor.impact}% różnicy). ${winConditionFactors.length > 1 ? `Również ważne: ${winConditionFactors.slice(1, 3).map(f => f.factor).join(", ")}.` : ""}`
+    : "Za mało danych do porównania wygranych i przegranych.";
+  const winConditions = { factors: winConditionFactors.slice(0, 6), summary: wcSummary };
+
+  // ─── Power Curve (Early / Mid / Late) ───
+  const earlyGames = validMatches.filter(m => m.gameDuration < 1500);
+  const midGames = validMatches.filter(m => m.gameDuration >= 1500 && m.gameDuration < 2100);
+  const lateGames = validMatches.filter(m => m.gameDuration >= 2100);
+
+  function phaseStats(games: MatchData[], phase: string, label: string) {
+    if (games.length === 0) return { phase, label, winRate: 0, avgKda: 0, avgPerformance: 0, gamesPlayed: 0 };
+    const wr = (games.filter(m => m.win).length / games.length) * 100;
+    const kda = mean(games.map(m => computeKda(m.kills, m.deaths, m.assists)));
+    const perf = mean(games.map(m => computeGameScore(m)));
+    return { phase, label, winRate: Math.round(wr * 10) / 10, avgKda: Math.round(kda * 100) / 100, avgPerformance: Math.round(perf), gamesPlayed: games.length };
+  }
+
+  const pcPhases = [
+    phaseStats(earlyGames, "early", "Early (< 25 min)"),
+    phaseStats(midGames, "mid", "Mid (25-35 min)"),
+    phaseStats(lateGames, "late", "Late (> 35 min)"),
+  ];
+  const playedPhases = pcPhases.filter(p => p.gamesPlayed >= 2);
+  let strongestPhase = "unknown";
+  let pcDesc = "Za mało meczy w poszczególnych fazach gry.";
+  if (playedPhases.length >= 2) {
+    const best = playedPhases.reduce((a, b) => a.avgPerformance > b.avgPerformance ? a : b);
+    const worst = playedPhases.reduce((a, b) => a.avgPerformance < b.avgPerformance ? a : b);
+    strongestPhase = best.phase;
+    const phaseLabels: Record<string, string> = { early: "wczesnej", mid: "środkowej", late: "późnej" };
+    pcDesc = `Najsilniejszy w ${phaseLabels[best.phase] ?? best.phase} fazie gry (WR ${best.winRate}%, KDA ${best.avgKda}). ${best.phase !== worst.phase ? `Najsłabszy w ${phaseLabels[worst.phase] ?? worst.phase} fazie (WR ${worst.winRate}%, KDA ${worst.avgKda}).` : ""} ${strongestPhase === "early" ? "Gracz early game — wykorzystuj przewagę z linii." : strongestPhase === "late" ? "Gracz late game — przetrwaj do late i skaliuj." : "Gracz mid game — kontroluj obiektywy w środkowej fazie."}`;
+  }
+  const powerCurve = { phases: pcPhases, strongestPhase, description: pcDesc };
+
   return {
     overallScore, overallRating, totalGamesAnalyzed: N, winRate: Math.round(winRate * 10) / 10,
     metrics, championBreakdown, formTrend, strengths, weaknesses,
@@ -787,6 +862,7 @@ function computeAnalysis(matches: MatchData[]) {
     primaryRole: displayPrimaryRole, roleDistribution, currentStreak, bestGame, worstGame,
     coachingTips, championRecommendations, performanceByGameLength, damageTypeBreakdown,
     predictedTier, playstyleRadar, lanePhaseStats, objectiveStats, deathAnalysis, tiltIndicator,
+    winConditions, powerCurve,
   };
 }
 

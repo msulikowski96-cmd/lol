@@ -916,6 +916,74 @@ components:
         - description
         - lossStreakKdaDrop
         - isTilted
+    WinConditionFactor:
+      type: object
+      properties:
+        factor:
+          type: string
+        winAvg:
+          type: number
+        lossAvg:
+          type: number
+        impact:
+          type: number
+        description:
+          type: string
+      required:
+        - factor
+        - winAvg
+        - lossAvg
+        - impact
+        - description
+    WinConditions:
+      type: object
+      properties:
+        factors:
+          type: array
+          items:
+            $ref: "#/components/schemas/WinConditionFactor"
+        summary:
+          type: string
+      required:
+        - factors
+        - summary
+    PowerCurvePhase:
+      type: object
+      properties:
+        phase:
+          type: string
+        label:
+          type: string
+        winRate:
+          type: number
+        avgKda:
+          type: number
+        avgPerformance:
+          type: number
+        gamesPlayed:
+          type: number
+      required:
+        - phase
+        - label
+        - winRate
+        - avgKda
+        - avgPerformance
+        - gamesPlayed
+    PowerCurve:
+      type: object
+      properties:
+        phases:
+          type: array
+          items:
+            $ref: "#/components/schemas/PowerCurvePhase"
+        strongestPhase:
+          type: string
+        description:
+          type: string
+      required:
+        - phases
+        - strongestPhase
+        - description
     PlayerAnalysis:
       type: object
       properties:
@@ -997,6 +1065,10 @@ components:
           $ref: "#/components/schemas/DeathAnalysis"
         tiltIndicator:
           $ref: "#/components/schemas/TiltIndicator"
+        winConditions:
+          $ref: "#/components/schemas/WinConditions"
+        powerCurve:
+          $ref: "#/components/schemas/PowerCurve"
       required:
         - overallScore
         - overallRating
@@ -1024,3 +1096,5 @@ components:
         - objectiveStats
         - deathAnalysis
         - tiltIndicator
+        - winConditions
+        - powerCurve

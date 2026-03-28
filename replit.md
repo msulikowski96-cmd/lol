@@ -16,8 +16,10 @@ TypeScript pnpm monorepo, fully in Polish. Users search players by Riot ID acros
 - `/promo` — TikTok promo page
 
 ## Design System
-- Primary: Electric cyan `#00d4ff` (`hsl(196,100%,50%)`)
-- Background: Ultra-dark navy `hsl(218,60%,3%)`
+- Theme: Clean light mode
+- Primary: `hsl(200,90%,38%)` blue
+- Background: `hsl(220,20%,97%)` light gray
+- Cards: white with `hsl(220,15%,88%)` borders, subtle shadows
 - Fonts: Barlow Condensed (display/numbers), Rajdhani (labels/buttons), Inter (body)
 - CSS utilities: `.glow-cyan`, `.neon-border`, `.tag-chip`, `.search-btn`, `.grid-bg`, `.scanline-card`
 - All content in Polish
@@ -28,7 +30,7 @@ TypeScript pnpm monorepo, fully in Polish. Users search players by Riot ID acros
 - `artifacts/web/src/pages/profile.tsx` — Player profile
 - `artifacts/web/src/pages/live.tsx` — Live game page
 - `artifacts/api-server/src/routes/summoner.ts` — All Riot API endpoints
-- `artifacts/api-server/src/routes/analysis.ts` — Analysis engine (~670 lines)
+- `artifacts/api-server/src/routes/analysis.ts` — Analysis engine (~940 lines, 22 algorithms)
 - `lib/api-spec/openapi.yaml` — API spec (source of truth)
 
 ## Important Notes

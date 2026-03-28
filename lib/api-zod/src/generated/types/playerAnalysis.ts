@@ -18,8 +18,10 @@ import type { PerformanceByGameLength } from "./performanceByGameLength";
 import type { PerformanceMetric } from "./performanceMetric";
 import type { PlayerAnalysisRoleDistribution } from "./playerAnalysisRoleDistribution";
 import type { PlaystyleRadar } from "./playstyleRadar";
+import type { PowerCurve } from "./powerCurve";
 import type { PredictedTier } from "./predictedTier";
 import type { TiltIndicator } from "./tiltIndicator";
+import type { WinConditions } from "./winConditions";
 
 export interface PlayerAnalysis {
   overallScore: number;
@@ -50,4 +52,6 @@ export interface PlayerAnalysis {
   objectiveStats: ObjectiveStats;
   deathAnalysis: DeathAnalysis;
   tiltIndicator: TiltIndicator;
+  winConditions: WinConditions;
+  powerCurve: PowerCurve;
 }

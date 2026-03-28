@@ -273,6 +273,34 @@ export interface TiltIndicator {
   isTilted: boolean;
 }
 
+export interface WinConditionFactor {
+  factor: string;
+  winAvg: number;
+  lossAvg: number;
+  impact: number;
+  description: string;
+}
+
+export interface WinConditions {
+  factors: WinConditionFactor[];
+  summary: string;
+}
+
+export interface PowerCurvePhase {
+  phase: string;
+  label: string;
+  winRate: number;
+  avgKda: number;
+  avgPerformance: number;
+  gamesPlayed: number;
+}
+
+export interface PowerCurve {
+  phases: PowerCurvePhase[];
+  strongestPhase: string;
+  description: string;
+}
+
 export type PlayerAnalysisRoleDistribution = { [key: string]: number };
 
 export interface PlayerAnalysis {
@@ -304,6 +332,8 @@ export interface PlayerAnalysis {
   objectiveStats: ObjectiveStats;
   deathAnalysis: DeathAnalysis;
   tiltIndicator: TiltIndicator;
+  winConditions: WinConditions;
+  powerCurve: PowerCurve;
 }
 
 export type SearchSummonerParams = {

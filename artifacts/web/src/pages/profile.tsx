@@ -12,7 +12,7 @@ import {
   Brain, Zap, BookOpen, XCircle,
   Wifi, Clock, Star, GraduationCap, Timer,
   Layers, ArrowUpRight, ArrowDownRight, Info, Users,
-  Share2, Copy, CheckCheck, ChevronRight, RefreshCw
+  Share2, Copy, CheckCheck, ChevronRight, RefreshCw, Crosshair, Activity
 } from "lucide-react";
 import {
   useSearchSummoner,
@@ -497,7 +497,8 @@ function AnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoad
   const { overallScore, overallRating, totalGamesAnalyzed, winRate, metrics, championBreakdown, formTrend, strengths, weaknesses,
     playstyleArchetype, playstyleDescription, criticalMistakes, gameplayPatterns, primaryRole, roleDistribution, currentStreak,
     bestGame, worstGame, coachingTips, championRecommendations, performanceByGameLength, damageTypeBreakdown,
-    predictedTier, playstyleRadar, lanePhaseStats, objectiveStats, deathAnalysis, tiltIndicator } = data;
+    predictedTier, playstyleRadar, lanePhaseStats, objectiveStats, deathAnalysis, tiltIndicator,
+    winConditions, powerCurve } = data;
 
   const sc = overallScore >= 70 ? "text-green-400" : overallScore >= 50 ? "text-yellow-400" : "text-red-400";
   const sr = overallScore >= 70 ? "stroke-green-400" : overallScore >= 50 ? "stroke-yellow-400" : "stroke-red-400";
@@ -890,6 +891,97 @@ function AnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoad
               <p className="text-[10px] text-muted-foreground leading-relaxed">{tiltIndicator.description}</p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Win Conditions */}
+      {winConditions && (
+        <div className="glass-panel p-4">
+          <p className="section-title"><Crosshair className="w-3.5 h-3.5 text-primary" /> Warunki zwycięstwa <InfoTooltip text="Porównanie kluczowych statystyk między Twoimi wygranymi a przegranymi meczami. Pokazuje, co konkretnie różni Twoje dobre gry od złych — nad czym warto popracować." /></p>
+          <p className="text-[10px] text-muted-foreground mb-3 leading-relaxed">{winConditions.summary}</p>
+          {winConditions.factors?.length > 0 && (<div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {winConditions.factors.map((f: any, i: number) => {
+              const positive = f.impact > 0;
+              return (
+                <div key={i} className={`stat-card ${positive ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}`}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[11px] font-bold text-foreground">{f.factor}</span>
+                    <span className={`text-[10px] font-bold ${positive ? "text-green-600" : "text-red-500"}`}>
+                      {positive ? "+" : ""}{f.impact}%
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 mb-1">
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between text-[9px] text-muted-foreground mb-0.5">
+                        <span>Wygrane</span><span className="font-bold text-green-600">{f.winAvg}</span>
+                      </div>
+                      <div className="h-1 bg-green-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-green-500 rounded-full" style={{ width: `${Math.min((f.winAvg / Math.max(f.winAvg, f.lossAvg, 0.01)) * 100, 100)}%` }} />
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between text-[9px] text-muted-foreground mb-0.5">
+                        <span>Przegrane</span><span className="font-bold text-red-500">{f.lossAvg}</span>
+                      </div>
+                      <div className="h-1 bg-red-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-red-500 rounded-full" style={{ width: `${Math.min((f.lossAvg / Math.max(f.winAvg, f.lossAvg, 0.01)) * 100, 100)}%` }} />
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-[9px] text-muted-foreground">{f.description}</p>
+                </div>
+              );
+            })}
+          </div>)}
+        </div>
+      )}
+
+      {/* Power Curve */}
+      {powerCurve && powerCurve.phases?.length > 0 && powerCurve.phases.some((p: any) => p.gamesPlayed > 0) && (
+        <div className="glass-panel p-4">
+          <p className="section-title"><Activity className="w-3.5 h-3.5 text-primary" /> Krzywa mocy <InfoTooltip text="Analiza Twojej siły w różnych fazach gry (early/mid/late). Pokazuje kiedy jesteś najsilniejszy i najsłabszy — pomaga dopasować styl gry i wybór bohaterów do Twoich naturalnych tendencji." /></p>
+          <p className="text-[10px] text-muted-foreground mb-3 leading-relaxed">{powerCurve.description}</p>
+          <div className="grid grid-cols-3 gap-2">
+            {powerCurve.phases.map((p: any) => {
+              const isStrongest = p.phase === powerCurve.strongestPhase;
+              const phaseColors: Record<string, { bg: string; border: string; accent: string }> = {
+                early: { bg: "bg-orange-50", border: "border-orange-200", accent: "text-orange-600" },
+                mid: { bg: "bg-blue-50", border: "border-blue-200", accent: "text-blue-600" },
+                late: { bg: "bg-purple-50", border: "border-purple-200", accent: "text-purple-600" },
+              };
+              const colors = phaseColors[p.phase] ?? phaseColors.mid;
+              return (
+                <div key={p.phase} className={`stat-card ${colors.bg} ${colors.border} ${isStrongest ? "ring-2 ring-primary/20" : ""}`}>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className={`text-[11px] font-bold ${colors.accent}`}>{p.label}</span>
+                    {isStrongest && <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />}
+                  </div>
+                  {p.gamesPlayed > 0 ? (
+                    <>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[9px] text-muted-foreground">Win Rate</span>
+                        <span className={`text-xs font-bold ${p.winRate >= 50 ? "text-green-600" : "text-red-500"}`}>{p.winRate}%</span>
+                      </div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[9px] text-muted-foreground">KDA</span>
+                        <span className="text-xs font-bold text-foreground">{p.avgKda}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px] text-muted-foreground">Mecze</span>
+                        <span className="text-[10px] text-muted-foreground">{p.gamesPlayed}</span>
+                      </div>
+                      <div className="mt-2 h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${Math.min(p.avgPerformance, 100)}%` }} />
+                      </div>
+                      <p className="text-[8px] text-muted-foreground/70 mt-0.5 text-right">Wynik: {p.avgPerformance}/100</p>
+                    </>
+                  ) : (
+                    <p className="text-[10px] text-muted-foreground/50 text-center py-2">Brak danych</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
