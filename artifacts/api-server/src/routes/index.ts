@@ -5,10 +5,14 @@ import analysisRouter from "./analysis";
 import championRouter from "./champion";
 import matchRouter from "./match";
 import aiAnalysisRouter from "./ai-analysis";
+import authRouter from "./auth";
+import linkedAccountsRouter from "./linked-accounts";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(authRouter);
+router.use("/user", linkedAccountsRouter);
 router.use("/summoner", summonerRouter);
 router.use("/summoner", analysisRouter);
 router.use("/summoner", championRouter);

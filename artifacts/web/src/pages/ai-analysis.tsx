@@ -1,6 +1,7 @@
 import { useParams, Link } from "wouter";
 import { useState, useEffect, useRef, Component } from "react";
 import type { ReactNode } from "react";
+import UserMenu from "@/components/UserMenu";
 import { motion } from "framer-motion";
 import {
   ChevronLeft, Brain, Star, TrendingUp, TrendingDown,
@@ -291,6 +292,8 @@ function AiAnalysisInner() {
             <Brain style={{ width: 13, height: 13, color: "#C89B3C" }} />
             <span style={{ fontSize: 9, fontWeight: 700, color: "#C89B3C", letterSpacing: "0.08em", fontFamily: "'Rajdhani',sans-serif" }}>NEXUS AI</span>
           </div>
+
+          <UserMenu />
         </div>
       </header>
 
