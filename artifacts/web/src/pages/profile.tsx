@@ -1005,14 +1005,15 @@ function AnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoad
             <tbody className="divide-y divide-border/30">
               {championBreakdown?.sort((a: any, b: any) => b.gamesPlayed - a.gamesPlayed).map((ch: any, i: number) => {
                 const pc = ch.performanceScore >= 70 ? "bg-green-500" : ch.performanceScore >= 50 ? "bg-yellow-500" : "bg-red-500";
+                const champUrl = `/champion/${region}/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}/${ch.championName}`;
                 return (
                   <tr key={i} className="hover:bg-muted/15 transition-colors">
                     <td className="py-2 px-2">
-                      <div className="flex items-center gap-2">
+                      <Link href={champUrl} className="flex items-center gap-2 group">
                         <img src={`${DD}/champion/${ch.championName}.png`} alt="" className="w-6 h-6 rounded-full border border-border"
                           onError={(e) => { e.currentTarget.src = FALLBACK_ICON; }} />
-                        <span className="text-xs font-semibold text-foreground">{ch.championName}</span>
-                      </div>
+                        <span className="text-xs font-semibold text-foreground group-hover:text-cyan-400 transition-colors">{ch.championName}</span>
+                      </Link>
                     </td>
                     <td className="py-2 px-2 text-center text-xs font-mono">{ch.gamesPlayed}</td>
                     <td className={`py-2 px-2 text-center text-xs font-mono font-semibold ${ch.winRate >= 50 ? "text-win" : "text-loss"}`}>{ch.winRate}%</td>
@@ -1309,19 +1310,20 @@ export default function Profile() {
                   : mastery?.length === 0
                     ? <p className="text-xs text-muted-foreground text-center py-3">Brak danych</p>
                     : mastery?.map((ch: any, i: number) => (
-                      <div key={i} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-muted transition-colors cursor-default">
+                      <Link key={i} href={`/champion/${region}/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}/${ch.championName}`}
+                        className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-muted transition-colors group">
                         <span className="text-[10px] text-muted-foreground/50 font-mono w-3 text-right">{i + 1}</span>
                         <img src={`${DD}/champion/${ch.championName}.png`} alt="" className="w-8 h-8 rounded-lg"
                           style={{ border: "1px solid hsl(220,15%,88%)" }}
                           onError={(e) => { e.currentTarget.src = FALLBACK_ICON; }} />
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-foreground/90 truncate">{ch.championName}</p>
+                          <p className="text-xs font-semibold text-foreground/90 truncate group-hover:text-cyan-500 transition-colors">{ch.championName}</p>
                           <p className="text-[10px] text-muted-foreground">Lv. {ch.championLevel}</p>
                         </div>
                         <span className="text-[10px] font-bold" style={{ color: "hsl(200,90%,35%)", fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 700 }}>
                           {(ch.championPoints / 1000).toFixed(0)}K
                         </span>
-                      </div>
+                      </Link>
                     ))
                 }
               </div>

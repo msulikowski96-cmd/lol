@@ -1,5 +1,21 @@
+let _ddVersion = "14.24.1";
+
+export function setDDVersion(v: string) { _ddVersion = v; }
+export function getDDVersion() { return _ddVersion; }
+export function getDDBase() { return `https://ddragon.leagueoflegends.com/cdn/${_ddVersion}/img`; }
+
 export const DD = "https://ddragon.leagueoflegends.com/cdn/14.24.1/img";
 export const FALLBACK_ICON = `${DD}/profileicon/29.png`;
+
+export function champIconUrl(championName: string) {
+  return `${getDDBase()}/champion/${championName}.png`;
+}
+export function itemIconUrl(itemId: number) {
+  return `${getDDBase()}/item/${itemId}.png`;
+}
+export function profileIconUrl(iconId: number) {
+  return `${getDDBase()}/profileicon/${iconId}.png`;
+}
 
 export const SPELL_IMG: Record<number, string> = {
   1: "SummonerBoost", 3: "SummonerExhaust", 4: "SummonerFlash",

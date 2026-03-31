@@ -6,149 +6,20 @@ import {
   GetSummonerMasteryResponse,
   GetLiveGameResponse,
 } from "@workspace/api-zod";
+import { riotFetch, handleRiotError, RiotApiError } from "../lib/riot-fetch";
+import { cache } from "../lib/cache";
+import { getDDVersion, getChampionName, getChampionMap } from "../lib/ddragon";
 
 const router: IRouter = Router();
 
 const RIOT_API_KEY = process.env.RIOT_API_KEY ?? "";
 
-// Region to routing value mapping for account API (uses regional clusters)
-const REGION_TO_CLUSTER: Record<string, string> = {
-  NA1: "americas",
-  BR1: "americas",
-  LA1: "americas",
-  LA2: "americas",
-  KR: "asia",
-  JP1: "asia",
-  EUW1: "europe",
-  EUN1: "europe",
-  TR1: "europe",
-  RU: "europe",
-  OC1: "sea",
-  PH2: "sea",
-  SG2: "sea",
-  TH2: "sea",
-  TW2: "sea",
-  VN2: "sea",
+export const REGION_TO_CLUSTER: Record<string, string> = {
+  NA1: "americas", BR1: "americas", LA1: "americas", LA2: "americas",
+  KR: "asia", JP1: "asia",
+  EUW1: "europe", EUN1: "europe", TR1: "europe", RU: "europe",
+  OC1: "sea", PH2: "sea", SG2: "sea", TH2: "sea", TW2: "sea", VN2: "sea",
 };
-
-async function riotFetch(url: string, req: any): Promise<Response> {
-  const res = await fetch(url, {
-    headers: {
-      "X-Riot-Token": RIOT_API_KEY,
-    },
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    req.log.error({ url, status: res.status, body: text }, "Riot API error");
-    const err = new Error(text) as any;
-    err.status = res.status;
-    throw err;
-  }
-
-  return res;
-}
-
-// GET /api/summoner/search?gameName=&tagLine=&region=
-router.get("/search", async (req, res) => {
-  const { gameName, tagLine, region } = req.query as {
-    gameName: string;
-    tagLine: string;
-    region: string;
-  };
-
-  if (!gameName || !tagLine || !region) {
-    res.status(400).json({ error: "bad_request", message: "gameName, tagLine, and region are required" });
-    return;
-  }
-
-  const cluster = REGION_TO_CLUSTER[region.toUpperCase()] ?? "europe";
-  const regionLower = region.toLowerCase();
-
-  try {
-    // Step 1: Get account by Riot ID
-    const accountUrl = `https://${cluster}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`;
-    const accountRes = await riotFetch(accountUrl, req);
-    const account = (await accountRes.json()) as { puuid: string; gameName: string; tagLine: string };
-
-    // Step 2: Get summoner by PUUID (optional — Riot is phasing this out)
-    let summonerId = "";
-    let summonerLevel = 0;
-    let profileIconId = 29; // default icon
-
-    try {
-      const summonerUrl = `https://${regionLower}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${account.puuid}`;
-      const summonerRes = await fetch(summonerUrl, {
-        headers: { "X-Riot-Token": RIOT_API_KEY },
-      });
-      if (summonerRes.ok) {
-        const summoner = (await summonerRes.json()) as {
-          id: string;
-          profileIconId: number;
-          summonerLevel: number;
-        };
-        summonerId = summoner.id ?? "";
-        summonerLevel = summoner.summonerLevel ?? 0;
-        profileIconId = summoner.profileIconId ?? 29;
-      }
-    } catch {
-      // summoner v4 lookup failed — continue with defaults
-    }
-
-    const profile = SearchSummonerResponse.parse({
-      puuid: account.puuid,
-      gameName: account.gameName,
-      tagLine: account.tagLine,
-      summonerId,
-      summonerLevel,
-      profileIconId,
-      region: region.toUpperCase(),
-    });
-
-    res.json(profile);
-  } catch (err: any) {
-    if (err?.status === 404) {
-      res.status(404).json({ error: "not_found", message: "Summoner not found" });
-    } else {
-      res.status(500).json({ error: "riot_api_error", message: err?.message ?? "Unknown error" });
-    }
-  }
-});
-
-// GET /api/summoner/:puuid/ranked?region=
-router.get("/:puuid/ranked", async (req, res) => {
-  const { puuid } = req.params;
-  const { region } = req.query as { region: string };
-
-  if (!region) {
-    res.status(400).json({ error: "bad_request", message: "region is required" });
-    return;
-  }
-
-  const regionLower = region.toLowerCase();
-
-  try {
-    const url = `https://${regionLower}.api.riotgames.com/lol/league/v4/entries/by-puuid/${puuid}`;
-    const apiRes = await riotFetch(url, req);
-    const data = (await apiRes.json()) as Array<{
-      queueType: string;
-      tier: string;
-      rank: string;
-      leaguePoints: number;
-      wins: number;
-      losses: number;
-      hotStreak: boolean;
-      veteran: boolean;
-      freshBlood: boolean;
-      inactive: boolean;
-    }>;
-
-    const ranked = GetSummonerRankedResponse.parse(data);
-    res.json(ranked);
-  } catch (err: any) {
-    res.status(500).json({ error: "riot_api_error", message: err?.message ?? "Unknown error" });
-  }
-});
 
 function computeOpScore(
   kills: number, deaths: number, assists: number,
@@ -169,6 +40,101 @@ function computeOpScore(
   return Math.round(Math.max(0, Math.min(100, raw))) / 10;
 }
 
+// GET /api/summoner/search?gameName=&tagLine=&region=
+router.get("/search", async (req, res) => {
+  const { gameName, tagLine, region } = req.query as {
+    gameName: string; tagLine: string; region: string;
+  };
+
+  if (!gameName || !tagLine || !region) {
+    res.status(400).json({ error: "bad_request", message: "gameName, tagLine, and region are required" });
+    return;
+  }
+
+  const regionUpper = region.toUpperCase();
+  const cacheKey = `search:${regionUpper}:${gameName.toLowerCase()}:${tagLine.toLowerCase()}`;
+  const cached = cache.get(cacheKey);
+  if (cached) { res.json(cached); return; }
+
+  const cluster = REGION_TO_CLUSTER[regionUpper] ?? "europe";
+  const regionLower = region.toLowerCase();
+
+  try {
+    const accountUrl = `https://${cluster}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`;
+    const accountRes = await riotFetch(accountUrl);
+    const account = (await accountRes.json()) as { puuid: string; gameName: string; tagLine: string };
+
+    let summonerId = "";
+    let summonerLevel = 0;
+    let profileIconId = 29;
+
+    try {
+      const summonerUrl = `https://${regionLower}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${account.puuid}`;
+      const summonerRes = await fetch(summonerUrl, {
+        headers: { "X-Riot-Token": RIOT_API_KEY },
+      });
+      if (summonerRes.ok) {
+        const summoner = (await summonerRes.json()) as {
+          id: string; profileIconId: number; summonerLevel: number;
+        };
+        summonerId = summoner.id ?? "";
+        summonerLevel = summoner.summonerLevel ?? 0;
+        profileIconId = summoner.profileIconId ?? 29;
+      }
+    } catch {
+      // summoner v4 lookup failed — continue with defaults
+    }
+
+    const profile = SearchSummonerResponse.parse({
+      puuid: account.puuid,
+      gameName: account.gameName,
+      tagLine: account.tagLine,
+      summonerId,
+      summonerLevel,
+      profileIconId,
+      region: regionUpper,
+    });
+
+    cache.set(cacheKey, profile, 60);
+    res.json(profile);
+  } catch (err) {
+    handleRiotError(err, res);
+  }
+});
+
+// GET /api/summoner/:puuid/ranked?region=
+router.get("/:puuid/ranked", async (req, res) => {
+  const { puuid } = req.params;
+  const { region } = req.query as { region: string };
+
+  if (!region) {
+    res.status(400).json({ error: "bad_request", message: "region is required" });
+    return;
+  }
+
+  const cacheKey = `ranked:${region.toUpperCase()}:${puuid}`;
+  const cached = cache.get(cacheKey);
+  if (cached) { res.json(cached); return; }
+
+  const regionLower = region.toLowerCase();
+
+  try {
+    const url = `https://${regionLower}.api.riotgames.com/lol/league/v4/entries/by-puuid/${puuid}`;
+    const apiRes = await riotFetch(url);
+    const data = (await apiRes.json()) as Array<{
+      queueType: string; tier: string; rank: string; leaguePoints: number;
+      wins: number; losses: number; hotStreak: boolean; veteran: boolean;
+      freshBlood: boolean; inactive: boolean;
+    }>;
+
+    const ranked = GetSummonerRankedResponse.parse(data);
+    cache.set(cacheKey, ranked, 120);
+    res.json(ranked);
+  } catch (err) {
+    handleRiotError(err, res);
+  }
+});
+
 // GET /api/summoner/:puuid/matches?region=&count=
 router.get("/:puuid/matches", async (req, res) => {
   const { puuid } = req.params;
@@ -179,18 +145,22 @@ router.get("/:puuid/matches", async (req, res) => {
     return;
   }
 
-  const cluster = REGION_TO_CLUSTER[region.toUpperCase()] ?? "europe";
   const matchCount = Math.min(Number(count ?? 20), 20);
+  const cacheKey = `matches:${region.toUpperCase()}:${puuid}:${matchCount}`;
+  const cached = cache.get(cacheKey);
+  if (cached) { res.json(cached); return; }
+
+  const cluster = REGION_TO_CLUSTER[region.toUpperCase()] ?? "europe";
 
   try {
     const matchListUrl = `https://${cluster}.api.riotgames.com/lol/match/v5/matches/by-puuid/${puuid}/ids?count=${matchCount}`;
-    const matchListRes = await riotFetch(matchListUrl, req);
+    const matchListRes = await riotFetch(matchListUrl);
     const matchIds = (await matchListRes.json()) as string[];
 
     const matches = await Promise.all(
       matchIds.map(async (matchId) => {
         const matchUrl = `https://${cluster}.api.riotgames.com/lol/match/v5/matches/${matchId}`;
-        const matchRes = await riotFetch(matchUrl, req);
+        const matchRes = await riotFetch(matchUrl);
         const matchData = (await matchRes.json()) as any;
         const allParticipants: any[] = matchData.info.participants ?? [];
 
@@ -209,7 +179,6 @@ router.get("/:puuid/matches", async (req, res) => {
 
         const myTeam = allParticipants.filter((p: any) => p.teamId === myTeamId);
         const teamKills = myTeam.reduce((sum: number, p: any) => sum + (p.kills ?? 0), 0);
-
         const opScore = computeOpScore(kills, deaths, assists, cs, gameDuration, totalDamageDealt, teamKills, win);
 
         let opponent: { championName: string; kills: number; deaths: number; assists: number } | null = null;
@@ -225,7 +194,6 @@ router.get("/:puuid/matches", async (req, res) => {
           }
         }
 
-        // Build participants list for all 10 players
         const participants = allParticipants.map((p: any) => {
           const pTeamId: number = p.teamId;
           const pKills: number = p.kills ?? 0;
@@ -241,14 +209,10 @@ router.get("/:puuid/matches", async (req, res) => {
             summonerName: (p.riotIdGameName ?? p.summonerName ?? "Nieznany") as string,
             puuid: (p.puuid ?? "") as string,
             championName: (p.championName ?? "Unknown") as string,
-            kills: pKills,
-            deaths: pDeaths,
-            assists: pAssists,
-            cs: pCs,
-            totalDamageDealt: pDmg,
+            kills: pKills, deaths: pDeaths, assists: pAssists,
+            cs: pCs, totalDamageDealt: pDmg,
             goldEarned: (p.goldEarned ?? 0) as number,
-            win: pWin,
-            teamId: pTeamId,
+            win: pWin, teamId: pTeamId,
             items: [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5, p.item6].map((i: any) => i ?? 0) as number[],
             opScore: pOpScore,
           };
@@ -259,15 +223,10 @@ router.get("/:puuid/matches", async (req, res) => {
           gameMode: matchData.info.gameMode as string,
           gameDuration,
           gameEndTimestamp: matchData.info.gameEndTimestamp as number,
-          win,
-          championName: participant.championName as string,
+          win, championName: participant.championName as string,
           championId: participant.championId as number,
-          kills,
-          deaths,
-          assists,
-          totalDamageDealt,
-          goldEarned: participant.goldEarned as number,
-          cs,
+          kills, deaths, assists, totalDamageDealt,
+          goldEarned: participant.goldEarned as number, cs,
           visionScore: participant.visionScore as number,
           items: [
             participant.item0, participant.item1, participant.item2,
@@ -279,18 +238,17 @@ router.get("/:puuid/matches", async (req, res) => {
             primaryStyleId: participant.perks?.styles?.[0]?.style ?? 0,
             subStyleId: participant.perks?.styles?.[1]?.style ?? 0,
           },
-          opScore,
-          opponent,
-          participants,
+          opScore, opponent, participants,
         };
       })
     );
 
     const filtered = matches.filter(Boolean);
     const validated = GetSummonerMatchesResponse.parse(filtered);
+    cache.set(cacheKey, validated, 90);
     res.json(validated);
-  } catch (err: any) {
-    res.status(500).json({ error: "riot_api_error", message: err?.message ?? "Unknown error" });
+  } catch (err) {
+    handleRiotError(err, res);
   }
 });
 
@@ -304,47 +262,33 @@ router.get("/:puuid/mastery", async (req, res) => {
     return;
   }
 
-  const regionLower = region.toLowerCase();
   const masteryCount = Math.min(Number(count ?? 7), 10);
+  const cacheKey = `mastery:${region.toUpperCase()}:${puuid}:${masteryCount}`;
+  const cached = cache.get(cacheKey);
+  if (cached) { res.json(cached); return; }
+
+  const regionLower = region.toLowerCase();
 
   try {
     const url = `https://${regionLower}.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid/${puuid}/top?count=${masteryCount}`;
-    const apiRes = await riotFetch(url, req);
+    const apiRes = await riotFetch(url);
     const data = (await apiRes.json()) as Array<{
-      championId: number;
-      championLevel: number;
-      championPoints: number;
-      lastPlayTime: number;
+      championId: number; championLevel: number; championPoints: number; lastPlayTime: number;
     }>;
-
-    const ddVersion = "14.24.1";
-    const championsByKey: Record<string, string> = {};
-    try {
-      const championsRes = await fetch(
-        `https://ddragon.leagueoflegends.com/cdn/${ddVersion}/data/en_US/champion.json`
-      );
-      if (championsRes.ok) {
-        const championsData = (await championsRes.json()) as { data: Record<string, { key: string; name: string }> };
-        for (const [name, champ] of Object.entries(championsData.data)) {
-          championsByKey[champ.key] = name;
-        }
-      }
-    } catch {
-      req.log.warn("Data Dragon champion fetch failed, using fallback names");
-    }
 
     const mastery = data.map((entry) => ({
       championId: entry.championId,
-      championName: championsByKey[String(entry.championId)] ?? "Unknown",
+      championName: getChampionName(entry.championId),
       championLevel: entry.championLevel,
       championPoints: entry.championPoints,
       lastPlayTime: entry.lastPlayTime,
     }));
 
     const validated = GetSummonerMasteryResponse.parse(mastery);
+    cache.set(cacheKey, validated, 300);
     res.json(validated);
-  } catch (err: any) {
-    res.status(500).json({ error: "riot_api_error", message: err?.message ?? "Unknown error" });
+  } catch (err) {
+    handleRiotError(err, res);
   }
 });
 
@@ -352,10 +296,20 @@ router.get("/:puuid/mastery", async (req, res) => {
 router.get("/:puuid/live", async (req, res) => {
   const { puuid } = req.params;
   const { region, summonerId } = req.query as { region: string; summonerId?: string };
-  if (!region) { res.status(400).json({ error: "bad_request", message: "region is required" }); return; }
+
+  if (!region) {
+    res.status(400).json({ error: "bad_request", message: "region is required" });
+    return;
+  }
+
+  const cacheKey = `live:${region.toUpperCase()}:${puuid}`;
+  const cached = cache.get(cacheKey);
+  if (cached) { res.json(cached); return; }
+
   const regionLower = region.toLowerCase();
+  const champById = getChampionMap();
+
   try {
-    // Try PUUID-based spectator endpoint first (Riot API v5 preferred)
     const liveByPuuidUrl = `https://${regionLower}.api.riotgames.com/lol/spectator/v5/active-games/by-puuid/${puuid}`;
     let liveRes = await fetch(liveByPuuidUrl, { headers: { "X-Riot-Token": RIOT_API_KEY } });
 
@@ -374,17 +328,14 @@ router.get("/:puuid/live", async (req, res) => {
         liveRes = await fetch(liveByIdUrl, { headers: { "X-Riot-Token": RIOT_API_KEY } });
       }
     }
+
     if (!liveRes.ok) {
       res.status(404).json({ error: "not_in_game", message: "Gracz nie jest teraz w meczu" });
       return;
     }
+
     const liveData = (await liveRes.json()) as any;
-    const ddVersion = "14.24.1";
-    const champRes = await fetch(`https://ddragon.leagueoflegends.com/cdn/${ddVersion}/data/en_US/champion.json`);
-    const champData = (await champRes.json()) as { data: Record<string, { key: string; name: string }> };
-    const champById: Record<string, string> = {};
-    for (const [name, champ] of Object.entries(champData.data)) { champById[champ.key] = name; }
-    // Fetch ranked data for all participants in parallel
+
     const rankedByPuuid: Record<string, { tier: string; division: string; lp: number; wins: number; losses: number }> = {};
     await Promise.allSettled(
       (liveData.participants ?? []).map(async (p: any) => {
@@ -421,20 +372,31 @@ router.get("/:puuid/live", async (req, res) => {
       rankedLP: rankedByPuuid[p.puuid]?.lp ?? 0,
       rankedWins: rankedByPuuid[p.puuid]?.wins ?? 0,
       rankedLosses: rankedByPuuid[p.puuid]?.losses ?? 0,
-      perks: { perkIds: p.perks?.perkIds ?? [], perkStyle: p.perks?.perkStyle ?? 0, perkSubStyle: p.perks?.perkSubStyle ?? 0 },
+      perks: {
+        perkIds: p.perks?.perkIds ?? [],
+        perkStyle: p.perks?.perkStyle ?? 0,
+        perkSubStyle: p.perks?.perkSubStyle ?? 0,
+      },
     }));
+
     const bans = (liveData.bannedChampions ?? []).map((b: any) => ({
       championId: b.championId ?? -1,
       championName: b.championId && b.championId > 0 ? (champById[String(b.championId)] ?? "Nieznany") : "Brak",
       teamId: b.teamId ?? 0,
       pickTurn: b.pickTurn ?? 0,
     }));
+
     const result = {
-      gameId: liveData.gameId ?? 0, gameMode: liveData.gameMode ?? "CLASSIC",
-      gameType: liveData.gameType ?? "MATCHED_GAME", gameLength: liveData.gameLength ?? 0,
-      mapId: liveData.mapId ?? 0, participants, bans,
+      gameId: liveData.gameId ?? 0,
+      gameMode: liveData.gameMode ?? "CLASSIC",
+      gameType: liveData.gameType ?? "MATCHED_GAME",
+      gameLength: liveData.gameLength ?? 0,
+      mapId: liveData.mapId ?? 0,
+      participants, bans,
     };
+
     const validated = GetLiveGameResponse.parse(result);
+    cache.set(cacheKey, validated, 30);
     res.json(validated);
   } catch (err: any) {
     res.status(500).json({ error: "riot_api_error", message: err?.message ?? "Unknown error" });

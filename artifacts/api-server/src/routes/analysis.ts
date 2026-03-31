@@ -1,8 +1,9 @@
 import { Router, type IRouter } from "express";
 import { GetSummonerAnalysisResponse } from "@workspace/api-zod";
+import { riotFetch, handleRiotError } from "../lib/riot-fetch";
+import { cache } from "../lib/cache";
 
 const router: IRouter = Router();
-const RIOT_API_KEY = process.env.RIOT_API_KEY ?? "";
 
 const REGION_TO_CLUSTER: Record<string, string> = {
   NA1: "americas", BR1: "americas", LA1: "americas", LA2: "americas",
@@ -870,19 +871,22 @@ router.get("/:puuid/analysis", async (req, res) => {
   const { puuid } = req.params;
   const { region, count } = req.query as { region: string; count?: string };
   if (!region) { res.status(400).json({ error: "bad_request", message: "region is required" }); return; }
-  const cluster = REGION_TO_CLUSTER[region.toUpperCase()] ?? "europe";
+
   const matchCount = Math.min(Number(count ?? 20), 20);
+  const cacheKey = `analysis:${region.toUpperCase()}:${puuid}:${matchCount}`;
+  const cached = cache.get(cacheKey);
+  if (cached) { res.json(cached); return; }
+
+  const cluster = REGION_TO_CLUSTER[region.toUpperCase()] ?? "europe";
   try {
     const matchListUrl = `https://${cluster}.api.riotgames.com/lol/match/v5/matches/by-puuid/${puuid}/ids?count=${matchCount}`;
-    const matchListRes = await fetch(matchListUrl, { headers: { "X-Riot-Token": RIOT_API_KEY } });
-    if (!matchListRes.ok) { res.status(500).json({ error: "riot_api_error", message: "Failed to fetch match list" }); return; }
+    const matchListRes = await riotFetch(matchListUrl);
     const matchIds = (await matchListRes.json()) as string[];
     const matchDataArr: MatchData[] = [];
     for (const matchId of matchIds) {
       try {
         const matchUrl = `https://${cluster}.api.riotgames.com/lol/match/v5/matches/${matchId}`;
-        const matchRes = await fetch(matchUrl, { headers: { "X-Riot-Token": RIOT_API_KEY } });
-        if (!matchRes.ok) continue;
+        const matchRes = await riotFetch(matchUrl);
         const matchData = (await matchRes.json()) as any;
         if (matchData.info?.gameMode === "CHERRY") continue;
         const participant = matchData.info?.participants?.find((p: any) => p.puuid === puuid);
@@ -935,10 +939,11 @@ router.get("/:puuid/analysis", async (req, res) => {
     }
     const analysis = computeAnalysis(matchDataArr);
     const validated = GetSummonerAnalysisResponse.parse(analysis);
+    cache.set(cacheKey, validated, 120);
     res.json(validated);
   } catch (err: any) {
     req.log.error({ err }, "Analysis error");
-    res.status(500).json({ error: "analysis_error", message: err?.message ?? "Unknown error" });
+    handleRiotError(err, res);
   }
 });
 
