@@ -1,4 +1,8 @@
 const RIOT_API_KEY = process.env.RIOT_API_KEY ?? "";
+if (!RIOT_API_KEY) {
+  // eslint-disable-next-line no-console
+  console.warn("[riot-fetch] RIOT_API_KEY is not set — all Riot API requests will fail with 401.");
+}
 const MAX_RETRIES = 2;
 const MIN_RETRY_DELAY_MS = 1000;
 const MAX_RETRY_DELAY_MS = 10000;
