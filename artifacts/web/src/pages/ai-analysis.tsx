@@ -10,7 +10,6 @@ import {
   ArrowRight, Clock, Activity
 } from "lucide-react";
 import { useSearchSummoner, useGetSummonerRanked, useGetSummonerMastery } from "@workspace/api-client-react";
-import { DD } from "@/lib/constants";
 
 const BASE_URL = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -307,7 +306,7 @@ function AiAnalysisInner() {
             <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, marginTop: 2 }}>{region}</div>
             {soloQ && (
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
-                <img src={DD(`img/ranked-emblems/${soloQ.tier}.webp`)}
+                <img src={`https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-shared-components/global/default/${soloQ.tier.toLowerCase()}.png`}
                   style={{ width: 20, height: 20, objectFit: "contain" }}
                   onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                 />
