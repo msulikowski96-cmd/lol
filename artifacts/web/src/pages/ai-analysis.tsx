@@ -163,8 +163,8 @@ class AiErrorBoundary extends Component<{ children: ReactNode }, { hasError: boo
   }
 }
 
-function PaymentWall({ gameName, tagLine, puuid, region, onPaid }: {
-  gameName: string; tagLine: string; puuid: string; region: string; onPaid: (sessionId: string) => void;
+function PaymentWall({ gameName, tagLine, puuid, region, authToken }: {
+  gameName: string; tagLine: string; puuid: string; region: string; authToken: string;
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -177,7 +177,7 @@ function PaymentWall({ gameName, tagLine, puuid, region, onPaid }: {
       const profileUrl = `${BASE_URL}/profile/${region}/${gameName}/${tagLine}`;
       const res = await fetch(`${BASE_URL}/api/stripe/create-ai-checkout`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
         body: JSON.stringify({
           puuid, region, gameName, tagLine,
           successUrl: currentUrl,
@@ -277,6 +277,132 @@ function PaymentWall({ gameName, tagLine, puuid, region, onPaid }: {
   );
 }
 
+const AUTH_KEY = "nexus_auth_token";
+
+function AuthModal({ onSuccess, onClose }: { onSuccess: (token: string, email: string) => void; onClose?: () => void }) {
+  const [tab, setTab] = useState<"login" | "register">("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setErr(null);
+    setLoading(true);
+    try {
+      const res = await fetch(`${BASE_URL}/api/auth/${tab}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setErr(data.error ?? "Błąd serwera"); return; }
+      localStorage.setItem(AUTH_KEY, data.token);
+      onSuccess(data.token, data.user.email);
+    } catch {
+      setErr("Błąd połączenia z serwerem");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 9999,
+      background: "rgba(10,22,40,0.7)", backdropFilter: "blur(4px)",
+      display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
+    }}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.25 }}
+        style={{ ...CARD, padding: 28, width: "100%", maxWidth: 360 }}
+      >
+        <div style={{ textAlign: "center", marginBottom: 20 }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: 12,
+            background: "linear-gradient(135deg,#0A1628,#1a3a6b)",
+            border: "1px solid rgba(200,155,60,0.4)",
+            display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px",
+          }}>
+            <Brain style={{ width: 22, height: 22, color: "#C89B3C" }} />
+          </div>
+          <div style={{ fontWeight: 800, fontSize: 18, color: FG, fontFamily: "'Barlow Condensed',sans-serif" }}>
+            Konto Nexus Sight
+          </div>
+          <div style={{ fontSize: 11, color: MUTED, marginTop: 3 }}>
+            Zaloguj się, aby uzyskać dostęp do Analizy AI
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 6, marginBottom: 18, background: "hsl(220,20%,97%)", borderRadius: 8, padding: 3 }}>
+          {(["login", "register"] as const).map((t) => (
+            <button key={t} onClick={() => { setTab(t); setErr(null); }} style={{
+              flex: 1, padding: "7px 0", borderRadius: 6, border: "none", cursor: "pointer",
+              fontWeight: 700, fontSize: 12, fontFamily: "'Rajdhani',sans-serif",
+              background: tab === t ? "white" : "transparent",
+              color: tab === t ? FG : MUTED,
+              boxShadow: tab === t ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+              transition: "all 0.2s",
+            }}>
+              {t === "login" ? "Zaloguj się" : "Zarejestruj się"}
+            </button>
+          ))}
+        </div>
+
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 600, color: MUTED, display: "block", marginBottom: 4 }}>Adres email</label>
+            <input
+              type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+              placeholder="twoj@email.pl" required autoComplete="email"
+              style={{
+                width: "100%", padding: "10px 12px", borderRadius: 8,
+                border: "1px solid hsl(220,15%,88%)", fontSize: 13, color: FG,
+                background: "white", outline: "none", boxSizing: "border-box",
+              }}
+            />
+          </div>
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 600, color: MUTED, display: "block", marginBottom: 4 }}>Hasło</label>
+            <input
+              type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+              placeholder={tab === "register" ? "min. 6 znaków" : "••••••••"} required autoComplete={tab === "register" ? "new-password" : "current-password"}
+              style={{
+                width: "100%", padding: "10px 12px", borderRadius: 8,
+                border: "1px solid hsl(220,15%,88%)", fontSize: 13, color: FG,
+                background: "white", outline: "none", boxSizing: "border-box",
+              }}
+            />
+          </div>
+
+          {err && (
+            <div style={{ padding: "8px 12px", background: "hsl(350,50%,97%)", border: "1px solid hsl(350,55%,82%)", borderRadius: 7, fontSize: 11.5, color: "hsl(350,65%,45%)" }}>
+              {err}
+            </div>
+          )}
+
+          <button type="submit" disabled={loading} style={{
+            width: "100%", padding: "12px", marginTop: 4,
+            background: loading ? "hsl(220,15%,90%)" : `linear-gradient(135deg,hsl(200,90%,34%),hsl(200,90%,44%))`,
+            color: loading ? MUTED : "white", border: "none", borderRadius: 9,
+            fontWeight: 700, fontSize: 14, fontFamily: "'Barlow Condensed',sans-serif",
+            letterSpacing: "0.04em", cursor: loading ? "not-allowed" : "pointer",
+          }}>
+            {loading ? "Proszę czekać..." : tab === "login" ? "Zaloguj się" : "Utwórz konto"}
+          </button>
+        </form>
+
+        <div style={{ fontSize: 10, color: MUTED, textAlign: "center", marginTop: 12 }}>
+          <Lock style={{ width: 9, height: 9, display: "inline", verticalAlign: "middle", marginRight: 4 }} />
+          Dane są chronione. Nie wysyłamy spamu.
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 function AiAnalysisInner() {
   const { region, gameName, tagLine } = useParams<{ region: string; gameName: string; tagLine: string }>();
   const [report, setReport] = useState<any>(null);
@@ -284,8 +410,11 @@ function AiAnalysisInner() {
   const [loadingStep, setLoadingStep] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [generatedAt, setGeneratedAt] = useState<number | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [paymentChecked, setPaymentChecked] = useState(false);
+  const [authToken, setAuthToken] = useState<string | null>(() => localStorage.getItem(AUTH_KEY));
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [hasAccess, setHasAccess] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const fetchedRef = useRef(false);
 
   const { data: summonerData } = useSearchSummoner({ region, gameName, tagLine });
@@ -300,46 +429,53 @@ function AiAnalysisInner() {
   const steps = STEPS.map(s => s.label);
 
   useEffect(() => {
-    if (!puuid) return;
-    const storageKey = `nexus_ai_token_${puuid}`;
+    if (!authToken) { setAuthChecked(true); return; }
+    fetch(`${BASE_URL}/api/auth/me`, { headers: { Authorization: `Bearer ${authToken}` } })
+      .then((r) => r.ok ? r.json() : Promise.reject())
+      .then((d) => setUserEmail(d.user.email))
+      .catch(() => { localStorage.removeItem(AUTH_KEY); setAuthToken(null); })
+      .finally(() => setAuthChecked(true));
+  }, [authToken]);
+
+  useEffect(() => {
+    if (!puuid || !authToken || !authChecked) return;
+
     const urlParams = new URLSearchParams(window.location.search);
-    const urlSessionId = urlParams.get("session_id");
-
-    if (urlSessionId) {
-      localStorage.setItem(storageKey, urlSessionId);
+    const justPaid = urlParams.get("paid") === "1";
+    if (justPaid) {
       window.history.replaceState({}, "", window.location.pathname);
-      verifyAndSet(urlSessionId);
+      verifyAfterPayment();
     } else {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        verifyAndSet(saved);
-      } else {
-        setPaymentChecked(true);
-      }
+      checkAccess();
     }
-  }, [puuid]);
+  }, [puuid, authToken, authChecked]);
 
-  async function verifyAndSet(sid: string) {
-    if (!puuid) return;
+  async function checkAccess() {
+    if (!puuid || !authToken) return;
     try {
-      const res = await fetch(`${BASE_URL}/api/stripe/verify-payment?sessionId=${sid}&puuid=${puuid}`);
+      const res = await fetch(`${BASE_URL}/api/stripe/check-access?puuid=${puuid}`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
       const data = await res.json();
-      if (data.paid) {
-        setSessionId(sid);
-      } else {
-        const storageKey = `nexus_ai_token_${puuid}`;
-        localStorage.removeItem(storageKey);
-      }
-    } catch {
-      /* ignore verify errors */
-    } finally {
-      setPaymentChecked(true);
-    }
+      setHasAccess(data.hasAccess === true);
+    } catch { setHasAccess(false); }
   }
 
-  async function generateReport(sid?: string) {
-    const activeSession = sid ?? sessionId;
-    if (!puuid || !activeSession) return;
+  async function verifyAfterPayment() {
+    if (!puuid || !authToken) return;
+    try {
+      const res = await fetch(`${BASE_URL}/api/stripe/verify-after-payment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ puuid }),
+      });
+      const data = await res.json();
+      if (data.hasAccess) { setHasAccess(true); }
+    } catch { /* ignore */ }
+  }
+
+  async function generateReport() {
+    if (!puuid || !authToken) return;
     setLoading(true);
     setError(null);
     setReport(null);
@@ -352,7 +488,8 @@ function AiAnalysisInner() {
     }, 4500);
     try {
       const res = await fetch(
-        `${BASE_URL}/api/summoner/${puuid}/ai-report?region=${region}&gameName=${encodeURIComponent(gameName)}&sessionId=${activeSession}`
+        `${BASE_URL}/api/summoner/${puuid}/ai-report?region=${region}&gameName=${encodeURIComponent(gameName)}`,
+        { headers: { Authorization: `Bearer ${authToken}` } }
       );
       clearInterval(interval);
       if (!res.ok) throw new Error(await res.text());
@@ -367,9 +504,25 @@ function AiAnalysisInner() {
     }
   }
 
+  function handleAuthSuccess(token: string, email: string) {
+    setAuthToken(token);
+    setUserEmail(email);
+    setShowAuthModal(false);
+  }
+
+  function handleLogout() {
+    localStorage.removeItem(AUTH_KEY);
+    setAuthToken(null);
+    setUserEmail(null);
+    setHasAccess(false);
+    setReport(null);
+    fetchedRef.current = false;
+    setAuthChecked(false);
+  }
+
   useEffect(() => {
-    if (puuid && sessionId && !fetchedRef.current) generateReport();
-  }, [puuid, sessionId]);
+    if (puuid && hasAccess && !fetchedRef.current) generateReport();
+  }, [puuid, hasAccess]);
 
   const profileLink = `${BASE_URL}/profile/${region}/${gameName}/${tagLine}`;
 
@@ -439,32 +592,73 @@ function AiAnalysisInner() {
             {!soloQ && !loading && <span style={{ fontSize: 11, color: MUTED }}>Unranked</span>}
           </div>
 
-          {/* AI Badge */}
-          <div style={{
-            display: "flex", alignItems: "center", gap: 5, padding: "5px 10px",
-            background: "linear-gradient(135deg,#0A1628,#1a3a6b)",
-            border: "1px solid rgba(200,155,60,0.4)", borderRadius: 7, flexShrink: 0,
-          }}>
-            <Brain style={{ width: 13, height: 13, color: "#C89B3C" }} />
-            <span style={{ fontSize: 9, fontWeight: 700, color: "#C89B3C", letterSpacing: "0.08em", fontFamily: "'Rajdhani',sans-serif" }}>NEXUS AI</span>
+          {/* AI Badge / User Account */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+            {userEmail ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 9, color: MUTED, fontWeight: 600 }}>Zalogowany</div>
+                  <div style={{ fontSize: 10, color: FG, fontWeight: 700, maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{userEmail}</div>
+                </div>
+                <button onClick={handleLogout} style={{
+                  background: "hsl(220,15%,96%)", border: "1px solid hsl(220,15%,88%)",
+                  borderRadius: 6, padding: "4px 8px", color: MUTED, fontSize: 10,
+                  fontWeight: 700, cursor: "pointer", fontFamily: "'Rajdhani',sans-serif",
+                }}>Wyloguj</button>
+              </div>
+            ) : (
+              <button onClick={() => setShowAuthModal(true)} style={{
+                display: "flex", alignItems: "center", gap: 5, padding: "5px 10px",
+                background: "linear-gradient(135deg,#0A1628,#1a3a6b)",
+                border: "1px solid rgba(200,155,60,0.4)", borderRadius: 7, cursor: "pointer",
+              }}>
+                <Brain style={{ width: 12, height: 12, color: "#C89B3C" }} />
+                <span style={{ fontSize: 9, fontWeight: 700, color: "#C89B3C", letterSpacing: "0.08em", fontFamily: "'Rajdhani',sans-serif" }}>ZALOGUJ</span>
+              </button>
+            )}
           </div>
         </div>
       </header>
 
+      {showAuthModal && <AuthModal onSuccess={handleAuthSuccess} onClose={() => setShowAuthModal(false)} />}
+
       {/* Content */}
       <div style={{ maxWidth: 520, margin: "0 auto", padding: "16px 14px 60px" }}>
 
-        {/* Payment wall — show when no valid session */}
-        {paymentChecked && !sessionId && !loading && puuid && (
+        {/* Not logged in — prompt to log in */}
+        {authChecked && !authToken && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}
+            style={{ ...CARD, padding: 28, textAlign: "center", marginBottom: 16 }}
+          >
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: "linear-gradient(135deg,#0A1628,#1a3a6b)", border: "1px solid rgba(200,155,60,0.4)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+              <Brain style={{ width: 22, height: 22, color: "#C89B3C" }} />
+            </div>
+            <div style={{ fontWeight: 800, fontSize: 18, color: FG, fontFamily: "'Barlow Condensed',sans-serif", marginBottom: 6 }}>Analiza AI — Nexus Sight</div>
+            <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.65, marginBottom: 18 }}>
+              Aby uzyskać dostęp do szczegółowego raportu AI, musisz posiadać konto Nexus Sight.
+            </div>
+            <button onClick={() => setShowAuthModal(true)} style={{
+              width: "100%", padding: "13px 20px",
+              background: "linear-gradient(135deg,hsl(200,90%,34%),hsl(200,90%,44%))",
+              color: "white", border: "none", borderRadius: 10, cursor: "pointer",
+              fontWeight: 700, fontSize: 15, fontFamily: "'Barlow Condensed',sans-serif",
+              letterSpacing: "0.04em", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+            }}>
+              <Users style={{ width: 16, height: 16 }} /> Zaloguj się lub załóż konto
+            </button>
+            <div style={{ fontSize: 10, color: MUTED, marginTop: 10 }}>Rejestracja jest darmowa. Płatność tylko za Analizę AI.</div>
+          </motion.div>
+        )}
+
+        {/* Logged in, no access — show PaymentWall */}
+        {authToken && !hasAccess && !loading && puuid && (
           <PaymentWall
             gameName={gameName}
             tagLine={tagLine}
             puuid={puuid}
             region={region}
-            onPaid={(sid) => {
-              setSessionId(sid);
-              generateReport(sid);
-            }}
+            authToken={authToken}
           />
         )}
 
