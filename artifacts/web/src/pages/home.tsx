@@ -3,7 +3,6 @@ import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, ChevronRight, BarChart3, Zap, Shield, Users, Clock, X, Activity, Heart } from "lucide-react";
 import { getFavorites, toggleFavorite, type Favorite } from "@/lib/favorites";
-import UserMenu from "@/components/UserMenu";
 
 const HISTORY_KEY = "nexus_sight_history";
 const MAX_HISTORY = 8;
@@ -129,10 +128,6 @@ export default function Home() {
 
   return (
     <div className="relative flex flex-col items-center justify-center px-4 overflow-hidden py-12">
-
-      <div style={{ position: "absolute", top: 12, right: 16, zIndex: 20 }}>
-        <UserMenu />
-      </div>
 
       <div className="absolute inset-0 z-0 overflow-hidden">
         <div className="absolute inset-0 grid-bg opacity-40" />

@@ -17,10 +17,6 @@ import {
 } from "lucide-react";
 import { toggleFavorite, isFavorite } from "@/lib/favorites";
 import { addRankSnapshot, getRankHistory } from "@/lib/rankHistory";
-import UserMenu from "@/components/UserMenu";
-import { useAuth } from "@workspace/replit-auth-web";
-import { useLinkedAccounts } from "@/lib/useLinkedAccounts";
-import AccountModal from "@/components/AccountModal";
 import {
   useSearchSummoner,
   useGetSummonerRanked,
@@ -1320,14 +1316,6 @@ export default function Profile() {
   const [matchCount, setMatchCount] = useState(10);
   const [shareState, setShareState] = useState<"idle" | "copied">("idle");
   const [fav, setFav] = useState(false);
-  const [accountModalOpen, setAccountModalOpen] = useState(false);
-  const { isAuthenticated } = useAuth();
-  const { accounts, addAccount } = useLinkedAccounts(isAuthenticated);
-  const isLinked = accounts.some(a =>
-    a.gameName.toLowerCase() === gameName.toLowerCase() &&
-    a.tagLine.toLowerCase() === tagLine.toLowerCase() &&
-    a.region === region
-  );
 
   const handleTabClick = (tabId: MobileTab) => {
     if (tabId === "live") {
@@ -1414,7 +1402,7 @@ export default function Profile() {
       <header className="relative border-b border-border overflow-hidden bg-white">
         <div className="absolute inset-0 pointer-events-none grid-bg opacity-30" />
 
-        <div className="relative max-w-7xl mx-auto px-4 py-4 sm:py-5 flex items-center gap-4" style={{ flexWrap: "nowrap" }}>
+        <div className="relative max-w-7xl mx-auto px-4 py-4 sm:py-5 flex items-center gap-4">
           <Link href="/" className="text-muted-foreground hover:text-primary transition-colors flex-shrink-0 p-1.5 rounded-[4px] hover:bg-muted"
             style={{ border: "1px solid hsl(220,15%,88%)" }}>
             <ChevronLeft className="w-5 h-5" />
@@ -1507,31 +1495,8 @@ export default function Profile() {
               </div>
             )}
           </div>
-
-          <div style={{ marginLeft: "auto", flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
-            {isAuthenticated && (
-              <button
-                onClick={() => isLinked ? setAccountModalOpen(true) : addAccount(gameName, tagLine, region).catch(() => setAccountModalOpen(true))}
-                title={isLinked ? "Konto przypisane" : "Przypisz to konto LoL"}
-                style={{
-                  display: "flex", alignItems: "center", gap: 5,
-                  background: isLinked ? "hsl(152,50%,95%)" : "hsl(220,15%,96%)",
-                  border: isLinked ? "1px solid hsl(152,40%,78%)" : "1px solid hsl(220,15%,88%)",
-                  color: isLinked ? "hsl(152,55%,35%)" : "hsl(220,10%,50%)",
-                  borderRadius: 6, padding: "5px 10px", fontSize: 10, fontWeight: 700,
-                  cursor: "pointer", fontFamily: "'Rajdhani',sans-serif", whiteSpace: "nowrap",
-                }}
-              >
-                {isLinked ? <CheckCheck className="w-3 h-3" /> : <ExternalLink className="w-3 h-3" />}
-                {isLinked ? "Przypisane" : "Przypisz"}
-              </button>
-            )}
-            <UserMenu />
-          </div>
         </div>
       </header>
-
-      <AccountModal open={accountModalOpen} onClose={() => setAccountModalOpen(false)} />
 
       <div className="max-w-7xl mx-auto px-4 mt-5">
         {liveGame && <LiveGameBanner data={liveGame} selfPuuid={puuid} />}
