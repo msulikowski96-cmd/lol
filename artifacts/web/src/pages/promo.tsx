@@ -1062,7 +1062,14 @@ type RecordState = 'idle' | 'capturing' | 'recording' | 'done';
 type Mp4State = 'idle' | 'loading' | 'converting' | 'done' | 'error';
 
 export default function Promo() {
-  const [currentScene, setCurrentScene] = useState(0);
+  // ?scene=N freezes a specific scene for screenshot purposes
+  const frozenScene = (() => {
+    const p = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+    const n = Number(p.get('scene'));
+    return !isNaN(n) && n >= 0 && n < SCENE_COUNT ? n : null;
+  })();
+
+  const [currentScene, setCurrentScene] = useState(frozenScene ?? 0);
   const [recordState, setRecordState] = useState<RecordState>('idle');
   const [countdown, setCountdown] = useState(0);
   const [webmBlob, setWebmBlob] = useState<Blob | null>(null);
@@ -1075,11 +1082,12 @@ export default function Promo() {
   const capturingRef = useRef(false);
 
   useEffect(() => {
+    if (frozenScene !== null) return; // frozen — don't auto-advance
     const timeout = setTimeout(() => {
       setCurrentScene((prev) => (prev + 1) % SCENE_COUNT);
     }, SCENE_DURATIONS[currentScene]);
     return () => clearTimeout(timeout);
-  }, [currentScene]);
+  }, [currentScene, frozenScene]);
 
   const handleRecord = async () => {
     const container = containerRef.current;
