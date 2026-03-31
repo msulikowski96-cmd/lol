@@ -13,6 +13,7 @@ import Terms from "@/pages/terms";
 import About from "@/pages/about";
 import Champion from "@/pages/champion";
 import MatchPage from "@/pages/match";
+import AiAnalysis from "@/pages/ai-analysis";
 import Footer from "@/components/Footer";
 import CookieConsent from "@/components/CookieConsent";
 import { setDDVersion } from "@/lib/constants";
@@ -49,6 +50,7 @@ function Router() {
       <Route path="/profile/:region/:gameName/:tagLine" component={Profile} />
       <Route path="/champion/:region/:gameName/:tagLine/:championName" component={Champion} />
       <Route path="/match/:region/:gameName/:tagLine/:matchId" component={MatchPage} />
+      <Route path="/ai-analysis/:region/:gameName/:tagLine" component={AiAnalysis} />
       <Route path="/live/:region/:gameName/:tagLine" component={LiveGame} />
       <Route path="/privacy" component={Privacy} />
       <Route path="/terms" component={Terms} />

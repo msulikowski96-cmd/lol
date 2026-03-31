@@ -12,6 +12,7 @@ TypeScript pnpm monorepo, fully in Polish. Users search players by Riot ID acros
 ## Routes
 - `/` — Home page with search + FAQ + about section
 - `/profile/:region/:gameName/:tagLine` — Player profile (stats, matches, analysis)
+- `/ai-analysis/:region/:gameName/:tagLine` — AI Analiza Gracza (Gemini-powered full report)
 - `/live/:region/:gameName/:tagLine` — Live game page (OP.GG-style team view)
 - `/champion/:region/:gameName/:tagLine/:championName` — Champion detail page (KDA, WR, builds, matchups)
 - `/promo` — TikTok promo page

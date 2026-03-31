@@ -1459,6 +1459,13 @@ export default function Profile() {
                 <Heart className={`w-3 h-3 transition-all ${fav ? "fill-current" : ""}`} />
                 {fav ? "Ulubiony" : "Ulubione"}
               </button>
+              <Link to={`/ai-analysis/${region}/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`}>
+                <span className="flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-[4px] flex-shrink-0 cursor-pointer transition-all hover:brightness-110"
+                  style={{ background: "linear-gradient(135deg,#0A1628,#1a3a6b)", border: "1px solid rgba(200,155,60,0.4)", color: "#C89B3C", fontFamily: "'Rajdhani',sans-serif", fontWeight: 700, letterSpacing: "0.03em" }}>
+                  <Brain className="w-3 h-3" />
+                  AI ANALIZA
+                </span>
+              </Link>
               {liveGame && (
                 <Link to={`/live/${region}/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`}>
                   <span className="text-[9px] px-2 py-0.5 rounded-[3px] font-bold tracking-wider flex items-center gap-1.5 flex-shrink-0 cursor-pointer hover:brightness-125 transition-all"
