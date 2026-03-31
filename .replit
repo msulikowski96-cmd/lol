@@ -122,3 +122,4 @@ defaultBucketID = "replit-objstore-991dba53-471a-47fc-b800-f479d808cb82"
 
 [userenv.shared]
 JWT_SECRET = "11e8ac050d4f1991b9160774cb6851e65242e4d50dc0ba0967ab2b61197cf24093aece79a975eeb0fa19656ceb6c5578"
+STRIPE_WEBHOOK_SECRET = "whsec_FOG9g1v3tYNuFuKEreXURMSapsghaBGu"
