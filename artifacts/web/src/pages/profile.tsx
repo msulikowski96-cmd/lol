@@ -249,12 +249,78 @@ function LiveGameBanner({ data, selfPuuid }: { data: any; selfPuuid?: string }) 
   );
 }
 
+const OP_SCORE_TOOLTIP = `OP Score (skala 0–10) — własna miara wydajności w meczu:
+
+• KDA 35%: (kills+assists)/śmierci (log)
+• Udział w killach 20%: % zabójstw drużyny
+• Obrażenia 15%: całkowite obrażenia (maks. 15k)
+• CS/min 15%: tempo farmienia
+• Przeżywalność 15%: 100 − śmierci×12
+• Bonus za wygraną: +1.5 pkt
+
+Zielony ≥ 8.0 · Żółty ≥ 6.0 · Czerwony < 6.0`;
+
 function OpScoreBadge({ score }: { score: number }) {
+  const [open, setOpen] = useState(false);
   const color = score >= 8 ? "text-green-400 bg-green-500/10 border-green-500/20"
     : score >= 6 ? "text-yellow-400 bg-yellow-500/10 border-yellow-500/20"
     : "text-red-400 bg-red-500/10 border-red-500/20";
   return (
-    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${color} flex-shrink-0`}>{score.toFixed(1)}</span>
+    <span className="relative flex-shrink-0 inline-flex">
+      <span
+        className={`text-[10px] font-bold px-1.5 py-0.5 rounded border cursor-help ${color}`}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onClick={() => setOpen(v => !v)}
+      >{score.toFixed(1)}</span>
+      <AnimatePresence>
+        {open && (
+          <motion.span
+            initial={{ opacity: 0, y: -3, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -3, scale: 0.97 }}
+            transition={{ duration: 0.12 }}
+            className="absolute bottom-6 right-0 z-[100] w-56 text-[10px] text-foreground/85 leading-relaxed pointer-events-none whitespace-pre-line"
+            style={{ background: "white", border: "1px solid hsl(220,15%,88%)", borderRadius: "8px", padding: "10px 12px", boxShadow: "0 4px 16px rgba(0,0,0,0.1)" }}
+          >
+            {OP_SCORE_TOOLTIP}
+          </motion.span>
+        )}
+      </AnimatePresence>
+    </span>
+  );
+}
+
+const GRADE_TOOLTIP = `Ocena literowa (skala 0–100):
+S+ ≥ 90 · S ≥ 80 · A ≥ 70
+B ≥ 58 · C ≥ 45 · D ≥ 30 · F < 30`;
+
+function GradeBadge({ grade, score, color }: { grade: string; score: number; color: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="relative inline-flex">
+      <span
+        className={`text-3xl font-black cursor-help select-none ${color}`}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onClick={() => setOpen(v => !v)}
+      >{grade}</span>
+      <AnimatePresence>
+        {open && (
+          <motion.span
+            initial={{ opacity: 0, y: -3, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -3, scale: 0.97 }}
+            transition={{ duration: 0.12 }}
+            className="absolute bottom-9 left-0 z-[100] w-48 text-[10px] text-foreground/85 leading-relaxed pointer-events-none whitespace-pre-line"
+            style={{ background: "white", border: "1px solid hsl(220,15%,88%)", borderRadius: "8px", padding: "10px 12px", boxShadow: "0 4px 16px rgba(0,0,0,0.1)" }}
+          >
+            <span className="block font-bold mb-1 text-foreground">Wynik: {score}/100</span>
+            {GRADE_TOOLTIP}
+          </motion.span>
+        )}
+      </AnimatePresence>
+    </span>
   );
 }
 
@@ -791,7 +857,11 @@ function AnalysisSection({ data, isLoading, recentMatches, region, gameName, tag
             <div className="glass-panel p-4">
               <p className="section-title"><Swords className="w-3.5 h-3.5 text-yellow-400" /> Faza linii (Early game) <InfoTooltip text="Analiza agresywności i dominacji w fazie lining. Uwzględnia first blood rate, solo kills, przewagę CS nad oponentem i presję wywieraną na wrogiej linii." /></p>
               <div className="flex items-center gap-3 mb-3">
-                <span className={`text-3xl font-black ${lanePhaseStats.grade === "S+" || lanePhaseStats.grade === "S" ? "text-yellow-400" : lanePhaseStats.grade === "A" || lanePhaseStats.grade === "B" ? "text-green-400" : lanePhaseStats.grade === "C" ? "text-yellow-400" : "text-red-400"}`}>{lanePhaseStats.grade}</span>
+                <GradeBadge
+                  grade={lanePhaseStats.grade}
+                  score={lanePhaseStats.earlyPressureScore}
+                  color={lanePhaseStats.grade === "S+" || lanePhaseStats.grade === "S" ? "text-yellow-400" : lanePhaseStats.grade === "A" || lanePhaseStats.grade === "B" ? "text-green-400" : lanePhaseStats.grade === "C" ? "text-yellow-400" : "text-red-400"}
+                />
                 <div className="flex-1">
                   <div className="h-1.5 bg-muted/40 rounded-full overflow-hidden">
                     <div className="h-full bg-yellow-500 rounded-full transition-all" style={{ width: `${lanePhaseStats.earlyPressureScore}%` }} />
@@ -822,7 +892,11 @@ function AnalysisSection({ data, isLoading, recentMatches, region, gameName, tag
             <div className="glass-panel p-4">
               <p className="section-title"><Star className="w-3.5 h-3.5 text-blue-400" /> Kontrola obiektywów <InfoTooltip text="Twój wpływ na smoki, wieże, inhibitory i cele kluczowe. Gracze wygrywający rankingi konwertują walkowe przewagi na trwałe obiektywy mapy." /></p>
               <div className="flex items-center gap-3 mb-3">
-                <span className={`text-3xl font-black ${objectiveStats.grade === "S+" || objectiveStats.grade === "S" ? "text-blue-400" : objectiveStats.grade === "A" || objectiveStats.grade === "B" ? "text-green-400" : objectiveStats.grade === "C" ? "text-yellow-400" : "text-red-400"}`}>{objectiveStats.grade}</span>
+                <GradeBadge
+                  grade={objectiveStats.grade}
+                  score={objectiveStats.objectiveControlScore}
+                  color={objectiveStats.grade === "S+" || objectiveStats.grade === "S" ? "text-blue-400" : objectiveStats.grade === "A" || objectiveStats.grade === "B" ? "text-green-400" : objectiveStats.grade === "C" ? "text-yellow-400" : "text-red-400"}
+                />
                 <div className="flex-1">
                   <div className="h-1.5 bg-muted/40 rounded-full overflow-hidden">
                     <div className="h-full bg-blue-500 rounded-full" style={{ width: `${objectiveStats.objectiveControlScore}%` }} />
@@ -852,7 +926,11 @@ function AnalysisSection({ data, isLoading, recentMatches, region, gameName, tag
             <div className="glass-panel p-4">
               <p className="section-title"><AlertTriangle className="w-3.5 h-3.5 text-red-400" /> Analiza śmierci <InfoTooltip text="Szczegółowa analiza wzorców śmierci: kiedy umierasz, jak długo jesteś martwy i jak to wpływa na Twoje mecze. Czas spędzony martwym to czas bez wpływu na grę." /></p>
               <div className="flex items-center gap-3 mb-3">
-                <span className={`text-3xl font-black ${deathAnalysis.grade === "S+" || deathAnalysis.grade === "S" ? "text-green-400" : deathAnalysis.grade === "A" || deathAnalysis.grade === "B" ? "text-green-400" : deathAnalysis.grade === "C" ? "text-yellow-400" : "text-red-400"}`}>{deathAnalysis.grade}</span>
+                <GradeBadge
+                  grade={deathAnalysis.grade}
+                  score={deathAnalysis.deathScore}
+                  color={deathAnalysis.grade === "S+" || deathAnalysis.grade === "S" || deathAnalysis.grade === "A" || deathAnalysis.grade === "B" ? "text-green-400" : deathAnalysis.grade === "C" ? "text-yellow-400" : "text-red-400"}
+                />
                 <div className="flex-1">
                   <div className="h-1.5 bg-muted/40 rounded-full overflow-hidden">
                     <div className={`h-full rounded-full ${deathAnalysis.deathScore >= 70 ? "bg-green-500" : deathAnalysis.deathScore >= 45 ? "bg-yellow-500" : "bg-red-500"}`} style={{ width: `${deathAnalysis.deathScore}%` }} />

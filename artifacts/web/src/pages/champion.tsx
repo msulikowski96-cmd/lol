@@ -1,6 +1,7 @@
 import { useParams, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
 import {
@@ -85,9 +86,42 @@ function KdaBadge({ kda }: { kda: number }) {
   return <span className={`font-bold ${color}`}>{kda.toFixed(2)}</span>;
 }
 
+const OP_SCORE_TOOLTIP = `OP Score (skala 0–10) — własna miara wydajności w meczu:
+
+• KDA 35%: (kills+assists)/śmierci (log)
+• Udział w killach 20%: % zabójstw drużyny
+• Obrażenia 15%: całkowite obrażenia (maks. 15k)
+• CS/min 15%: tempo farmienia
+• Przeżywalność 15%: 100 − śmierci×12
+• Bonus za wygraną: +1.5 pkt`;
+
 function OpScoreBadge({ score }: { score: number }) {
+  const [open, setOpen] = useState(false);
   const color = score >= 8 ? "text-yellow-400" : score >= 6 ? "text-emerald-400" : score >= 4 ? "text-cyan-400" : "text-muted-foreground";
-  return <span className={`font-bold text-sm ${color}`}>{score.toFixed(1)}</span>;
+  return (
+    <span className="relative inline-flex">
+      <span
+        className={`font-bold text-sm cursor-help ${color}`}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onClick={() => setOpen(v => !v)}
+      >{score.toFixed(1)}</span>
+      <AnimatePresence>
+        {open && (
+          <motion.span
+            initial={{ opacity: 0, y: -3, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -3, scale: 0.97 }}
+            transition={{ duration: 0.12 }}
+            className="absolute bottom-6 left-0 z-[100] w-56 text-[10px] text-foreground/85 leading-relaxed pointer-events-none whitespace-pre-line"
+            style={{ background: "white", border: "1px solid hsl(220,15%,88%)", borderRadius: "8px", padding: "10px 12px", boxShadow: "0 4px 16px rgba(0,0,0,0.1)" }}
+          >
+            {OP_SCORE_TOOLTIP}
+          </motion.span>
+        )}
+      </AnimatePresence>
+    </span>
+  );
 }
 
 export default function Champion() {
