@@ -485,7 +485,7 @@ function RankedCard({ entry }: { entry: any }) {
   );
 }
 
-function AnalysisSection({ data, isLoading, recentMatches }: { data: any; isLoading: boolean; recentMatches?: any[] }) {
+function AnalysisSection({ data, isLoading, recentMatches, region, gameName, tagLine }: { data: any; isLoading: boolean; recentMatches?: any[]; region: string; gameName: string; tagLine: string }) {
   if (isLoading) return <div className="glass-panel p-8 flex items-center justify-center min-h-[200px]"><LoadingSpinner text="Analizowanie wyników..." /></div>;
   if (!data || data.totalGamesAnalyzed === 0) return (
     <div className="glass-panel p-6 text-center">
@@ -1241,7 +1241,7 @@ export default function Profile() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
           {/* Main Content */}
           <div className={`lg:col-span-9 ${mobileTab !== "analiza" ? "hidden lg:block" : ""}`}>
-            <AnalysisSection data={analysis} isLoading={isLoadingAnalysis} recentMatches={matches} />
+            <AnalysisSection data={analysis} isLoading={isLoadingAnalysis} recentMatches={matches} region={region} gameName={gameName} tagLine={tagLine} />
           </div>
 
           {/* Sidebar */}

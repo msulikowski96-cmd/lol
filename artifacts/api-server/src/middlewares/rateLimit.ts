@@ -69,12 +69,12 @@ export function createRateLimit(options: { windowMs: number; max: number; messag
 
 export const generalLimit = createRateLimit({
   windowMs: 60_000,
-  max: 120,
-  message: "Zbyt wiele zapytań. Limit: 120/min.",
+  max: 200,
+  message: "Zbyt wiele zapytań. Limit: 200/min.",
 });
 
 export const riotLimit = createRateLimit({
   windowMs: 60_000,
-  max: 25,
-  message: "Zbyt wiele zapytań do Riot API. Limit: 25/min.",
+  max: 100,
+  message: "Zbyt wiele zapytań do Riot API. Limit: 100/min.",
 });
