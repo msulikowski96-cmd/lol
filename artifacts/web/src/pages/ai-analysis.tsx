@@ -7,7 +7,7 @@ import {
   Shield, Swords, Eye, Target, Zap, BookOpen,
   Award, AlertTriangle, CheckCircle2, Lightbulb,
   RefreshCw, Sparkles, Users, Trophy,
-  ArrowRight, Clock, Activity
+  ArrowRight, Clock, Activity, CreditCard, Lock
 } from "lucide-react";
 import { useSearchSummoner, useGetSummonerRanked, useGetSummonerMastery } from "@workspace/api-client-react";
 
@@ -163,6 +163,120 @@ class AiErrorBoundary extends Component<{ children: ReactNode }, { hasError: boo
   }
 }
 
+function PaymentWall({ gameName, tagLine, puuid, region, onPaid }: {
+  gameName: string; tagLine: string; puuid: string; region: string; onPaid: (sessionId: string) => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handlePay() {
+    setLoading(true);
+    setError(null);
+    try {
+      const currentUrl = window.location.href.split("?")[0];
+      const profileUrl = `${BASE_URL}/profile/${region}/${gameName}/${tagLine}`;
+      const res = await fetch(`${BASE_URL}/api/stripe/create-ai-checkout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          puuid, region, gameName, tagLine,
+          successUrl: currentUrl,
+          cancelUrl: profileUrl,
+        }),
+      });
+      if (!res.ok) throw new Error("Błąd inicjowania płatności");
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+    } catch (e: any) {
+      setError(e.message ?? "Błąd płatności");
+      setLoading(false);
+    }
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35 }}
+      style={{ ...CARD, padding: 28, textAlign: "center", marginBottom: 16 }}
+    >
+      <div style={{
+        width: 52, height: 52, borderRadius: 14,
+        background: "linear-gradient(135deg,#0A1628,#1a3a6b)",
+        border: "1px solid rgba(200,155,60,0.4)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        margin: "0 auto 14px",
+      }}>
+        <Brain style={{ width: 26, height: 26, color: "#C89B3C" }} />
+      </div>
+      <div style={{ fontWeight: 800, fontSize: 19, color: FG, fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: "0.02em", marginBottom: 6 }}>
+        Nexus AI — Analiza Gracza
+      </div>
+      <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.65, marginBottom: 18, maxWidth: 300, margin: "0 auto 18px" }}>
+        Otrzymaj szczegółowy raport AI dla{" "}
+        <strong style={{ color: FG }}>{gameName}#{tagLine}</strong>:
+        styl gry, słabe i mocne strony, wskazówki coachingowe i prognoza rangi.
+      </div>
+
+      <div style={{
+        display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8,
+        marginBottom: 20, textAlign: "left",
+      }}>
+        {[
+          { icon: Brain, text: "Analiza stylu gry i archetypów" },
+          { icon: Target, text: "Micro & macro skills" },
+          { icon: Lightbulb, text: "Min. 5 wskazówek coachingowych" },
+          { icon: TrendingUp, text: "Prognoza rangi i potencjał" },
+          { icon: Award, text: "Analiza pool championów" },
+          { icon: Eye, text: "Vision control & map awareness" },
+        ].map(({ icon: Icon, text }) => (
+          <div key={text} style={{ display: "flex", alignItems: "flex-start", gap: 7, padding: "7px 10px", background: "hsl(220,20%,97%)", borderRadius: 8, border: "1px solid hsl(220,15%,90%)" }}>
+            <Icon style={{ width: 11, height: 11, color: PRIMARY, flexShrink: 0, marginTop: 1 }} />
+            <span style={{ fontSize: 10.5, color: FG, lineHeight: 1.4 }}>{text}</span>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ marginBottom: 16, padding: "12px 16px", background: "hsl(152,50%,96%)", border: "1px solid hsl(152,45%,82%)", borderRadius: 10 }}>
+        <div style={{ fontSize: 11, color: "hsl(152,50%,35%)", fontWeight: 600, marginBottom: 2 }}>
+          ✓ Jednorazowa płatność — ważna przez 30 dni
+        </div>
+        <div style={{ fontSize: 10.5, color: "hsl(152,50%,40%)" }}>
+          Po opłaceniu możesz wielokrotnie odświeżać raport dla tego gracza
+        </div>
+      </div>
+
+      {error && (
+        <div style={{ marginBottom: 12, padding: "8px 12px", background: "hsl(350,50%,97%)", border: "1px solid hsl(350,55%,82%)", borderRadius: 8, fontSize: 11, color: "hsl(350,65%,45%)" }}>
+          {error}
+        </div>
+      )}
+
+      <button
+        onClick={handlePay}
+        disabled={loading}
+        style={{
+          width: "100%", padding: "13px 20px",
+          background: loading ? "hsl(220,15%,90%)" : "linear-gradient(135deg,hsl(200,90%,34%),hsl(200,90%,44%))",
+          color: loading ? MUTED : "white",
+          border: "none", borderRadius: 10, cursor: loading ? "not-allowed" : "pointer",
+          fontWeight: 700, fontSize: 15, fontFamily: "'Barlow Condensed',sans-serif",
+          letterSpacing: "0.04em", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+          transition: "all 0.2s",
+        }}
+      >
+        <CreditCard style={{ width: 16, height: 16 }} />
+        {loading ? "Przekierowuję do płatności..." : "Zapłać 9,99 zł i generuj raport"}
+      </button>
+
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, marginTop: 10 }}>
+        <Lock style={{ width: 10, height: 10, color: MUTED }} />
+        <span style={{ fontSize: 10, color: MUTED }}>Bezpieczna płatność — Stripe · BLIK · Karta · Przelewy24</span>
+      </div>
+    </motion.div>
+  );
+}
+
 function AiAnalysisInner() {
   const { region, gameName, tagLine } = useParams<{ region: string; gameName: string; tagLine: string }>();
   const [report, setReport] = useState<any>(null);
@@ -170,6 +284,8 @@ function AiAnalysisInner() {
   const [loadingStep, setLoadingStep] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [generatedAt, setGeneratedAt] = useState<number | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [paymentChecked, setPaymentChecked] = useState(false);
   const fetchedRef = useRef(false);
 
   const { data: summonerData } = useSearchSummoner({ region, gameName, tagLine });
@@ -183,8 +299,47 @@ function AiAnalysisInner() {
 
   const steps = STEPS.map(s => s.label);
 
-  async function generateReport() {
+  useEffect(() => {
     if (!puuid) return;
+    const storageKey = `nexus_ai_token_${puuid}`;
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlSessionId = urlParams.get("session_id");
+
+    if (urlSessionId) {
+      localStorage.setItem(storageKey, urlSessionId);
+      window.history.replaceState({}, "", window.location.pathname);
+      verifyAndSet(urlSessionId);
+    } else {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        verifyAndSet(saved);
+      } else {
+        setPaymentChecked(true);
+      }
+    }
+  }, [puuid]);
+
+  async function verifyAndSet(sid: string) {
+    if (!puuid) return;
+    try {
+      const res = await fetch(`${BASE_URL}/api/stripe/verify-payment?sessionId=${sid}&puuid=${puuid}`);
+      const data = await res.json();
+      if (data.paid) {
+        setSessionId(sid);
+      } else {
+        const storageKey = `nexus_ai_token_${puuid}`;
+        localStorage.removeItem(storageKey);
+      }
+    } catch {
+      /* ignore verify errors */
+    } finally {
+      setPaymentChecked(true);
+    }
+  }
+
+  async function generateReport(sid?: string) {
+    const activeSession = sid ?? sessionId;
+    if (!puuid || !activeSession) return;
     setLoading(true);
     setError(null);
     setReport(null);
@@ -196,7 +351,9 @@ function AiAnalysisInner() {
       setLoadingStep(steps[stepIdx]);
     }, 4500);
     try {
-      const res = await fetch(`${BASE_URL}/api/summoner/${puuid}/ai-report?region=${region}&gameName=${encodeURIComponent(gameName)}`);
+      const res = await fetch(
+        `${BASE_URL}/api/summoner/${puuid}/ai-report?region=${region}&gameName=${encodeURIComponent(gameName)}&sessionId=${activeSession}`
+      );
       clearInterval(interval);
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
@@ -211,8 +368,8 @@ function AiAnalysisInner() {
   }
 
   useEffect(() => {
-    if (puuid && !fetchedRef.current) generateReport();
-  }, [puuid]);
+    if (puuid && sessionId && !fetchedRef.current) generateReport();
+  }, [puuid, sessionId]);
 
   const profileLink = `${BASE_URL}/profile/${region}/${gameName}/${tagLine}`;
 
@@ -297,16 +454,30 @@ function AiAnalysisInner() {
       {/* Content */}
       <div style={{ maxWidth: 520, margin: "0 auto", padding: "16px 14px 60px" }}>
 
+        {/* Payment wall — show when no valid session */}
+        {paymentChecked && !sessionId && !loading && puuid && (
+          <PaymentWall
+            gameName={gameName}
+            tagLine={tagLine}
+            puuid={puuid}
+            region={region}
+            onPaid={(sid) => {
+              setSessionId(sid);
+              generateReport(sid);
+            }}
+          />
+        )}
+
         {/* Loading */}
         {loading && <GeneratingCard step={loadingStep} />}
 
         {/* Error */}
-        {error && !loading && (
+        {error && !loading && sessionId && (
           <div style={{ ...CARD, padding: 20, textAlign: "center", marginBottom: 12 }}>
             <AlertTriangle style={{ width: 24, height: 24, color: "hsl(350,65%,48%)", margin: "0 auto 10px" }} />
             <div style={{ fontWeight: 700, color: FG, marginBottom: 6, fontSize: 14 }}>Błąd generowania raportu</div>
             <div style={{ fontSize: 12, color: MUTED, marginBottom: 14 }}>{error}</div>
-            <button onClick={generateReport} style={{
+            <button onClick={() => generateReport()} style={{
               background: "hsl(350,50%,97%)", border: "1px solid hsl(350,55%,82%)",
               borderRadius: 7, padding: "7px 16px", color: "hsl(350,65%,45%)", fontSize: 12,
               fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5,
@@ -328,7 +499,7 @@ function AiAnalysisInner() {
                   {new Date(generatedAt).toLocaleTimeString("pl-PL")}
                 </span>
               )}
-              <button onClick={generateReport} style={{
+              <button onClick={() => generateReport()} style={{
                 background: "white", border: "1px solid hsl(220,15%,88%)",
                 borderRadius: 7, padding: "5px 12px", color: MUTED, fontSize: 11,
                 fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5,

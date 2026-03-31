@@ -48,6 +48,19 @@ TypeScript pnpm monorepo, fully in Polish. Users search players by Riot ID acros
 - `artifacts/api-server/src/routes/analysis.ts` — Analysis engine (~940 lines, 22 algorithms)
 - `lib/api-spec/openapi.yaml` — API spec (source of truth)
 
+## Monetization — Stripe Payment (AI Analysis)
+- **Model**: One-time payment, 9.99 PLN (999 groszy) per player analysis, valid 30 days
+- **Connector**: Replit Stripe connector (ID: `connection:conn_stripe_01KN2NEVG7D47RDECJB4WS02KJ`)
+- **stripeClient.ts**: `artifacts/api-server/src/stripeClient.ts` — never cache Stripe client; uses `REPLIT_CONNECTORS_HOSTNAME` + `REPL_IDENTITY`/`WEB_REPL_RENEWAL` token
+- **Payment DB table**: `public.ai_analysis_payments (session_id, puuid, status, created_at, paid_at, expires_at)` — created automatically at server start
+- **Backend routes** (in `routes/stripe-payments.ts`):
+  - `POST /api/stripe/create-ai-checkout` — creates Stripe Checkout session, inserts pending payment
+  - `GET /api/stripe/verify-payment?sessionId&puuid` — checks DB + Stripe API; updates to 'paid' if needed
+  - `POST /api/stripe/webhook` — processes Stripe webhook events (must receive raw body, app.ts registers it before `express.json()`)
+- **Payment guard**: `routes/ai-analysis.ts` → requires `?sessionId=` query param; calls `checkPaymentForPuuid()` → returns 402 if unpaid
+- **Frontend flow**: `ai-analysis.tsx` → checks URL for `?session_id=` (from Stripe success redirect) → stores in localStorage as `nexus_ai_token_{puuid}` → verifies via `/api/stripe/verify-payment` → shows PaymentWall or generates report
+- **Supported payment methods**: Card, BLIK, Przelewy24 (Polish payment methods enabled)
+
 ## Important Notes
 - Never edit generated files in `lib/api-client-react/src/generated/` or `lib/api-zod/src/generated/`
 - `refetchInterval` in react-query v5 does NOT work on errored queries — use `useEffect + setInterval + refetch()` workaround
@@ -55,4 +68,4 @@ TypeScript pnpm monorepo, fully in Polish. Users search players by Riot ID acros
 - Cache: all Riot API endpoints are cached server-side (search=60s, ranked=120s, matches=90s, mastery=300s, analysis=120s, live=30s, champion=180s)
 - `pushHistory` defined in BOTH home.tsx and profile.tsx (intentional duplicates)
 - `Link` from wouter renders its own `<a>` — never wrap in plain `<a>`
-- Workflows: "Start application" runs both API server (port 8080) and web (PORT env var); individual artifact workflows also exist
+- Workflows: "Start application" runs both API server (port 8080) and web (PORT env var); individual artifact workflows also exist — if "Start application" fails because port 8080 is occupied, restart individual `artifacts/api-server: API Server` workflow instead

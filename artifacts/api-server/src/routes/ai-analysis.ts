@@ -3,6 +3,7 @@ import { ai } from "@workspace/integrations-gemini-ai";
 import { riotFetch } from "../lib/riot-fetch";
 import { cache } from "../lib/cache";
 import { getChampionName } from "../lib/ddragon";
+import { checkPaymentForPuuid } from "./stripe-payments";
 
 const router: IRouter = Router();
 
@@ -310,14 +311,25 @@ WAŻNE: Coaching tips musi zawierać minimum 5 wskazówek, champion_recommendati
 
 router.get("/:puuid/ai-report", async (req, res) => {
   const { puuid } = req.params;
-  const { region, gameName } = req.query as { region: string; gameName?: string };
+  const { region, gameName, sessionId } = req.query as { region: string; gameName?: string; sessionId?: string };
 
   if (!region) {
     res.status(400).json({ error: "bad_request", message: "region is required" });
     return;
   }
 
-  const cacheKey = `ai-report:${region.toUpperCase()}:${puuid}`;
+  if (!sessionId) {
+    res.status(402).json({ error: "payment_required", message: "Płatność wymagana do wygenerowania analizy AI" });
+    return;
+  }
+
+  const paid = await checkPaymentForPuuid(puuid, sessionId).catch(() => false);
+  if (!paid) {
+    res.status(402).json({ error: "payment_required", message: "Płatność wymagana do wygenerowania analizy AI" });
+    return;
+  }
+
+  const cacheKey = `ai-report:${region.toUpperCase()}:${puuid}:${sessionId}`;
   const cached = cache.get(cacheKey);
   if (cached) {
     res.json(cached);
