@@ -59,6 +59,11 @@ router.get("/:matchId", async (req, res) => {
       const teamKills: number = teamKillMap[p.teamId] ?? 1;
       const kda = deaths === 0 ? kills + assists : parseFloat(((kills + assists) / deaths).toFixed(2));
 
+      const goldEarned = (p.goldEarned ?? 0) as number;
+      const goldPerMin = duration > 0 ? parseFloat((goldEarned / (duration / 60)).toFixed(0)) : 0;
+      const dmgTaken = (p.totalDamageTaken ?? 0) as number;
+      const dmgPerGold = goldEarned > 0 ? parseFloat((dmg / goldEarned).toFixed(2)) : 0;
+
       return {
         puuid: (p.puuid ?? "") as string,
         summonerName: (p.riotIdGameName ?? p.summonerName ?? "Unknown") as string,
@@ -70,12 +75,24 @@ router.get("/:matchId", async (req, res) => {
         kills, deaths, assists, kda, cs,
         csPerMin: parseFloat((cs / (duration / 60)).toFixed(1)),
         totalDamageDealt: dmg,
+        damageTaken: dmgTaken,
         damageShare: parseFloat(((dmg / maxDmg) * 100).toFixed(1)),
         killParticipation: teamKills > 0 ? parseFloat(((kills + assists) / teamKills * 100).toFixed(1)) : 0,
-        goldEarned: (p.goldEarned ?? 0) as number,
+        goldEarned,
+        goldPerMin,
+        dmgPerGold,
         visionScore: (p.visionScore ?? 0) as number,
         wardsPlaced: (p.wardsPlaced ?? 0) as number,
         wardsKilled: (p.wardsKilled ?? 0) as number,
+        controlWardsPlaced: (p.detectorWardsPlaced ?? 0) as number,
+        timeCCingOthers: (p.timeCCingOthers ?? 0) as number,
+        totalHeal: (p.totalHeal ?? 0) as number,
+        totalHealsOnTeammates: (p.totalHealsOnTeammates ?? 0) as number,
+        damageSelfMitigated: (p.damageSelfMitigated ?? 0) as number,
+        objectivesStolen: (p.objectivesStolen ?? 0) as number,
+        turretKills: (p.turretKills ?? 0) as number,
+        largestKillingSpree: (p.largestKillingSpree ?? 0) as number,
+        bountyLevel: (p.bountyLevel ?? 0) as number,
         items: [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5, p.item6].map((i: any) => i ?? 0) as number[],
         summoner1Id: (p.summoner1Id ?? 0) as number,
         summoner2Id: (p.summoner2Id ?? 0) as number,

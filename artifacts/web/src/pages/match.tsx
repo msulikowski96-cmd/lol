@@ -145,37 +145,46 @@ function TeamSection({ participants, team, maxDmg, selfPuuid, label, color }: { 
 type Insight = { text: string; type: "positive" | "negative" | "neutral" };
 
 function computePlayerScore(p: any): number {
-  const sup = p.teamPosition === "UTILITY";
+  const sup  = p.teamPosition === "UTILITY";
   const jung = p.teamPosition === "JUNGLE";
-  const kda = p.deaths === 0 ? (p.kills + p.assists) * 1.2 : (p.kills + p.assists) / p.deaths;
-  const kp = typeof p.killParticipation === "number" ? p.killParticipation : 0;
+  const kda  = p.deaths === 0 ? (p.kills + p.assists) * 1.3 : (p.kills + p.assists) / p.deaths;
+  const kp   = typeof p.killParticipation === "number" ? p.killParticipation : 0;
 
-  // KDA component (0-35)
-  const kdaScore = Math.min(35, (kda / (kda + 2)) * 48);
+  // KDA: 0-30 pts (log scale so high KDA still gives points)
+  const kdaScore = Math.min(30, (kda / (kda + 1.5)) * 38);
 
-  // KP component (0-20)
-  const kpScore = Math.min(20, (kp / 100) * 22);
+  // Kill participation: 0-18 pts
+  const kpScore = Math.min(18, (kp / 100) * 20);
 
-  // CS component (0-20, skip supports)
+  // CS per minute: 0-18 pts (0 for support)
   let csScore = 0;
   if (!sup) {
     const target = jung ? 5.5 : 7.5;
-    csScore = Math.min(20, (p.csPerMin / target) * 20);
+    csScore = Math.min(18, (p.csPerMin / target) * 18);
   } else {
-    csScore = 10; // supports get neutral CS score
+    csScore = 9;
   }
 
-  // Vision component (0-15)
-  const visionTarget = sup ? 50 : 18;
-  const visionScore = Math.min(15, (p.visionScore / visionTarget) * 15);
+  // Vision: 0-14 pts (role-weighted)
+  const visionTarget = sup ? 55 : 20;
+  const visionScore  = Math.min(14, (p.visionScore / visionTarget) * 14);
 
-  // Death penalty (0 to -12)
-  const deathPenalty = Math.min(12, Math.max(0, (p.deaths - 2) * 2.5));
+  // Control wards: 0-5 pts
+  const cwScore = Math.min(5, (p.controlWardsPlaced ?? 0) * 1.2);
 
-  // Win bonus
+  // Death penalty: up to -15 pts (linear above 2 deaths)
+  const deathPenalty = Math.min(15, Math.max(0, (p.deaths - 2) * 2.8));
+
+  // Win bonus: 7 pts
   const winBonus = p.win ? 7 : 0;
 
-  const raw = kdaScore + kpScore + csScore + visionScore - deathPenalty + winBonus;
+  // Multikill bonus: 0-4 pts
+  const multikillBonus = Math.min(4,
+    (p.pentaKills ?? 0) * 4 + (p.quadraKills ?? 0) * 3 +
+    (p.tripleKills ?? 0) * 2 + (p.doubleKills ?? 0) * 0.5
+  );
+
+  const raw = kdaScore + kpScore + csScore + visionScore + cwScore - deathPenalty + winBonus + multikillBonus;
   return Math.round(Math.max(0, Math.min(100, raw)));
 }
 
@@ -223,138 +232,248 @@ function ScoreRing({ score }: { score: number }) {
   );
 }
 
-function isSupport(p: any) { return p.teamPosition === "UTILITY"; }
-function isJungle(p: any) { return p.teamPosition === "JUNGLE"; }
+// ─── Context helpers ──────────────────────────────────────────────────────────
+function avg(arr: number[]): number { return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0; }
+function fmt1(n: number): string { return n.toFixed(1); }
+function fmtK(n: number): string { return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n); }
 
-function analyzePlayer(p: any, teamParticipants: any[], allParticipants: any[]): Insight[] {
-  const insights: Insight[] = [];
-  const { kills, deaths, assists, cs, csPerMin, killParticipation, totalDamageDealt,
-    visionScore, wardsPlaced, firstBloodKill, pentaKills, quadraKills, tripleKills,
-    win, kda, goldEarned } = p;
+function analyzePlayer(p: any, teamPlayers: any[], allPlayers: any[]): Insight[] {
+  const ins: Insight[] = [];
+  const {
+    kills, deaths, assists, csPerMin, killParticipation,
+    totalDamageDealt, damageTaken, damageSelfMitigated,
+    visionScore, wardsPlaced, wardsKilled, controlWardsPlaced,
+    timeCCingOthers, totalHeal, totalHealsOnTeammates,
+    objectivesStolen, turretKills, largestKillingSpree, bountyLevel,
+    goldEarned, goldPerMin, dmgPerGold,
+    firstBloodKill, pentaKills, quadraKills, tripleKills, doubleKills,
+    win, kda, teamPosition,
+  } = p;
 
-  const sup = isSupport(p);
-  const jung = isJungle(p);
+  const sup  = teamPosition === "UTILITY";
+  const jung = teamPosition === "JUNGLE";
+  const top  = teamPosition === "TOP";
 
-  const teamGold = teamParticipants.reduce((s: number, x: any) => s + x.goldEarned, 0);
-  const avgTeamDmg = teamParticipants.reduce((s: number, x: any) => s + x.totalDamageDealt, 0) / teamParticipants.length;
+  // ── Game-wide context ──────────────────────────────────────────────────────
+  const gameDmgAvg    = avg(allPlayers.map((x: any) => x.totalDamageDealt));
+  const gameGpmAvg    = avg(allPlayers.map((x: any) => x.goldPerMin));
+  const gameVisionAvg = avg(allPlayers.map((x: any) => x.visionScore));
+  const teamDmgAvg    = avg(teamPlayers.map((x: any) => x.totalDamageDealt));
+  const teamDmgTotal  = teamPlayers.reduce((s: number, x: any) => s + x.totalDamageDealt, 0);
+  const dmgShareOfTeam = teamDmgTotal > 0 ? (totalDamageDealt / teamDmgTotal) * 100 : 0;
 
-  // ── Multikills & highlights ──
-  if (pentaKills > 0) insights.push({ type: "positive", text: `Penta Kill! Absolutne zdominowanie meczu — ${pentaKills === 1 ? "jeden" : pentaKills} Penta Kill${pentaKills > 1 ? "s" : ""}.` });
-  else if (quadraKills > 0) insights.push({ type: "positive", text: `Quadra Kill — wyjątkowy play teamfightowy.` });
-  else if (tripleKills > 0) insights.push({ type: "positive", text: `Triple Kill — skuteczna walka 1v3 lub domination w teamfighcie.` });
+  // ─── Highlights ───────────────────────────────────────────────────────────
+  if (pentaKills > 0)   ins.push({ type: "positive", text: `PENTA KILL! Kompletne zdominowanie teamfightu — absolutne wyróżnienie meczu.` });
+  else if (quadraKills > 0) ins.push({ type: "positive", text: `Quadra Kill — eliminacja 4 przeciwników w jednej sekwencji walk.` });
+  else if (tripleKills > 0) ins.push({ type: "positive", text: `Triple Kill — skuteczna dominacja w teamfighcie.` });
+  else if (doubleKills >= 3) ins.push({ type: "positive", text: `${doubleKills}× Double Kill — wielokrotna efektywność w walkach 1v2.` });
 
-  if (firstBloodKill) insights.push({ type: "positive", text: "First Blood — agresywny start gry, zdobycie psychologicznej przewagi nad lanem." });
+  if (firstBloodKill) ins.push({ type: "positive", text: "First Blood — agresywny start lany, psychologiczna i złotna przewaga od pierwszych minut." });
 
-  // ── Deaths ──
-  if (deaths >= 10) insights.push({ type: "negative", text: `Krytyczna liczba śmierci (${deaths}) — gracz spędził znaczną część gry poza mapą. Priorytet: bezpieczniejsze pozycjonowanie.` });
-  else if (deaths >= 7) insights.push({ type: "negative", text: `Bardzo wysoka liczba śmierci (${deaths}) — każda śmierć to utracone złoto dla przeciwnika i czas bez wpływu na grę.` });
-  else if (deaths >= 5) insights.push({ type: "negative", text: `Podwyższona liczba śmierci (${deaths}) — warto przeanalizować momenty, w których gracz brał nadmiernie ryzykowne walki.` });
-  else if (deaths === 0) insights.push({ type: "positive", text: "Bezbłędna gra — zero śmierci. Doskonała ocena ryzyka i pozycjonowanie przez cały mecz." });
-  else if (deaths === 1) insights.push({ type: "positive", text: `Tylko ${deaths} śmierć — wyjątkowa przeżywalność.` });
+  if (largestKillingSpree >= 8) ins.push({ type: "positive", text: `Killing spree x${largestKillingSpree} — przez długi czas gracz był nieuchwytny i stanowił zagrożenie dla całej mapy.` });
+  else if (largestKillingSpree >= 5) ins.push({ type: "positive", text: `Killing spree x${largestKillingSpree} — ciągła efektywność bez śmierci.` });
 
-  // ── CS (skip supports) ──
+  if (objectivesStolen > 0) ins.push({ type: "positive", text: `${objectivesStolen} skradzion${objectivesStolen === 1 ? "y" : "e"} obiektyw${objectivesStolen === 1 ? "" : "y"} — ryzykowny play, który zmienił bieg gry.` });
+
+  if (turretKills >= 3) ins.push({ type: "positive", text: `${turretKills} zniszczone wieże — gracz aktywnie konwertował przewagę na obiektywy strukturalne.` });
+  else if (turretKills >= 2 && (top || jung)) ins.push({ type: "positive", text: `${turretKills} wieże — dobra presja na struktury mapy.` });
+
+  // ─── Deaths ───────────────────────────────────────────────────────────────
+  const avgGameDeaths = avg(allPlayers.map((x: any) => x.deaths));
+  if (deaths >= 12) ins.push({ type: "negative", text: `Krytyczna liczba śmierci (${deaths}) — gracz spędził ogromną część gry poza mapą, przekazując ${deaths} bounty killerowi. Priorytet: pozycjonowanie i ocena ryzyka.` });
+  else if (deaths >= 8) ins.push({ type: "negative", text: `Bardzo wysoka liczba śmierci (${deaths}, średnia meczu: ${fmt1(avgGameDeaths)}) — każda śmierć to darmowe złoto i czas dla przeciwników.` });
+  else if (deaths >= 6) ins.push({ type: "negative", text: `Podwyższona liczba śmierci (${deaths} vs śr. meczu ${fmt1(avgGameDeaths)}) — warto ograniczyć ryzykowne single-walki.` });
+  else if (deaths === 0) ins.push({ type: "positive", text: `Bezbłędna gra — zero śmierci. Doskonałe pozycjonowanie przez cały mecz.` });
+  else if (deaths === 1) ins.push({ type: "positive", text: `Tylko 1 śmierć — wyjątkowa przeżywalność (śr. meczu: ${fmt1(avgGameDeaths)}).` });
+
+  // ─── CS / Farmienie ───────────────────────────────────────────────────────
   if (!sup) {
-    const csThresholdLow = jung ? 3.5 : 5.0;
-    const csThresholdVeryLow = jung ? 2.5 : 3.5;
-    const csThresholdGood = jung ? 5.5 : 7.0;
-    const csThresholdElite = jung ? 7.0 : 8.5;
-    if (csPerMin >= csThresholdElite) insights.push({ type: "positive", text: `Elitarne farmienie (${csPerMin} CS/min) — gracz skutecznie konwertował czas na przewagę złota.` });
-    else if (csPerMin >= csThresholdGood) insights.push({ type: "positive", text: `Dobre farmienie powyżej normy (${csPerMin} CS/min).` });
-    else if (csPerMin < csThresholdVeryLow) insights.push({ type: "negative", text: `Bardzo słabe farmienie (${csPerMin} CS/min). Norma dla tej roli to ${jung ? "5–7" : "6–9"} CS/min — stracono znaczną ilość złota.` });
-    else if (csPerMin < csThresholdLow) insights.push({ type: "negative", text: `Farmienie poniżej normy (${csPerMin} CS/min). Poprawa regularności ostatnich hitów to najszybszy sposób na wzrost złota.` });
+    const normTarget  = jung ? 5.5 : 7.5;
+    const goodTarget  = jung ? 6.5 : 8.5;
+    const eliteTarget = jung ? 7.5 : 9.5;
+    const badTarget   = jung ? 3.5 : 5.0;
+    const veryBad     = jung ? 2.5 : 3.5;
+    const roleLabel   = jung ? "junglerów" : "linerów";
+
+    if (csPerMin >= eliteTarget) ins.push({ type: "positive", text: `Elitarne farmienie (${csPerMin} CS/min) — najwyższy próg wśród ${roleLabel} — gracz generował złoto bardzo efektywnie.` });
+    else if (csPerMin >= goodTarget) ins.push({ type: "positive", text: `Dobre farmienie (${csPerMin} CS/min) — powyżej normy ${fmt1(normTarget)} dla tej roli.` });
+    else if (csPerMin < veryBad) ins.push({ type: "negative", text: `Bardzo słabe farmienie (${csPerMin} CS/min vs norma ${fmt1(normTarget)}) — stracono ok. ${Math.round((normTarget - csPerMin) * 20 * (1/60) * 30 * 20)} złota wartości w CS.` });
+    else if (csPerMin < badTarget) ins.push({ type: "negative", text: `Farmienie poniżej normy (${csPerMin} CS/min, norma ${fmt1(normTarget)}) — regularne last-hity to najszybszy sposób wzrostu siły postaci.` });
   }
 
-  // ── Vision score ──
+  // ─── Wizja i wardy ────────────────────────────────────────────────────────
   if (sup) {
-    if (visionScore >= 60) insights.push({ type: "positive", text: `Doskonała kontrola wzroku (${visionScore}) — support aktywnie zarządzał wizją całej mapy.` });
-    else if (visionScore < 20) insights.push({ type: "negative", text: `Niski wynik wizji dla supporta (${visionScore}) — ta rola powinna dominować w wardowaniu i sweepowaniu.` });
-    else if (visionScore < 35) insights.push({ type: "negative", text: `Wynik wizji poniżej oczekiwań dla supporta (${visionScore}) — warto wardować kluczowe miejsca po każdej walce.` });
+    if (visionScore >= 70) ins.push({ type: "positive", text: `Wzorowa kontrola wzroku (${visionScore}) — support dominował wizją, znacznie powyżej średniej meczu (${fmt1(gameVisionAvg)}).` });
+    else if (visionScore >= 45) ins.push({ type: "positive", text: `Dobry wynik wizji dla supporta (${visionScore}).` });
+    else if (visionScore < 18) ins.push({ type: "negative", text: `Niski wynik wizji dla supporta (${visionScore} vs śr. ${fmt1(gameVisionAvg)}) — support powinien dominować wizją mapy.` });
+    else if (visionScore < 30) ins.push({ type: "negative", text: `Wynik wizji poniżej oczekiwań (${visionScore}) — więcej wardów i sweepowania po walkach.` });
+
+    if (controlWardsPlaced === 0) ins.push({ type: "negative", text: `Brak control wardów (pink wardów) — kosztują 75g każdy i eliminują ukryte wardy przeciwnika. Niezbędne jako support.` });
+    else if (controlWardsPlaced >= 5) ins.push({ type: "positive", text: `${controlWardsPlaced} control wardów — aktywne eliminowanie wzroku przeciwnika i ochrona własnych miejsc.` });
+    else if (controlWardsPlaced <= 2) ins.push({ type: "negative", text: `Tylko ${controlWardsPlaced} control ward${controlWardsPlaced === 1 ? "" : "y"} — przy minimum 1 co rotację, ta wartość powinna być wyższa.` });
+
+    if (timeCCingOthers >= 60) ins.push({ type: "positive", text: `${fmt1(timeCCingOthers / 60)} minut CC nałożonego na przeciwników — support aktywnie ograniczał ruchy wrogów.` });
+    else if (timeCCingOthers < 10 && timeCCingOthers >= 0) ins.push({ type: "negative", text: `Bardzo mało CC (${fmt1(timeCCingOthers)}s) — postać miała potencjał kontroli tłumu, który nie był wykorzystany.` });
+
+    if (totalHealsOnTeammates >= 8000) ins.push({ type: "positive", text: `Wyleczono ${fmtK(totalHealsOnTeammates)} HP sojuszników — healing support znacząco przedłużał życie drużyny w walkach.` });
   } else {
-    if (visionScore >= 30) insights.push({ type: "positive", text: `Wyróżniający wynik wizji (${visionScore}) — gracz rozumiał jak ważna jest kontrola mapy.` });
-    else if (visionScore < 5) insights.push({ type: "negative", text: `Prawie całkowity brak wardów (wynik wzroku: ${visionScore}) — brak informacji o mapie to prosta droga do śmierci z niewidocznych kątów.` });
-    else if (visionScore < 12) insights.push({ type: "negative", text: `Niski wynik wizji (${visionScore}) — regularne wardowanie kluczowych obszarów pozwala unikać zasadzek i kontrolować obiektywy.` });
+    if (visionScore >= 35) ins.push({ type: "positive", text: `Wyróżniający wynik wizji (${visionScore} vs śr. meczu ${fmt1(gameVisionAvg)}) — gracz aktywnie mapował informacje dla drużyny.` });
+    else if (visionScore < 5) ins.push({ type: "negative", text: `Brak wardów (wynik wzroku: ${visionScore}) — bez wizji każdy ruch po mapie to zgadywanie pozycji przeciwników.` });
+    else if (visionScore < gameVisionAvg * 0.5) ins.push({ type: "negative", text: `Niski wynik wizji (${visionScore} vs śr. meczu ${fmt1(gameVisionAvg)}) — nawet 2-3 wardy na rotację zwiększają bezpieczeństwo i udział w walkach.` });
+
+    if (controlWardsPlaced === 0) ins.push({ type: "negative", text: `Zero control wardów (pink wardów) — kosztują 75g i eliminują wszelką ukrytą wizję przeciwnika w kluczowych miejscach.` });
+
+    if (wardsKilled >= 5) ins.push({ type: "positive", text: `${wardsKilled} wardów przeciwnika zniszczonych — aktywne sweepowanie mapy.` });
   }
 
-  // ── Kill participation ──
+  // ─── Kill Participation ───────────────────────────────────────────────────
   const kpNum = typeof killParticipation === "number" ? killParticipation : 0;
-  if (kpNum >= 80) insights.push({ type: "positive", text: `Wyjątkowy udział w walkach drużyny (${kpNum.toFixed(0)}%) — gracz był obecny niemal przy każdym zabójstwie.` });
-  else if (kpNum >= 65) insights.push({ type: "positive", text: `Wysoki udział w walkach (${kpNum.toFixed(0)}%) — aktywne wsparcie drużyny.` });
-  else if (!sup && kpNum < 30 && deaths < 4) insights.push({ type: "negative", text: `Bardzo niski udział w walkach drużyny (${kpNum.toFixed(0)}%) — gracz spędził zbyt dużo czasu w izolacji od drużyny.` });
-  else if (!sup && kpNum < 45) insights.push({ type: "negative", text: `Niski KP (${kpNum.toFixed(0)}%) — warto częściej dołączać do walki drużynowej zamiast farmić solo.` });
+  if (kpNum >= 85) ins.push({ type: "positive", text: `Wyjątkowy udział w walkach (${fmt1(kpNum)}%) — gracz był obecny przy niemal każdym zabójstwie drużyny.` });
+  else if (kpNum >= 70) ins.push({ type: "positive", text: `Wysoki udział w walkach drużyny (${fmt1(kpNum)}%) — aktywna obecność na mapie.` });
+  else if (!sup && kpNum < 35 && deaths < 5) ins.push({ type: "negative", text: `Bardzo niski KP (${fmt1(kpNum)}%) — gracz spędził zbyt wiele czasu w izolacji, tracąc wpływ na wynik walk.` });
+  else if (!sup && kpNum < 50 && deaths >= 5) ins.push({ type: "negative", text: `Niski KP (${fmt1(kpNum)}%) przy ${deaths} śmierciach — postać nie miała znaczącego wpływu na przebieg gry.` });
 
-  // ── Damage ──
+  // ─── Damage ───────────────────────────────────────────────────────────────
+  const dmgK = fmtK(totalDamageDealt);
+  const gameDmgAvgK = fmtK(gameDmgAvg);
+
   if (!sup) {
-    const dmgK = (totalDamageDealt / 1000).toFixed(1);
-    if (totalDamageDealt < 6000 && !jung) insights.push({ type: "negative", text: `Bardzo niskie obrażenia zadane bohaterom (${dmgK}k) — postać nie wnosiła siły ognia do walk drużynowych.` });
-    else if (totalDamageDealt < 10000 && !jung && deaths >= 5) insights.push({ type: "neutral", text: `Niskie obrażenia (${dmgK}k) w połączeniu z dużą liczbą śmierci — postać nie miała wpływu na przebieg walk.` });
-    else if (totalDamageDealt > avgTeamDmg * 1.5) insights.push({ type: "positive", text: `Wiodący damage dealer drużyny — zadał ${dmgK}k obrażeń, znacznie powyżej średniej drużyny.` });
+    const dmgRatio = gameDmgAvg > 0 ? totalDamageDealt / gameDmgAvg : 1;
+    if (dmgRatio >= 1.6) ins.push({ type: "positive", text: `Wiodący damage dealer — ${dmgK} obrażeń (${Math.round((dmgRatio - 1) * 100)}% powyżej średniej meczu ${gameDmgAvgK}).` });
+    else if (dmgRatio >= 1.25) ins.push({ type: "positive", text: `Solidna siła ognia — ${dmgK} obrażeń, powyżej średniej meczu (${gameDmgAvgK}).` });
+    else if (dmgRatio < 0.5 && deaths < 5) ins.push({ type: "negative", text: `Bardzo niskie obrażenia (${dmgK} vs średnia meczu ${gameDmgAvgK}) — postać nie wnosiła realnej siły do walk drużynowych.` });
+    else if (dmgRatio < 0.65 && deaths >= 5) ins.push({ type: "negative", text: `Niskie obrażenia (${dmgK}) w połączeniu z ${deaths} śmierciami — postać nie miała wpływu na mecz.` });
+
+    // Damage efficiency (dmg per gold)
+    const avgDmgPerGold = avg(allPlayers.filter((x: any) => x.teamPosition !== "UTILITY").map((x: any) => x.dmgPerGold));
+    if (avgDmgPerGold > 0) {
+      if (dmgPerGold >= avgDmgPerGold * 1.4) ins.push({ type: "positive", text: `Wysoka efektywność złota (${fmt1(dmgPerGold)} DMG/G vs śr. ${fmt1(avgDmgPerGold)}) — postać robiła więcej za każde zarobione złoto.` });
+      else if (dmgPerGold < avgDmgPerGold * 0.6 && totalDamageDealt < gameDmgAvg) ins.push({ type: "negative", text: `Niska efektywność złota (${fmt1(dmgPerGold)} DMG/G vs śr. ${fmt1(avgDmgPerGold)}) — zarobione złoto nie przekładało się na wpływ w walkach.` });
+    }
   }
 
-  // ── KDA ──
+  // ─── Dla tanków / initiatorów ─────────────────────────────────────────────
+  if (top || jung) {
+    const tankThresh = 25000;
+    if (damageTaken >= tankThresh && deaths <= 5) {
+      ins.push({ type: "positive", text: `Wyjątkowy tank (${fmtK(damageTaken)} absorb.) — gracz przyjął ogień na siebie, chroniąc sojuszników w walkach.` });
+    }
+    if (damageSelfMitigated >= 15000) {
+      ins.push({ type: "positive", text: `${fmtK(damageSelfMitigated)} obrażeń zmitigowanych — skuteczne korzystanie z tarcz i redukcji obrażeń.` });
+    }
+  }
+
+  // ─── Gold per minute ──────────────────────────────────────────────────────
+  if (!sup) {
+    const gpmDiff = goldPerMin - gameGpmAvg;
+    if (gpmDiff >= 100) ins.push({ type: "positive", text: `Świetne tempo zarobku złota (${goldPerMin} G/min vs śr. meczu ${Math.round(gameGpmAvg)}) — stały nacisk na farmienie i walki.` });
+    else if (gpmDiff <= -120 && !jung) ins.push({ type: "negative", text: `Niskie tempo złota (${goldPerMin} G/min vs śr. ${Math.round(gameGpmAvg)}) — stracono znaczną część potencjalnej przewagi ekonomicznej.` });
+  }
+
+  // ─── KDA ──────────────────────────────────────────────────────────────────
   const kdaNum = typeof kda === "number" ? kda : 0;
-  if (deaths > 0 && kdaNum >= 7) insights.push({ type: "positive", text: `Znakomite KDA (${kdaNum.toFixed(1)}) — gracz skutecznie eliminował i asystował minimalizując własne straty.` });
-  else if (deaths > 0 && kdaNum < 1.0 && deaths >= 5) insights.push({ type: "negative", text: `Negatywne KDA (${kdaNum.toFixed(1)}) — liczba zabójstw i asyst nie rekompensowała ilości śmierci.` });
+  if (deaths > 0 && kdaNum >= 8) ins.push({ type: "positive", text: `Znakomite KDA (${kdaNum}) — eliminacje i asysty przy minimalnych stratach własnych.` });
+  else if (deaths > 0 && kdaNum < 0.8 && deaths >= 6) ins.push({ type: "negative", text: `Negatywne KDA (${kdaNum}) — liczba zabójstw i asyst (${kills + assists}) nie rekompensuje ${deaths} śmierci.` });
 
-  // ── Gold efficiency ──
-  const goldShare = teamGold > 0 ? (goldEarned / teamGold) * 100 : 0;
-  if (!sup && goldShare < 15 && cs < 80) insights.push({ type: "negative", text: `Niski udział w złocie drużyny (${goldShare.toFixed(0)}%) — słabe farmienie i rzadki udział w walkach ograniczyły siłę postaci.` });
-
-  return insights;
+  return ins;
 }
 
 function computeMVP(participants: any[]): any {
   return [...participants].sort((a, b) => {
-    const scoreA = (a.kills * 3 + a.assists * 1.5 - a.deaths * 2) + (a.damageShare / 5) + (a.visionScore / 5);
-    const scoreB = (b.kills * 3 + b.assists * 1.5 - b.deaths * 2) + (b.damageShare / 5) + (b.visionScore / 5);
-    return scoreB - scoreA;
+    const score = (p: any) =>
+      (p.kills * 3.5 + p.assists * 1.5 - p.deaths * 2.5)
+      + (p.damageShare / 4)
+      + (p.visionScore / 4)
+      + (p.objectivesStolen ?? 0) * 5
+      + (p.turretKills ?? 0) * 2
+      + (p.largestKillingSpree ?? 0) * 1.5;
+    return score(b) - score(a);
   })[0];
 }
 
 function computeWeakLink(participants: any[]): any {
   return [...participants].sort((a, b) => {
-    const scoreA = (a.kills + a.assists) - a.deaths * 2.5 + a.csPerMin;
-    const scoreB = (b.kills + b.assists) - b.deaths * 2.5 + b.csPerMin;
-    return scoreA - scoreB;
+    const score = (p: any) =>
+      (p.kills + p.assists) - p.deaths * 3
+      + p.csPerMin * 0.5
+      + (p.killParticipation ?? 0) / 10;
+    return score(a) - score(b);
   })[0];
 }
 
 function generateGameInsights(participants: any[], teams: any[], duration: number): string[] {
-  const insights: string[] = [];
+  const ins: string[] = [];
   const team1 = participants.filter((p: any) => p.teamId === 100);
   const team2 = participants.filter((p: any) => p.teamId === 200);
   const t1 = teams.find((t: any) => t.teamId === 100);
   const t2 = teams.find((t: any) => t.teamId === 200);
-
   const durationMin = duration / 60;
-  if (durationMin < 22) insights.push("Błyskawiczny mecz — jedna drużyna całkowicie zdominowała early game i nie pozwoliła rywalom na powrót do gry.");
-  else if (durationMin < 28) insights.push("Szybkie rozstrzygnięcie — przewaga zbudowana w early/mid game została skutecznie skonwertowana na wygraną.");
-  else if (durationMin > 40) insights.push("Bardzo długi mecz — obie drużyny były wyrównane; gra o obiektywy i skalowanie zadecydowało o wyniku.");
-  else if (durationMin > 32) insights.push("Długi mecz — żadna drużyna nie zdominowała wczesnej gry, rozstrzygnięcie nastąpiło w late game.");
 
+  // Duration context
+  if (durationMin < 20) ins.push(`Błyskawiczny mecz (${Math.round(durationMin)}min) — jedna drużyna zdominowała early game i nie dała rywalom wrócić do gry.`);
+  else if (durationMin < 27) ins.push(`Szybkie rozstrzygnięcie (${Math.round(durationMin)}min) — przewaga z early/mid game skutecznie skonwertowana.`);
+  else if (durationMin > 42) ins.push(`Bardzo długi mecz (${Math.round(durationMin)}min) — wyrównana gra; skalowanie i late game obiektywy zadecydowały.`);
+  else if (durationMin > 33) ins.push(`Długi mecz (${Math.round(durationMin)}min) — żadna drużyna nie przełamała early game, rozstrzygnięcie w late game.`);
+
+  // Kill dominance
   const t1Kills = team1.reduce((s: number, p: any) => s + p.kills, 0);
   const t2Kills = team2.reduce((s: number, p: any) => s + p.kills, 0);
+  const totalKills = t1Kills + t2Kills;
   const killRatio = Math.max(t1Kills, t2Kills) / Math.max(Math.min(t1Kills, t2Kills), 1);
-  if (killRatio >= 2.5) {
-    const dominantTeam = t1Kills > t2Kills ? "Niebieska" : "Czerwona";
-    insights.push(`Drużyna ${dominantTeam} zdominowała walki (${Math.max(t1Kills, t2Kills)} vs ${Math.min(t1Kills, t2Kills)} zabójstw) — miażdżąca przewaga kill-by-kill.`);
+  if (killRatio >= 3) {
+    const dom = t1Kills > t2Kills ? "Niebieska" : "Czerwona";
+    ins.push(`Drużyna ${dom} zmiażdżyła kill-by-kill (${Math.max(t1Kills, t2Kills)}:${Math.min(t1Kills, t2Kills)}) — całkowita dominacja walki.`);
+  } else if (killRatio >= 2) {
+    const dom = t1Kills > t2Kills ? "Niebieska" : "Czerwona";
+    ins.push(`Drużyna ${dom} wyraźnie wygrała walki (${Math.max(t1Kills, t2Kills)}:${Math.min(t1Kills, t2Kills)} zabójstw).`);
   }
 
+  // Gold difference
+  const t1Gold = team1.reduce((s: number, p: any) => s + p.goldEarned, 0);
+  const t2Gold = team2.reduce((s: number, p: any) => s + p.goldEarned, 0);
+  const goldDiff = Math.abs(t1Gold - t2Gold);
+  if (goldDiff >= 12000) {
+    const richTeam = t1Gold > t2Gold ? "Niebieska" : "Czerwona";
+    ins.push(`Drużyna ${richTeam} zakończyła grę z przewagą ${fmtK(goldDiff)} złota — ogromna dysproporcja ekonomiczna.`);
+  }
+
+  // Objectives
   if (t1 && t2) {
-    const winTeam = t1.win ? t1 : t2;
-    const loseTeam = t1.win ? t2 : t1;
-    const dragonDiff = (winTeam.objectives?.dragon ?? 0) - (loseTeam.objectives?.dragon ?? 0);
-    const baronDiff = (winTeam.objectives?.baron ?? 0) - (loseTeam.objectives?.baron ?? 0);
-    if (baronDiff >= 2) insights.push(`Wygrywająca drużyna dominowała przy Baronie (${winTeam.objectives?.baron} vs ${loseTeam.objectives?.baron}) — kluczowa kontrola obiektywa późnej gry.`);
-    if (dragonDiff >= 3) insights.push(`Znaczna przewaga smoków (${winTeam.objectives?.dragon} vs ${loseTeam.objectives?.dragon}) — buffy dragonów dały trwałą przewagę statystyczną.`);
+    const winT = t1.win ? t1 : t2;
+    const loseT = t1.win ? t2 : t1;
+    const dragonDiff = (winT.objectives?.dragon ?? 0) - (loseT.objectives?.dragon ?? 0);
+    const baronDiff  = (winT.objectives?.baron ?? 0) - (loseT.objectives?.baron ?? 0);
+    const towerDiff  = (winT.objectives?.tower ?? 0) - (loseT.objectives?.tower ?? 0);
+    if (baronDiff >= 2) ins.push(`Wygrywająca drużyna wzięła ${winT.objectives?.baron} Baron${winT.objectives?.baron > 1 ? "ów" : "a"} (rywal: ${loseT.objectives?.baron}) — kluczowa kontrola late-game.`);
+    else if (baronDiff === 1 && durationMin > 30) ins.push(`Baron zadecydował o wyniku — wygrywająca drużyna sięgnęła po Barona jako kluczowy buff.`);
+    if (dragonDiff >= 3) ins.push(`Dominacja smoków: ${winT.objectives?.dragon} vs ${loseT.objectives?.dragon} — permanentne buffy statystyczne przez cały mecz.`);
+    if (towerDiff >= 5) ins.push(`Miażdżąca przewaga wieżowa (${winT.objectives?.tower} vs ${loseT.objectives?.tower}) — pełna kontrola strukturalna mapy.`);
   }
 
-  const highDeathPlayers = participants.filter((p: any) => p.deaths >= 7);
-  if (highDeathPlayers.length >= 2) insights.push(`Aż ${highDeathPlayers.length} graczy zginęło 7+ razy — mecz charakteryzował się bardzo chaotycznym, agresywnym stylem gry.`);
+  // Stolen objectives
+  const stolenTotal = participants.reduce((s: number, p: any) => s + (p.objectivesStolen ?? 0), 0);
+  if (stolenTotal >= 2) ins.push(`W tym meczu skradziono łącznie ${stolenTotal} obiektywy — dramatyczne zwroty akcji przy smoku/baronie.`);
 
-  const zeroDeathPlayers = participants.filter((p: any) => p.deaths === 0);
-  if (zeroDeathPlayers.length > 0) insights.push(`${zeroDeathPlayers.map((p: any) => p.summonerName).join(", ")} zakończyło mecz bez ani jednej śmierci — wyjątkowa przeżywalność.`);
+  // Chaos indicator
+  const highDeathCount = participants.filter((p: any) => p.deaths >= 7).length;
+  if (highDeathCount >= 3) ins.push(`${highDeathCount} graczy zginęło 7+ razy — bardzo chaotyczny, otwarty styl gry z licznymi błędami pozycjonowania.`);
+  else if (totalKills >= 50) ins.push(`${totalKills} łącznych zabójstw — wyjątkowo agresywny mecz z ciągłymi teamfightami na całej mapie.`);
 
-  return insights;
+  // Perfect survivors
+  const zeroDeath = participants.filter((p: any) => p.deaths === 0);
+  if (zeroDeath.length >= 2) ins.push(`${zeroDeath.map((p: any) => p.summonerName).join(" i ")} zakończyli mecz bez ani jednej śmierci.`);
+  else if (zeroDeath.length === 1) ins.push(`${zeroDeath[0].summonerName} (${zeroDeath[0].championName}) bezbłędnie — zero śmierci przez cały mecz.`);
+
+  // Vision war
+  const t1Vision = team1.reduce((s: number, p: any) => s + p.visionScore, 0);
+  const t2Vision = team2.reduce((s: number, p: any) => s + p.visionScore, 0);
+  const visionDiff = Math.abs(t1Vision - t2Vision);
+  if (visionDiff >= 40) {
+    const betterVision = t1Vision > t2Vision ? "Niebieska" : "Czerwona";
+    ins.push(`Drużyna ${betterVision} wygrała "wojnę wizji" (${Math.max(t1Vision, t2Vision)} vs ${Math.min(t1Vision, t2Vision)}) — przewaga informacyjna na mapie.`);
+  }
+
+  return ins;
 }
 
 function PlayerInsightCard({ p, team, allParticipants }: { p: any; team: any[]; allParticipants: any[] }) {
