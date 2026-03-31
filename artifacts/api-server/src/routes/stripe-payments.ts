@@ -11,18 +11,15 @@ async function ensurePaymentsTable() {
     CREATE TABLE IF NOT EXISTS ai_analysis_payments (
       session_id TEXT PRIMARY KEY,
       puuid TEXT NOT NULL,
-      user_id UUID,
       status TEXT NOT NULL DEFAULT 'pending',
       created_at TIMESTAMPTZ DEFAULT NOW(),
       paid_at TIMESTAMPTZ,
       expires_at TIMESTAMPTZ
     );
-    CREATE INDEX IF NOT EXISTS idx_aip_puuid ON ai_analysis_payments(puuid);
-    CREATE INDEX IF NOT EXISTS idx_aip_user_puuid ON ai_analysis_payments(user_id, puuid);
   `);
-  await pool.query(`
-    ALTER TABLE ai_analysis_payments ADD COLUMN IF NOT EXISTS user_id UUID;
-  `).catch(() => {});
+  await pool.query(`ALTER TABLE ai_analysis_payments ADD COLUMN IF NOT EXISTS user_id UUID;`).catch(() => {});
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_aip_puuid ON ai_analysis_payments(puuid);`).catch(() => {});
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_aip_user_puuid ON ai_analysis_payments(user_id, puuid);`).catch(() => {});
 }
 
 ensurePaymentsTable().catch(console.error);
