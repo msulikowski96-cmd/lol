@@ -1,5 +1,6 @@
 import { useParams, Link } from "wouter";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Component } from "react";
+import type { ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft, Brain, Star, TrendingUp, TrendingDown,
@@ -145,7 +146,34 @@ function GeneratingCard({ step }: { step: string }) {
   );
 }
 
-export default function AiAnalysisPage() {
+class AiErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: string }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: "" };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error: error.message };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ minHeight: "100vh", background: "linear-gradient(160deg,#0A1628 0%,#0d1f3c 60%,#162040 100%)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: "rgba(244,67,54,0.1)", border: "1px solid rgba(244,67,54,0.3)", borderRadius: 16, padding: 28, textAlign: "center", maxWidth: 360 }}>
+            <AlertTriangle style={{ width: 36, height: 36, color: "#F44336", margin: "0 auto 12px" }} />
+            <div style={{ color: "#fff", fontWeight: 700, marginBottom: 8 }}>Błąd ładowania strony</div>
+            <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, marginBottom: 16 }}>{this.state.error}</div>
+            <button onClick={() => window.location.reload()} style={{ background: "rgba(244,67,54,0.2)", border: "1px solid rgba(244,67,54,0.4)", borderRadius: 8, padding: "8px 18px", color: "#F44336", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+              Odśwież stronę
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function AiAnalysisInner() {
   const { region, gameName, tagLine } = useParams<{ region: string; gameName: string; tagLine: string }>();
   const [report, setReport] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -154,17 +182,19 @@ export default function AiAnalysisPage() {
   const [generatedAt, setGeneratedAt] = useState<number | null>(null);
   const fetchedRef = useRef(false);
 
-  const { data: summonerData } = useSearchSummoner({
-    gameName, tagLine, region,
-  } as any, { enabled: !!(gameName && tagLine && region) });
+  const { data: summonerData } = useSearchSummoner({ region, gameName, tagLine });
 
-  const puuid = summonerData?.puuid;
+  const puuid = (summonerData as any)?.puuid as string | undefined;
 
   const { data: rankedData } = useGetSummonerRanked(
-    puuid ?? "", { region } as any, { enabled: !!puuid }
+    puuid ?? "",
+    { region } as any,
+    { query: { enabled: !!puuid } }
   );
   const { data: masteryData } = useGetSummonerMastery(
-    puuid ?? "", { region } as any, { enabled: !!puuid }
+    puuid ?? "",
+    { region, count: 7 } as any,
+    { query: { enabled: !!puuid } }
   );
 
   const soloQ = (rankedData as any[])?.find((e: any) => e.queueType === "RANKED_SOLO_5x5");
@@ -634,5 +664,13 @@ export default function AiAnalysisPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function AiAnalysisPage() {
+  return (
+    <AiErrorBoundary>
+      <AiAnalysisInner />
+    </AiErrorBoundary>
   );
 }
