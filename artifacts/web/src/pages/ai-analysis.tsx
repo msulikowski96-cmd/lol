@@ -1,28 +1,39 @@
 import { useParams, Link } from "wouter";
 import { useState, useEffect, useRef, Component } from "react";
 import type { ReactNode } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   ChevronLeft, Brain, Star, TrendingUp, TrendingDown,
   Shield, Swords, Eye, Target, Zap, BookOpen,
   Award, AlertTriangle, CheckCircle2, Lightbulb,
-  RefreshCw, Sparkles, BarChart3, Users, Trophy,
+  RefreshCw, Sparkles, Users, Trophy,
   ArrowRight, Clock, Activity
 } from "lucide-react";
 import { useSearchSummoner, useGetSummonerRanked, useGetSummonerMastery } from "@workspace/api-client-react";
 
 const BASE_URL = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-const RATING_COLOR: Record<string, string> = {
-  "S+": "#FFD700", S: "#FFD700", "A+": "#00C853", A: "#00C853",
-  "B+": "#2979FF", B: "#2979FF", "C+": "#FF6D00", C: "#FF6D00",
-  "D": "#F44336",
+const CARD: React.CSSProperties = {
+  background: "white",
+  border: "1px solid hsl(220,15%,90%)",
+  borderRadius: 12,
+  boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
 };
 
-const PRIORITY_COLOR: Record<string, { bg: string; text: string; label: string }> = {
-  high: { bg: "rgba(244,67,54,0.12)", text: "#F44336", label: "Wysoki" },
-  medium: { bg: "rgba(255,152,0,0.12)", text: "#FF9800", label: "Średni" },
-  low: { bg: "rgba(76,175,80,0.12)", text: "#4CAF50", label: "Niski" },
+const PRIMARY = "hsl(200,90%,38%)";
+const FG = "hsl(220,25%,12%)";
+const MUTED = "hsl(220,10%,46%)";
+
+const RATING_COLOR: Record<string, string> = {
+  "S+": "hsl(45,90%,44%)", S: "hsl(45,90%,44%)", "A+": "hsl(152,60%,38%)", A: "hsl(152,60%,38%)",
+  "B+": PRIMARY, B: PRIMARY, "C+": "hsl(28,90%,50%)", C: "hsl(28,90%,50%)",
+  "D": "hsl(350,65%,48%)",
+};
+
+const PRIORITY_COLOR: Record<string, { bg: string; border: string; text: string; label: string }> = {
+  high: { bg: "hsl(350,50%,97%)", border: "hsl(350,55%,82%)", text: "hsl(350,65%,45%)", label: "Wysoki" },
+  medium: { bg: "hsl(38,80%,96%)", border: "hsl(38,70%,78%)", text: "hsl(38,75%,40%)", label: "Średni" },
+  low: { bg: "hsl(152,50%,96%)", border: "hsl(152,45%,78%)", text: "hsl(152,55%,36%)", label: "Niski" },
 };
 
 const CATEGORY_ICON: Record<string, any> = {
@@ -31,112 +42,99 @@ const CATEGORY_ICON: Record<string, any> = {
 };
 
 const FORM_COLOR: Record<string, string> = {
-  "Świetna forma": "#00C853", "Dobra forma": "#4CAF50",
-  "Stabilna": "#2979FF", "Zmienna": "#FF9800",
-  "Słaba forma": "#FF6D00", "Kryzys": "#F44336",
+  "Świetna forma": "hsl(152,60%,38%)", "Dobra forma": "hsl(152,55%,42%)",
+  "Stabilna": PRIMARY, "Zmienna": "hsl(38,75%,40%)",
+  "Słaba forma": "hsl(28,85%,48%)", "Kryzys": "hsl(350,65%,48%)",
 };
 
-function Section({ icon: Icon, title, children, delay = 0, fullWidth = false }: {
-  icon: any; title: string; children: React.ReactNode; delay?: number; fullWidth?: boolean;
+const TIER_COLOR: Record<string, string> = {
+  IRON: "#8d9fa9", BRONZE: "#cd7f32", SILVER: "#8FA3B1", GOLD: "#D4A839",
+  PLATINUM: "#4CBFAA", EMERALD: "#3AC48B", DIAMOND: "#57A8E7",
+  MASTER: "#9B5CE8", GRANDMASTER: "#CF4B4B", CHALLENGER: "#E9BE5C",
+};
+
+function SectionTitle({ icon: Icon, children }: { icon: any; children: ReactNode }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+      <Icon style={{ width: 13, height: 13, color: PRIMARY, flexShrink: 0 }} />
+      <span style={{
+        fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase",
+        color: PRIMARY, fontFamily: "'Rajdhani',sans-serif",
+      }}>
+        {children}
+      </span>
+    </div>
+  );
+}
+
+function Card({ children, style, delay = 0, fullWidth = false }: {
+  children: ReactNode; style?: React.CSSProperties; delay?: number; fullWidth?: boolean;
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 18 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.4 }}
-      style={{
-        background: "rgba(255,255,255,0.55)",
-        backdropFilter: "blur(10px)",
-        border: "1px solid rgba(0,90,150,0.12)",
-        borderRadius: 16,
-        padding: "18px 16px 16px",
-        gridColumn: fullWidth ? "1 / -1" : undefined,
-      }}
+      transition={{ delay, duration: 0.3 }}
+      style={{ ...CARD, padding: "14px 14px 12px", gridColumn: fullWidth ? "1 / -1" : undefined, ...style }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-        <div style={{
-          width: 30, height: 30, borderRadius: 9,
-          background: "linear-gradient(135deg,#0A1628,#1a3a6b)",
-          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-        }}>
-          <Icon style={{ width: 14, height: 14, color: "#C89B3C" }} />
-        </div>
-        <span style={{ fontWeight: 700, fontSize: 13, color: "#0A1628", letterSpacing: 0.2 }}>{title}</span>
-      </div>
       {children}
     </motion.div>
   );
 }
 
 function Prose({ text }: { text: string }) {
-  return <p style={{ fontSize: 12, lineHeight: 1.7, color: "#1a2a4a", margin: 0 }}>{text}</p>;
+  return <p style={{ fontSize: 12, lineHeight: 1.7, color: MUTED, margin: 0 }}>{text}</p>;
 }
 
 function LoadingDots() {
   return (
-    <span style={{ display: "inline-flex", gap: 4, alignItems: "center" }}>
+    <span style={{ display: "inline-flex", gap: 3 }}>
       {[0, 1, 2].map((i) => (
-        <motion.span
-          key={i}
-          style={{ width: 6, height: 6, borderRadius: "50%", background: "#C89B3C", display: "inline-block" }}
-          animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.2, 0.8] }}
-          transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
-        />
+        <motion.span key={i} style={{ width: 4, height: 4, borderRadius: "50%", background: PRIMARY, display: "inline-block" }}
+          animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }} />
       ))}
     </span>
   );
 }
 
+const STEPS = [
+  { label: "Pobieranie statystyk gracza...", icon: Target },
+  { label: "Analiza stylu gry i archetypów...", icon: Brain },
+  { label: "Ocena mikro i makro umiejętności...", icon: Swords },
+  { label: "Generowanie wskazówek coachingowych...", icon: Lightbulb },
+  { label: "Finalizowanie raportu AI...", icon: Sparkles },
+];
+
 function GeneratingCard({ step }: { step: string }) {
-  const steps = [
-    { icon: BarChart3, label: "Pobieranie statystyk gracza..." },
-    { icon: Brain, label: "Analiza stylu gry i archetypów..." },
-    { icon: Target, label: "Ocena mikro i makro umiejętności..." },
-    { icon: Lightbulb, label: "Generowanie wskazówek coachingowych..." },
-    { icon: Sparkles, label: "Finalizowanie raportu AI..." },
-  ];
-  const currentIdx = steps.findIndex((s) => s.label === step);
   return (
-    <div style={{
-      background: "rgba(255,255,255,0.6)", backdropFilter: "blur(12px)",
-      border: "1px solid rgba(0,90,150,0.15)", borderRadius: 18, padding: 28,
-      textAlign: "center",
-    }}>
-      <motion.div
-        animate={{ rotate: 360 }}
-        transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-        style={{ display: "inline-flex", marginBottom: 16 }}
-      >
-        <Brain style={{ width: 44, height: 44, color: "#C89B3C" }} />
-      </motion.div>
-      <div style={{ fontWeight: 700, fontSize: 17, color: "#0A1628", marginBottom: 8 }}>
-        Nexus AI generuje raport <LoadingDots />
+    <div style={{ ...CARD, padding: 20, marginBottom: 12 }}>
+      <div style={{ textAlign: "center", marginBottom: 16 }}>
+        <div style={{ width: 40, height: 40, borderRadius: 10, background: "hsl(200,90%,95%)", border: `1px solid hsl(200,80%,82%)`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
+          <Brain style={{ width: 20, height: 20, color: PRIMARY }} />
+        </div>
+        <div style={{ fontWeight: 700, fontSize: 15, color: FG, fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: "0.02em" }}>
+          Nexus AI generuje raport <LoadingDots />
+        </div>
+        <div style={{ fontSize: 11, color: MUTED, marginTop: 4 }}>Analizujemy ostatnie mecze i wszystkie Twoje dane statystyczne</div>
       </div>
-      <div style={{ fontSize: 13, color: "#5a7a9a", marginBottom: 22 }}>
-        Analizujemy {" "}
-        <span style={{ color: "#C89B3C", fontWeight: 600 }}>30 ostatnich meczy</span>{" "}
-        i wszystkie Twoje dane statystyczne
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {steps.map((s, i) => {
-          const Icon = s.icon;
-          const done = currentIdx > i;
-          const active = currentIdx === i;
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {STEPS.map(({ label, icon: Icon }, i) => {
+          const active = label === step;
+          const done = STEPS.findIndex(s => s.label === step) > i;
           return (
             <div key={i} style={{
-              display: "flex", alignItems: "center", gap: 10, padding: "10px 14px",
-              borderRadius: 10,
-              background: active ? "rgba(200,155,60,0.12)" : done ? "rgba(0,200,83,0.08)" : "rgba(0,0,0,0.04)",
-              border: `1px solid ${active ? "rgba(200,155,60,0.3)" : done ? "rgba(0,200,83,0.2)" : "transparent"}`,
+              display: "flex", alignItems: "center", gap: 9, padding: "8px 12px", borderRadius: 8,
+              background: active ? "hsl(200,90%,95%)" : done ? "hsl(152,50%,96%)" : "hsl(220,15%,97%)",
+              border: `1px solid ${active ? "hsl(200,80%,82%)" : done ? "hsl(152,45%,82%)" : "hsl(220,15%,90%)"}`,
+              opacity: done || active ? 1 : 0.5,
               transition: "all 0.3s",
-              opacity: i > currentIdx + 1 ? 0.4 : 1,
             }}>
-              <Icon style={{ width: 15, height: 15, color: active ? "#C89B3C" : done ? "#4CAF50" : "#aaa", flexShrink: 0 }} />
-              <span style={{ fontSize: 12.5, color: active ? "#C89B3C" : done ? "#4CAF50" : "#888", fontWeight: active ? 600 : 400 }}>
-                {s.label}
+              <Icon style={{ width: 12, height: 12, color: active ? PRIMARY : done ? "hsl(152,60%,38%)" : MUTED, flexShrink: 0 }} />
+              <span style={{ fontSize: 11.5, fontWeight: active ? 600 : 400, color: active ? FG : done ? "hsl(152,60%,35%)" : MUTED, flex: 1 }}>
+                {label}
               </span>
-              {done && <CheckCircle2 style={{ width: 13, height: 13, color: "#4CAF50", marginLeft: "auto" }} />}
-              {active && <span style={{ marginLeft: "auto" }}><LoadingDots /></span>}
+              {active && <LoadingDots />}
+              {done && <CheckCircle2 style={{ width: 12, height: 12, color: "hsl(152,60%,38%)" }} />}
             </div>
           );
         })}
@@ -145,29 +143,22 @@ function GeneratingCard({ step }: { step: string }) {
   );
 }
 
-class AiErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: string }> {
+class AiErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; msg: string }> {
   constructor(props: { children: ReactNode }) {
     super(props);
-    this.state = { hasError: false, error: "" };
+    this.state = { hasError: false, msg: "" };
   }
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error: error.message };
-  }
+  static getDerivedStateFromError(err: any) { return { hasError: true, msg: err?.message ?? "" }; }
   render() {
-    if (this.state.hasError) {
-      return (
-        <div style={{ minHeight: "100vh", background: "linear-gradient(160deg,#0A1628 0%,#0d1f3c 60%,#162040 100%)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div style={{ background: "rgba(244,67,54,0.1)", border: "1px solid rgba(244,67,54,0.3)", borderRadius: 16, padding: 28, textAlign: "center", maxWidth: 360 }}>
-            <AlertTriangle style={{ width: 36, height: 36, color: "#F44336", margin: "0 auto 12px" }} />
-            <div style={{ color: "#fff", fontWeight: 700, marginBottom: 8 }}>Błąd ładowania strony</div>
-            <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, marginBottom: 16 }}>{this.state.error}</div>
-            <button onClick={() => window.location.reload()} style={{ background: "rgba(244,67,54,0.2)", border: "1px solid rgba(244,67,54,0.4)", borderRadius: 8, padding: "8px 18px", color: "#F44336", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-              Odśwież stronę
-            </button>
-          </div>
+    if (this.state.hasError) return (
+      <div style={{ minHeight: "100vh", background: "hsl(220,20%,97%)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+        <div style={{ ...CARD, padding: 28, textAlign: "center", maxWidth: 340 }}>
+          <AlertTriangle style={{ width: 28, height: 28, color: "hsl(350,65%,48%)", margin: "0 auto 10px" }} />
+          <div style={{ fontWeight: 700, color: FG, marginBottom: 6 }}>Błąd strony</div>
+          <div style={{ fontSize: 12, color: MUTED }}>{this.state.msg || "Odśwież stronę"}</div>
         </div>
-      );
-    }
+      </div>
+    );
     return this.props.children;
   }
 }
@@ -182,35 +173,15 @@ function AiAnalysisInner() {
   const fetchedRef = useRef(false);
 
   const { data: summonerData } = useSearchSummoner({ region, gameName, tagLine });
-
   const puuid = (summonerData as any)?.puuid as string | undefined;
 
-  const { data: rankedData } = useGetSummonerRanked(
-    puuid ?? "",
-    { region } as any,
-    { query: { enabled: !!puuid } }
-  );
-  const { data: masteryData } = useGetSummonerMastery(
-    puuid ?? "",
-    { region, count: 7 } as any,
-    { query: { enabled: !!puuid } }
-  );
+  const { data: rankedData } = useGetSummonerRanked(puuid ?? "", { region } as any, { query: { enabled: !!puuid } });
+  const { data: masteryData } = useGetSummonerMastery(puuid ?? "", { region, count: 7 } as any, { query: { enabled: !!puuid } });
 
   const soloQ = (rankedData as any[])?.find((e: any) => e.queueType === "RANKED_SOLO_5x5");
-  const tierColors: Record<string, string> = {
-    IRON: "#8d9fa9", BRONZE: "#cd7f32", SILVER: "#c0c0c0", GOLD: "#FFD700",
-    PLATINUM: "#00e5bb", EMERALD: "#00C853", DIAMOND: "#88ccff",
-    MASTER: "#9c59d1", GRANDMASTER: "#ff4655", CHALLENGER: "#f4c874",
-  };
-  const tierColor = soloQ ? (tierColors[soloQ.tier] ?? "#aaa") : "#aaa";
+  const tierColor = soloQ ? (TIER_COLOR[soloQ.tier] ?? MUTED) : MUTED;
 
-  const steps = [
-    "Pobieranie statystyk gracza...",
-    "Analiza stylu gry i archetypów...",
-    "Ocena mikro i makro umiejętności...",
-    "Generowanie wskazówek coachingowych...",
-    "Finalizowanie raportu AI...",
-  ];
+  const steps = STEPS.map(s => s.label);
 
   async function generateReport() {
     if (!puuid) return;
@@ -218,18 +189,14 @@ function AiAnalysisInner() {
     setError(null);
     setReport(null);
     fetchedRef.current = true;
-
     let stepIdx = 0;
     setLoadingStep(steps[0]);
     const interval = setInterval(() => {
       stepIdx = Math.min(stepIdx + 1, steps.length - 1);
       setLoadingStep(steps[stepIdx]);
     }, 4500);
-
     try {
-      const res = await fetch(
-        `${BASE_URL}/api/summoner/${puuid}/ai-report?region=${region}&gameName=${encodeURIComponent(gameName)}`
-      );
+      const res = await fetch(`${BASE_URL}/api/summoner/${puuid}/ai-report?region=${region}&gameName=${encodeURIComponent(gameName)}`);
       clearInterval(interval);
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
@@ -244,109 +211,108 @@ function AiAnalysisInner() {
   }
 
   useEffect(() => {
-    if (puuid && !fetchedRef.current) {
-      generateReport();
-    }
+    if (puuid && !fetchedRef.current) generateReport();
   }, [puuid]);
 
   const profileLink = `${BASE_URL}/profile/${region}/${gameName}/${tagLine}`;
 
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(160deg,#0A1628 0%,#0d1f3c 60%,#162040 100%)" }}>
-      <div style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(8px)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-        <div style={{ maxWidth: 520, margin: "0 auto", padding: "12px 16px", display: "flex", alignItems: "center", gap: 12 }}>
+    <div style={{ minHeight: "100vh", background: "hsl(220,20%,97%)" }}>
+
+      {/* Header — matches profile page style */}
+      <header style={{
+        position: "sticky", top: 0, zIndex: 40,
+        background: "white", borderBottom: "1px solid hsl(220,15%,90%)",
+        boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+      }}>
+        <div style={{ maxWidth: 520, margin: "0 auto", padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}>
           <Link href={profileLink}>
             <button style={{
-              display: "flex", alignItems: "center", gap: 5, background: "rgba(255,255,255,0.08)",
-              border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, padding: "6px 12px",
-              color: "#C89B3C", fontSize: 13, fontWeight: 600, cursor: "pointer",
+              display: "flex", alignItems: "center", gap: 4,
+              background: "hsl(220,15%,96%)", border: "1px solid hsl(220,15%,88%)",
+              borderRadius: 6, padding: "5px 10px", color: MUTED, fontSize: 11,
+              fontWeight: 700, cursor: "pointer", fontFamily: "'Rajdhani',sans-serif",
             }}>
-              <ChevronLeft style={{ width: 15, height: 15 }} />
-              Profil
+              <ChevronLeft style={{ width: 13, height: 13 }} /> Profil
             </button>
           </Link>
-          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8 }}>
-            <Brain style={{ width: 18, height: 18, color: "#C89B3C" }} />
-            <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>AI Analiza Gracza</span>
-          </div>
-        </div>
-      </div>
 
-      <div style={{ maxWidth: 520, margin: "0 auto", padding: "20px 16px 60px" }}>
-        {/* Player Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -12 }}
-          animate={{ opacity: 1, y: 0 }}
-          style={{
-            background: "rgba(255,255,255,0.06)", backdropFilter: "blur(8px)",
-            border: "1px solid rgba(255,255,255,0.12)", borderRadius: 16, padding: 18,
-            marginBottom: 18, display: "flex", alignItems: "center", gap: 14,
-          }}
-        >
-          <div style={{ position: "relative" }}>
+          {/* Avatar */}
+          <div style={{ position: "relative", flexShrink: 0 }}>
             <img
-              src={`https://ddragon.leagueoflegends.com/cdn/profileicon/${summonerData?.profileIconId ?? 1}.png`}
-              style={{ width: 52, height: 52, borderRadius: 12, border: `2px solid ${tierColor}`, objectFit: "cover" }}
+              src={`https://ddragon.leagueoflegends.com/cdn/profileicon/${(summonerData as any)?.profileIconId ?? 1}.png`}
+              style={{ width: 36, height: 36, borderRadius: 8, border: `2px solid ${tierColor}`, objectFit: "cover" }}
               onError={(e) => { (e.target as HTMLImageElement).src = "https://ddragon.leagueoflegends.com/cdn/profileicon/1.png"; }}
             />
-            {summonerData?.summonerLevel && (
-              <div style={{
-                position: "absolute", bottom: -6, left: "50%", transform: "translateX(-50%)",
-                background: "#0A1628", border: "1px solid rgba(200,155,60,0.5)",
-                borderRadius: 6, padding: "1px 6px", fontSize: 10, fontWeight: 700, color: "#C89B3C",
+            {(summonerData as any)?.summonerLevel && (
+              <span style={{
+                position: "absolute", bottom: -5, left: "50%", transform: "translateX(-50%)",
+                background: FG, borderRadius: 4, padding: "1px 4px",
+                fontSize: 8, fontWeight: 700, color: "white", whiteSpace: "nowrap",
               }}>
-                {summonerData.summonerLevel}
-              </div>
+                Lv. {(summonerData as any).summonerLevel}
+              </span>
             )}
           </div>
+
+          {/* Name + rank */}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ color: "#fff", fontWeight: 800, fontSize: 18, letterSpacing: 0.3 }}>
-              {gameName}<span style={{ color: "rgba(255,255,255,0.4)", fontSize: 14 }}>#{tagLine}</span>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 5, flexWrap: "wrap" }}>
+              <span style={{ fontWeight: 800, fontSize: 16, color: FG, fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: "0.02em" }}>
+                {gameName}
+              </span>
+              <span style={{ fontSize: 12, color: MUTED }}>#{tagLine}</span>
+              <span style={{
+                fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", padding: "1px 6px",
+                background: "hsl(200,90%,95%)", color: PRIMARY, border: "1px solid hsl(200,80%,82%)",
+                borderRadius: 4, fontFamily: "'Rajdhani',sans-serif",
+              }}>{region}</span>
             </div>
-            <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, marginTop: 2 }}>{region}</div>
             {soloQ && (
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
-                <img src={`https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-shared-components/global/default/${soloQ.tier.toLowerCase()}.png`}
-                  style={{ width: 20, height: 20, objectFit: "contain" }}
+              <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
+                <img
+                  src={`https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-shared-components/global/default/${soloQ.tier.toLowerCase()}.png`}
+                  style={{ width: 14, height: 14, objectFit: "contain" }}
                   onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                 />
-                <span style={{ color: tierColor, fontWeight: 700, fontSize: 13 }}>
-                  {soloQ.tier} {soloQ.rank} {soloQ.leaguePoints} LP
-                </span>
-                <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>
-                  {soloQ.wins}W {soloQ.losses}L
-                </span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: tierColor }}>{soloQ.tier} {soloQ.rank}</span>
+                <span style={{ fontSize: 11, color: MUTED }}>{soloQ.leaguePoints} LP · {soloQ.wins}W {soloQ.losses}L</span>
               </div>
             )}
+            {!soloQ && !loading && <span style={{ fontSize: 11, color: MUTED }}>Unranked</span>}
           </div>
-          <div style={{
-            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-            background: "linear-gradient(135deg,rgba(200,155,60,0.2),rgba(200,155,60,0.05))",
-            border: "1px solid rgba(200,155,60,0.25)", borderRadius: 12, padding: "10px 14px",
-          }}>
-            <Brain style={{ width: 22, height: 22, color: "#C89B3C", marginBottom: 4 }} />
-            <span style={{ color: "#C89B3C", fontSize: 10, fontWeight: 700, letterSpacing: 0.5 }}>NEXUS AI</span>
-          </div>
-        </motion.div>
 
-        {/* Loading State */}
+          {/* AI Badge */}
+          <div style={{
+            display: "flex", alignItems: "center", gap: 5, padding: "5px 10px",
+            background: "linear-gradient(135deg,#0A1628,#1a3a6b)",
+            border: "1px solid rgba(200,155,60,0.4)", borderRadius: 7, flexShrink: 0,
+          }}>
+            <Brain style={{ width: 13, height: 13, color: "#C89B3C" }} />
+            <span style={{ fontSize: 9, fontWeight: 700, color: "#C89B3C", letterSpacing: "0.08em", fontFamily: "'Rajdhani',sans-serif" }}>NEXUS AI</span>
+          </div>
+        </div>
+      </header>
+
+      {/* Content */}
+      <div style={{ maxWidth: 520, margin: "0 auto", padding: "16px 14px 60px" }}>
+
+        {/* Loading */}
         {loading && <GeneratingCard step={loadingStep} />}
 
         {/* Error */}
         {error && !loading && (
-          <div style={{
-            background: "rgba(244,67,54,0.1)", border: "1px solid rgba(244,67,54,0.3)",
-            borderRadius: 14, padding: 20, textAlign: "center",
-          }}>
-            <AlertTriangle style={{ width: 28, height: 28, color: "#F44336", margin: "0 auto 10px" }} />
-            <div style={{ color: "#F44336", fontWeight: 600, marginBottom: 6 }}>Błąd generowania raportu</div>
-            <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, marginBottom: 14 }}>{error}</div>
+          <div style={{ ...CARD, padding: 20, textAlign: "center", marginBottom: 12 }}>
+            <AlertTriangle style={{ width: 24, height: 24, color: "hsl(350,65%,48%)", margin: "0 auto 10px" }} />
+            <div style={{ fontWeight: 700, color: FG, marginBottom: 6, fontSize: 14 }}>Błąd generowania raportu</div>
+            <div style={{ fontSize: 12, color: MUTED, marginBottom: 14 }}>{error}</div>
             <button onClick={generateReport} style={{
-              background: "rgba(244,67,54,0.2)", border: "1px solid rgba(244,67,54,0.4)",
-              borderRadius: 8, padding: "8px 18px", color: "#F44336", fontSize: 13,
-              fontWeight: 600, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6,
+              background: "hsl(350,50%,97%)", border: "1px solid hsl(350,55%,82%)",
+              borderRadius: 7, padding: "7px 16px", color: "hsl(350,65%,45%)", fontSize: 12,
+              fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5,
+              fontFamily: "'Rajdhani',sans-serif",
             }}>
-              <RefreshCw style={{ width: 13, height: 13 }} /> Spróbuj ponownie
+              <RefreshCw style={{ width: 12, height: 12 }} /> Spróbuj ponownie
             </button>
           </div>
         )}
@@ -354,304 +320,312 @@ function AiAnalysisInner() {
         {/* Report */}
         {report && !loading && !report.error && (
           <div>
-            {/* Regenerate button */}
-            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12, gap: 8 }}>
+            {/* Refresh bar */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, marginBottom: 10 }}>
               {generatedAt && (
-                <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 11, alignSelf: "center" }}>
-                  <Clock style={{ width: 10, height: 10, display: "inline", marginRight: 3 }} />
+                <span style={{ fontSize: 10, color: MUTED, display: "flex", alignItems: "center", gap: 4 }}>
+                  <Clock style={{ width: 9, height: 9 }} />
                   {new Date(generatedAt).toLocaleTimeString("pl-PL")}
                 </span>
               )}
               <button onClick={generateReport} style={{
-                background: "rgba(200,155,60,0.1)", border: "1px solid rgba(200,155,60,0.3)",
-                borderRadius: 8, padding: "6px 14px", color: "#C89B3C", fontSize: 12,
+                background: "white", border: "1px solid hsl(220,15%,88%)",
+                borderRadius: 7, padding: "5px 12px", color: MUTED, fontSize: 11,
                 fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5,
+                fontFamily: "'Rajdhani',sans-serif",
               }}>
-                <RefreshCw style={{ width: 12, height: 12 }} /> Odśwież raport
+                <RefreshCw style={{ width: 11, height: 11 }} /> Odśwież raport
               </button>
             </div>
 
-            {/* Overall Rating Card */}
+            {/* Overall Rating — accent card */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4 }}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
               style={{
-                background: "linear-gradient(135deg,rgba(200,155,60,0.15) 0%,rgba(10,22,40,0.9) 100%)",
-                backdropFilter: "blur(10px)",
-                border: "1px solid rgba(200,155,60,0.3)",
-                borderRadius: 18, padding: "24px 20px", marginBottom: 14, textAlign: "center",
+                background: "linear-gradient(135deg, hsl(200,90%,96%), white)",
+                border: "1px solid hsl(200,80%,82%)",
+                borderRadius: 14, padding: "18px 16px 16px", marginBottom: 10,
               }}
             >
-              <div style={{ display: "flex", justifyContent: "center", gap: 18, marginBottom: 16 }}>
-                <div>
+              {/* Score row */}
+              <div style={{ display: "flex", alignItems: "center", gap: 0, marginBottom: 12 }}>
+                <div style={{ textAlign: "center", paddingRight: 16, borderRight: "1px solid hsl(220,15%,90%)" }}>
                   <div style={{
-                    fontSize: 52, fontWeight: 900, lineHeight: 1,
-                    color: RATING_COLOR[report.overall_rating] ?? "#C89B3C",
-                    textShadow: `0 0 20px ${RATING_COLOR[report.overall_rating] ?? "#C89B3C"}66`,
+                    fontSize: 44, fontWeight: 900, lineHeight: 1, fontFamily: "'Barlow Condensed',sans-serif",
+                    color: RATING_COLOR[report.overall_rating] ?? PRIMARY,
                   }}>
                     {report.overall_rating ?? "?"}
                   </div>
-                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 600, marginTop: 2 }}>OCENA</div>
+                  <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", color: MUTED, textTransform: "uppercase", marginTop: 2, fontFamily: "'Rajdhani',sans-serif" }}>OCENA</div>
                 </div>
-                <div style={{ width: 1, background: "rgba(255,255,255,0.1)" }} />
-                <div>
-                  <div style={{ fontSize: 40, fontWeight: 900, lineHeight: 1, color: "#fff" }}>
-                    {report.overall_score ?? "–"}
-                  </div>
-                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 600, marginTop: 2 }}>WYNIK</div>
-                </div>
-                {report.consistency_score != null && (
-                  <>
-                    <div style={{ width: 1, background: "rgba(255,255,255,0.1)" }} />
-                    <div>
-                      <div style={{ fontSize: 40, fontWeight: 900, lineHeight: 1, color: "#88ccff" }}>
-                        {report.consistency_score}
-                      </div>
-                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 600, marginTop: 2 }}>KONSEKWENCJA</div>
+                <div style={{ display: "flex", gap: 0, flex: 1 }}>
+                  {report.overall_score != null && (
+                    <div style={{ textAlign: "center", flex: 1, borderRight: report.consistency_score != null ? "1px solid hsl(220,15%,90%)" : "none" }}>
+                      <div style={{ fontSize: 32, fontWeight: 800, color: FG, fontFamily: "'Barlow Condensed',sans-serif" }}>{report.overall_score}</div>
+                      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", color: MUTED, textTransform: "uppercase", fontFamily: "'Rajdhani',sans-serif" }}>WYNIK</div>
                     </div>
-                  </>
-                )}
+                  )}
+                  {report.consistency_score != null && (
+                    <div style={{ textAlign: "center", flex: 1 }}>
+                      <div style={{ fontSize: 32, fontWeight: 800, color: PRIMARY, fontFamily: "'Barlow Condensed',sans-serif" }}>{report.consistency_score}</div>
+                      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", color: MUTED, textTransform: "uppercase", fontFamily: "'Rajdhani',sans-serif" }}>KONSEKWENCJA</div>
+                    </div>
+                  )}
+                </div>
               </div>
-              {report.form_assessment && (
-                <div style={{
-                  display: "inline-flex", alignItems: "center", gap: 6,
-                  background: "rgba(0,0,0,0.3)", borderRadius: 20, padding: "5px 14px", marginBottom: 14,
-                }}>
-                  <Activity style={{ width: 12, height: 12, color: FORM_COLOR[report.form_assessment] ?? "#aaa" }} />
-                  <span style={{ fontSize: 12, fontWeight: 700, color: FORM_COLOR[report.form_assessment] ?? "#aaa" }}>
+
+              {/* Chips */}
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+                {report.form_assessment && (
+                  <span style={{
+                    display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px",
+                    background: "white", border: `1px solid hsl(220,15%,88%)`,
+                    borderRadius: 20, fontSize: 11, fontWeight: 700, color: FORM_COLOR[report.form_assessment] ?? MUTED,
+                    fontFamily: "'Rajdhani',sans-serif",
+                  }}>
+                    <Activity style={{ width: 10, height: 10 }} />
                     {report.form_assessment}
                   </span>
-                </div>
-              )}
-              {report.playstyle_archetype && (
-                <div style={{
-                  display: "inline-flex", alignItems: "center", gap: 7,
-                  background: "rgba(200,155,60,0.12)", border: "1px solid rgba(200,155,60,0.25)",
-                  borderRadius: 20, padding: "6px 16px", marginBottom: 14,
-                }}>
-                  <Zap style={{ width: 13, height: 13, color: "#C89B3C" }} />
-                  <span style={{ color: "#C89B3C", fontWeight: 700, fontSize: 13 }}>{report.playstyle_archetype}</span>
-                </div>
-              )}
-              <p style={{ color: "rgba(255,255,255,0.75)", fontSize: 13.5, lineHeight: 1.7, margin: 0 }}>
+                )}
+                {report.playstyle_archetype && (
+                  <span style={{
+                    display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px",
+                    background: "linear-gradient(135deg,#0A1628,#1a3a6b)",
+                    borderRadius: 20, fontSize: 11, fontWeight: 700, color: "#C89B3C",
+                    fontFamily: "'Rajdhani',sans-serif",
+                  }}>
+                    <Zap style={{ width: 10, height: 10 }} />
+                    {report.playstyle_archetype}
+                  </span>
+                )}
+              </div>
+
+              <p style={{ fontSize: 12.5, lineHeight: 1.7, color: FG, margin: 0 }}>
                 {report.executive_summary}
               </p>
             </motion.div>
 
-            {/* 2-column grid for all sections */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            {/* Grid of sections */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
 
               {/* Strengths & Weaknesses — full width */}
               {(report.strengths?.length > 0 || report.weaknesses?.length > 0) && (
-                <Section icon={Award} title="Mocne i słabe strony" delay={0.05} fullWidth>
+                <Card delay={0.05} fullWidth>
+                  <SectionTitle icon={Award}>Mocne i słabe strony</SectionTitle>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                     <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 8 }}>
-                        <TrendingUp style={{ width: 12, height: 12, color: "#4CAF50" }} />
-                        <span style={{ fontSize: 11, fontWeight: 700, color: "#4CAF50" }}>MOCNE STRONY</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 7 }}>
+                        <TrendingUp style={{ width: 11, height: 11, color: "hsl(152,60%,38%)" }} />
+                        <span style={{ fontSize: 9, fontWeight: 700, color: "hsl(152,60%,38%)", letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Rajdhani',sans-serif" }}>MOCNE</span>
                       </div>
                       {(report.strengths ?? []).map((s: string, i: number) => (
-                        <div key={i} style={{ display: "flex", gap: 6, marginBottom: 6 }}>
-                          <CheckCircle2 style={{ width: 12, height: 12, color: "#4CAF50", flexShrink: 0, marginTop: 2 }} />
-                          <span style={{ fontSize: 11.5, color: "#1a2a4a", lineHeight: 1.55 }}>{s}</span>
+                        <div key={i} style={{ display: "flex", gap: 5, marginBottom: 5 }}>
+                          <CheckCircle2 style={{ width: 11, height: 11, color: "hsl(152,60%,38%)", flexShrink: 0, marginTop: 2 }} />
+                          <span style={{ fontSize: 11, color: FG, lineHeight: 1.55 }}>{s}</span>
                         </div>
                       ))}
                     </div>
                     <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 8 }}>
-                        <TrendingDown style={{ width: 12, height: 12, color: "#F44336" }} />
-                        <span style={{ fontSize: 11, fontWeight: 700, color: "#F44336" }}>SŁABE STRONY</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 7 }}>
+                        <TrendingDown style={{ width: 11, height: 11, color: "hsl(350,65%,48%)" }} />
+                        <span style={{ fontSize: 9, fontWeight: 700, color: "hsl(350,65%,48%)", letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Rajdhani',sans-serif" }}>SŁABE</span>
                       </div>
                       {(report.weaknesses ?? []).map((w: string, i: number) => (
-                        <div key={i} style={{ display: "flex", gap: 6, marginBottom: 6 }}>
-                          <AlertTriangle style={{ width: 12, height: 12, color: "#FF9800", flexShrink: 0, marginTop: 2 }} />
-                          <span style={{ fontSize: 11.5, color: "#1a2a4a", lineHeight: 1.55 }}>{w}</span>
+                        <div key={i} style={{ display: "flex", gap: 5, marginBottom: 5 }}>
+                          <AlertTriangle style={{ width: 11, height: 11, color: "hsl(38,75%,40%)", flexShrink: 0, marginTop: 2 }} />
+                          <span style={{ fontSize: 11, color: FG, lineHeight: 1.55 }}>{w}</span>
                         </div>
                       ))}
                     </div>
                   </div>
-                </Section>
+                </Card>
               )}
 
               {/* Playstyle */}
               {report.playstyle_description && (
-                <Section icon={Zap} title="Styl Gry i Archetyp" delay={0.1}>
+                <Card delay={0.08}>
+                  <SectionTitle icon={Zap}>Styl Gry</SectionTitle>
                   <Prose text={report.playstyle_description} />
-                </Section>
+                </Card>
               )}
 
               {/* Champion Pool */}
               {report.champion_pool_analysis && (
-                <Section icon={BookOpen} title="Champion Pool" delay={0.15}>
-                  <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
+                <Card delay={0.1}>
+                  <SectionTitle icon={BookOpen}>Champion Pool</SectionTitle>
+                  <div style={{ display: "flex", gap: 5, marginBottom: 9, flexWrap: "wrap" }}>
                     {(masteryData as any[])?.slice(0, 5).map((m: any) => (
                       <div key={m.championId} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
                         <img
                           src={`https://ddragon.leagueoflegends.com/cdn/img/champion/tiles/${m.championName ?? "Annie"}_0.jpg`}
-                          style={{ width: 34, height: 34, borderRadius: 7, border: "1px solid rgba(0,90,150,0.2)", objectFit: "cover" }}
+                          style={{ width: 32, height: 32, borderRadius: 6, border: "1px solid hsl(220,15%,88%)", objectFit: "cover" }}
                           onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                         />
-                        <span style={{ fontSize: 8, color: "#5a7a9a", fontWeight: 600, textAlign: "center", maxWidth: 36, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: 8, color: MUTED, fontWeight: 600, maxWidth: 34, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {m.championName}
                         </span>
                       </div>
                     ))}
                   </div>
                   <Prose text={report.champion_pool_analysis} />
-                </Section>
+                </Card>
               )}
 
               {/* Macro */}
               {report.macro_analysis && (
-                <Section icon={Target} title="Makro — Mapa" delay={0.2}>
+                <Card delay={0.12}>
+                  <SectionTitle icon={Target}>Makro — Mapa</SectionTitle>
                   <Prose text={report.macro_analysis} />
-                </Section>
+                </Card>
               )}
 
               {/* Micro */}
               {report.micro_analysis && (
-                <Section icon={Swords} title="Mikro — Mechanika" delay={0.25}>
+                <Card delay={0.14}>
+                  <SectionTitle icon={Swords}>Mikro — Mechanika</SectionTitle>
                   <Prose text={report.micro_analysis} />
-                </Section>
+                </Card>
               )}
 
               {/* Lane Phase */}
               {report.lane_phase_analysis && (
-                <Section icon={Shield} title="Faza Laningowa" delay={0.3}>
+                <Card delay={0.16}>
+                  <SectionTitle icon={Shield}>Faza Laningowa</SectionTitle>
                   <Prose text={report.lane_phase_analysis} />
-                </Section>
+                </Card>
               )}
 
               {/* Teamfight */}
               {report.teamfight_analysis && (
-                <Section icon={Users} title="Teamfighty" delay={0.35}>
+                <Card delay={0.18}>
+                  <SectionTitle icon={Users}>Teamfighty</SectionTitle>
                   <Prose text={report.teamfight_analysis} />
-                </Section>
+                </Card>
               )}
 
               {/* Deaths */}
               {report.death_analysis && (
-                <Section icon={AlertTriangle} title="Analiza Zgonów" delay={0.38}>
+                <Card delay={0.20}>
+                  <SectionTitle icon={AlertTriangle}>Analiza Zgonów</SectionTitle>
                   <Prose text={report.death_analysis} />
-                </Section>
+                </Card>
               )}
 
               {/* Vision */}
               {report.vision_analysis && (
-                <Section icon={Eye} title="Vision i Świadomość" delay={0.4}>
+                <Card delay={0.22}>
+                  <SectionTitle icon={Eye}>Vision i Świadomość</SectionTitle>
                   <Prose text={report.vision_analysis} />
-                </Section>
+                </Card>
               )}
 
               {/* Mental */}
               {report.mental_game && (
-                <Section icon={Brain} title="Aspekt Mentalny" delay={0.43}>
+                <Card delay={0.24}>
+                  <SectionTitle icon={Brain}>Aspekt Mentalny</SectionTitle>
                   <Prose text={report.mental_game} />
                   {report.consistency_comment && (
                     <div style={{
-                      marginTop: 10, padding: "7px 10px", borderRadius: 9,
-                      background: "rgba(41,121,255,0.08)", border: "1px solid rgba(41,121,255,0.15)",
+                      marginTop: 8, padding: "6px 10px", borderRadius: 7,
+                      background: "hsl(200,90%,96%)", border: "1px solid hsl(200,80%,82%)",
                     }}>
-                      <span style={{ fontSize: 11.5, color: "#2979FF" }}>{report.consistency_comment}</span>
+                      <span style={{ fontSize: 11, color: PRIMARY }}>{report.consistency_comment}</span>
                     </div>
                   )}
-                </Section>
+                </Card>
               )}
 
               {/* Rank Prediction */}
               {report.rank_prediction && (
-                <Section icon={Trophy} title="Prognoza Rankingowa" delay={0.6}>
+                <Card delay={0.26}>
+                  <SectionTitle icon={Trophy}>Prognoza Rankingowa</SectionTitle>
                   <Prose text={report.rank_prediction} />
-                </Section>
+                </Card>
               )}
 
               {/* Coaching Tips — full width */}
               {report.coaching_tips?.length > 0 && (
-                <Section icon={Lightbulb} title="Wskazówki Coachingowe" delay={0.48} fullWidth>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                <Card delay={0.3} fullWidth>
+                  <SectionTitle icon={Lightbulb}>Wskazówki Coachingowe</SectionTitle>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 }}>
                     {report.coaching_tips.map((tip: any, i: number) => {
-                      const pStyle = PRIORITY_COLOR[tip.priority] ?? PRIORITY_COLOR.medium;
+                      const p = PRIORITY_COLOR[tip.priority] ?? PRIORITY_COLOR.medium;
                       const Icon = CATEGORY_ICON[tip.category] ?? Lightbulb;
                       return (
-                        <motion.div
-                          key={i}
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: 0.48 + i * 0.04 }}
-                          style={{
-                            borderRadius: 11, padding: "11px 12px",
-                            background: pStyle.bg, border: `1px solid ${pStyle.text}30`,
-                          }}
-                        >
-                          <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 5 }}>
-                            <Icon style={{ width: 12, height: 12, color: pStyle.text, flexShrink: 0 }} />
-                            <span style={{ fontWeight: 700, fontSize: 12, color: "#0A1628", flex: 1 }}>{tip.title}</span>
+                        <div key={i} style={{
+                          borderRadius: 9, padding: "10px 11px",
+                          background: p.bg, border: `1px solid ${p.border}`,
+                        }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                            <Icon style={{ width: 11, height: 11, color: p.text, flexShrink: 0 }} />
+                            <span style={{ fontWeight: 700, fontSize: 11.5, color: FG, flex: 1, fontFamily: "'Rajdhani',sans-serif" }}>{tip.title}</span>
                             <span style={{
-                              fontSize: 9, fontWeight: 700, color: pStyle.text,
-                              background: `${pStyle.text}18`, borderRadius: 5, padding: "2px 6px",
+                              fontSize: 8, fontWeight: 700, color: p.text,
+                              background: "white", borderRadius: 4, padding: "1px 5px", border: `1px solid ${p.border}`,
+                              fontFamily: "'Rajdhani',sans-serif",
                             }}>
-                              {pStyle.label}
+                              {p.label}
                             </span>
                           </div>
-                          <p style={{ margin: 0, fontSize: 12, color: "#1a2a4a", lineHeight: 1.6 }}>{tip.description}</p>
-                        </motion.div>
+                          <p style={{ margin: 0, fontSize: 11, color: MUTED, lineHeight: 1.6 }}>{tip.description}</p>
+                        </div>
                       );
                     })}
                   </div>
-                </Section>
+                </Card>
               )}
 
               {/* Champion Recommendations — full width */}
               {report.champion_recommendations?.length > 0 && (
-                <Section icon={Star} title="Polecane Championy" delay={0.55} fullWidth>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                <Card delay={0.35} fullWidth>
+                  <SectionTitle icon={Star}>Polecane Championy</SectionTitle>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 7 }}>
                     {report.champion_recommendations.map((rec: any, i: number) => (
                       <div key={i} style={{
-                        display: "flex", flexDirection: "column", gap: 8, padding: "10px 10px", borderRadius: 12,
-                        background: "rgba(200,155,60,0.06)", border: "1px solid rgba(200,155,60,0.15)",
+                        padding: "9px 10px", borderRadius: 9,
+                        background: "hsl(200,90%,97%)", border: "1px solid hsl(200,80%,86%)",
                       }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}>
                           <img
                             src={`https://ddragon.leagueoflegends.com/cdn/img/champion/tiles/${rec.champion}_0.jpg`}
-                            style={{ width: 38, height: 38, borderRadius: 9, objectFit: "cover", flexShrink: 0, border: "1px solid rgba(200,155,60,0.3)" }}
+                            style={{ width: 34, height: 34, borderRadius: 7, objectFit: "cover", flexShrink: 0, border: "1px solid hsl(200,80%,82%)" }}
                             onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                           />
-                          <div style={{ fontWeight: 700, fontSize: 12.5, color: "#0A1628" }}>{rec.champion}</div>
+                          <div style={{ fontWeight: 700, fontSize: 12, color: FG, fontFamily: "'Rajdhani',sans-serif" }}>{rec.champion}</div>
                         </div>
-                        <div style={{ fontSize: 11.5, color: "#1a3a6b", lineHeight: 1.5 }}>{rec.reason}</div>
+                        <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5, marginBottom: rec.synergy ? 5 : 0 }}>{rec.reason}</div>
                         {rec.synergy && (
-                          <div style={{ fontSize: 11, color: "#5a7a9a" }}>
-                            <ArrowRight style={{ width: 9, height: 9, display: "inline", marginRight: 3 }} />
+                          <div style={{ fontSize: 10, color: PRIMARY }}>
+                            <ArrowRight style={{ width: 8, height: 8, display: "inline", marginRight: 3 }} />
                             {rec.synergy}
                           </div>
                         )}
                       </div>
                     ))}
                   </div>
-                </Section>
+                </Card>
               )}
 
             </div>
 
-            {/* Motivation Quote */}
+            {/* Motivation quote */}
             {report.motivation_quote && (
               <motion.div
-                initial={{ opacity: 0, y: 16 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.65 }}
+                transition={{ delay: 0.4 }}
                 style={{
-                  background: "linear-gradient(135deg,rgba(200,155,60,0.18),rgba(200,155,60,0.06))",
-                  backdropFilter: "blur(8px)",
-                  border: "1px solid rgba(200,155,60,0.35)",
-                  borderRadius: 16, padding: "20px 22px", textAlign: "center",
+                  marginTop: 8, padding: "16px 18px",
+                  background: "linear-gradient(135deg, hsl(45,90%,97%), white)",
+                  border: "1px solid hsl(45,70%,84%)", borderRadius: 12, textAlign: "center",
                 }}
               >
-                <Sparkles style={{ width: 22, height: 22, color: "#C89B3C", margin: "0 auto 10px" }} />
-                <p style={{ fontStyle: "italic", fontSize: 14, color: "#1a2a4a", lineHeight: 1.7, margin: 0, fontWeight: 600 }}>
+                <Sparkles style={{ width: 16, height: 16, color: "hsl(45,85%,45%)", margin: "0 auto 8px" }} />
+                <p style={{ fontStyle: "italic", fontSize: 13, color: FG, lineHeight: 1.7, margin: "0 0 6px", fontWeight: 600 }}>
                   "{report.motivation_quote}"
                 </p>
-                <div style={{ marginTop: 10, fontSize: 11, color: "#C89B3C", fontWeight: 700 }}>— Nexus AI</div>
+                <span style={{ fontSize: 10, color: "hsl(45,85%,45%)", fontWeight: 700, fontFamily: "'Rajdhani',sans-serif" }}>— Nexus AI</span>
               </motion.div>
             )}
           </div>
@@ -659,28 +633,19 @@ function AiAnalysisInner() {
 
         {/* Parse error fallback */}
         {report?.error && !loading && (
-          <div style={{
-            background: "rgba(255,107,107,0.08)", backdropFilter: "blur(10px)",
-            border: "1px solid rgba(244,67,54,0.2)", borderRadius: 16, padding: 24,
-            textAlign: "center",
-          }}>
-            <AlertTriangle style={{ width: 32, height: 32, color: "#F44336", margin: "0 auto 12px" }} />
-            <p style={{ color: "#F44336", fontWeight: 700, fontSize: 15, margin: "0 0 8px" }}>
-              Błąd generowania raportu
-            </p>
-            <p style={{ color: "#1a2a4a", fontSize: 13, lineHeight: 1.6, margin: "0 0 16px" }}>
+          <div style={{ ...CARD, padding: 22, textAlign: "center" }}>
+            <AlertTriangle style={{ width: 28, height: 28, color: "hsl(350,65%,48%)", margin: "0 auto 10px" }} />
+            <div style={{ fontWeight: 700, color: FG, marginBottom: 6, fontSize: 14 }}>Błąd generowania raportu</div>
+            <p style={{ color: MUTED, fontSize: 12, lineHeight: 1.6, margin: "0 0 14px" }}>
               AI nie mogło przetworzyć danych. Kliknij poniżej aby spróbować ponownie.
             </p>
-            <button
-              onClick={() => generateReport()}
-              style={{
-                background: "linear-gradient(135deg,#0A1628,#1a3a6b)",
-                color: "#C89B3C", border: "none", borderRadius: 10,
-                padding: "10px 22px", fontWeight: 700, fontSize: 13, cursor: "pointer",
-                display: "inline-flex", alignItems: "center", gap: 6,
-              }}
-            >
-              <RefreshCw style={{ width: 14, height: 14 }} /> Spróbuj ponownie
+            <button onClick={() => generateReport()} style={{
+              background: "hsl(200,90%,96%)", border: "1px solid hsl(200,80%,82%)",
+              borderRadius: 8, padding: "8px 18px", color: PRIMARY, fontSize: 12,
+              fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6,
+              fontFamily: "'Rajdhani',sans-serif",
+            }}>
+              <RefreshCw style={{ width: 12, height: 12 }} /> Spróbuj ponownie
             </button>
           </div>
         )}
