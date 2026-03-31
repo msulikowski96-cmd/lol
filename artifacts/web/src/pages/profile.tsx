@@ -16,7 +16,7 @@ import {
   Heart, ExternalLink
 } from "lucide-react";
 import { toggleFavorite, isFavorite } from "@/lib/favorites";
-import { addRankSnapshot } from "@/lib/rankHistory";
+import { addRankSnapshot, getRankHistory } from "@/lib/rankHistory";
 import {
   useSearchSummoner,
   useGetSummonerRanked,
@@ -92,6 +92,91 @@ const TIER_ABBR: Record<string, string> = {
   DIAMOND: "D", EMERALD: "E", PLATINUM: "P",
   GOLD: "G", SILVER: "S", BRONZE: "B", IRON: "I",
 };
+
+const TIER_COLOR_LP: Record<string, string> = {
+  CHALLENGER: "#E9BE5C", GRANDMASTER: "#CF4B4B", MASTER: "#9B5CE8",
+  DIAMOND: "#57A8E7", EMERALD: "#3AC48B", PLATINUM: "#4CBFAA",
+  GOLD: "#D4A839", SILVER: "#8FA3B1", BRONZE: "#A0724C", IRON: "#8B8B8B",
+};
+
+function LPHistoryChart({ puuid }: { puuid: string }) {
+  const history = getRankHistory(puuid);
+  if (history.length < 2) return (
+    <div className="text-center py-4 px-2">
+      <p className="text-[10px] text-muted-foreground leading-relaxed">
+        Historia LP pojawi się tutaj po kolejnych odwiedzinach profilu. Każde wejście na stronę zapisuje aktualny stan rangi.
+      </p>
+    </div>
+  );
+
+  const sorted = [...history].sort((a, b) => a.date - b.date);
+  const lpVals = sorted.map(s => s.totalLP);
+  const minLP = Math.min(...lpVals);
+  const maxLP = Math.max(...lpVals);
+  const range = maxLP - minLP || 100;
+
+  const w = 260, h = 80, px = 8, py = 10;
+  const iw = w - px * 2;
+  const ih = h - py * 2;
+
+  const pts = sorted.map((s, i) => ({
+    x: px + (i / Math.max(sorted.length - 1, 1)) * iw,
+    y: py + (1 - (s.totalLP - minLP) / range) * ih,
+    snap: s,
+  }));
+
+  const pathD = pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+  const areaD = `${pathD} L ${pts[pts.length - 1].x} ${h - py + 2} L ${pts[0].x} ${h - py + 2} Z`;
+
+  const last = sorted[sorted.length - 1];
+  const first = sorted[0];
+  const lpDiff = last.totalLP - first.totalLP;
+  const isUp = lpDiff >= 0;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2 px-0.5">
+        <span className="text-[10px] text-muted-foreground">{sorted.length} {sorted.length === 1 ? "zapis" : "zapisów"}</span>
+        <span className={`text-[10px] font-bold ${isUp ? "text-win" : "text-loss"}`}>
+          {isUp ? "+" : ""}{lpDiff} LP
+        </span>
+      </div>
+      <div className="relative">
+        <svg viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ height: 80 }} preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="lpGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={isUp ? "rgba(34,197,94,0.18)" : "rgba(239,68,68,0.18)"} />
+              <stop offset="100%" stopColor={isUp ? "rgba(34,197,94,0)" : "rgba(239,68,68,0)"} />
+            </linearGradient>
+          </defs>
+          <path d={areaD} fill="url(#lpGrad)" />
+          <path d={pathD} fill="none" stroke={isUp ? "#22c55e" : "#ef4444"} strokeWidth="1.5" strokeLinejoin="round" />
+          {pts.map((p, i) => {
+            const color = TIER_COLOR_LP[p.snap.tier] ?? "#888";
+            return (
+              <g key={i}>
+                <circle cx={p.x} cy={p.y} r="3" fill={color} stroke="white" strokeWidth="1" />
+              </g>
+            );
+          })}
+        </svg>
+        <div className="flex items-center justify-between mt-1 px-0.5">
+          <span className="text-[9px] text-muted-foreground/50">
+            {new Date(first.date).toLocaleDateString("pl-PL", { day: "numeric", month: "short" })}
+          </span>
+          <div className="flex items-center gap-1">
+            <span className="text-[9px] font-bold" style={{ color: TIER_COLOR_LP[last.tier] ?? "#888" }}>
+              {last.tier} {["CHALLENGER","GRANDMASTER","MASTER"].includes(last.tier) ? "" : last.rank} · {last.lp} LP
+            </span>
+          </div>
+          <span className="text-[9px] text-muted-foreground/50">
+            {new Date(last.date).toLocaleDateString("pl-PL", { day: "numeric", month: "short" })}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function LiveGameBanner({ data, selfPuuid }: { data: any; selfPuuid?: string }) {
   if (!data) return null;
@@ -366,6 +451,123 @@ function RadarChart({ data }: { data: { aggression: number; farming: number; vis
         </text>
       ))}
     </svg>
+  );
+}
+
+type ChampSortCol = "gamesPlayed" | "winRate" | "kda" | "killParticipation" | "avgCsPerMin" | "damageShare" | "performanceScore";
+
+function ChampionBreakdownTable({ championBreakdown, region, gameName, tagLine }: { championBreakdown: any[]; region: string; gameName: string; tagLine: string }) {
+  const [sortCol, setSortCol] = useState<ChampSortCol>("gamesPlayed");
+  const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
+
+  function handleSort(col: ChampSortCol) {
+    if (sortCol === col) setSortDir(d => d === "desc" ? "asc" : "desc");
+    else { setSortCol(col); setSortDir("desc"); }
+  }
+
+  const sorted = [...(championBreakdown ?? [])].sort((a: any, b: any) => {
+    const diff = (a[sortCol] ?? 0) - (b[sortCol] ?? 0);
+    return sortDir === "desc" ? -diff : diff;
+  });
+
+  function SortIcon({ col }: { col: ChampSortCol }) {
+    if (sortCol !== col) return <span className="opacity-20">↕</span>;
+    return <span className="text-primary">{sortDir === "desc" ? "↓" : "↑"}</span>;
+  }
+
+  function Th({ col, label, className = "" }: { col: ChampSortCol; label: string; className?: string }) {
+    return (
+      <th className={`pb-2 px-2 font-medium cursor-pointer select-none hover:text-foreground transition-colors ${className}`}
+        onClick={() => handleSort(col)}>
+        <span className="flex items-center gap-0.5 justify-center">{label} <SortIcon col={col} /></span>
+      </th>
+    );
+  }
+
+  if (!championBreakdown || championBreakdown.length === 0) return null;
+
+  return (
+    <div className="glass-panel p-4">
+      <p className="section-title"><Swords className="w-3.5 h-3.5 text-primary" /> Wyniki na bohaterach <InfoTooltip text="Statystyki z ostatnich 20 meczy pogrupowane po bohaterach. Kliknij nagłówek kolumny, żeby posortować. KDA = (Zabójstwa+Asysty)/Śmierci. KP% = udział w zabójstwach drużyny. CS/min = minionki na minutę. Dmg% = Twój procent obrażeń całej drużyny. Wynik = ogólna ocena 0–100." /></p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left min-w-[720px]">
+          <thead>
+            <tr className="border-b border-border/50 text-[10px] uppercase tracking-wider text-muted-foreground">
+              <th className="pb-2 px-2 font-medium">Bohater</th>
+              <Th col="gamesPlayed" label="G" className="w-10" />
+              <th className="pb-2 px-2 text-center font-medium w-28">W / L</th>
+              <Th col="winRate" label="WR" />
+              <th className="pb-2 px-2 text-center font-medium">K / D / A</th>
+              <Th col="kda" label="KDA" />
+              <Th col="killParticipation" label="KP%" />
+              <Th col="avgCsPerMin" label="CS/min" />
+              <Th col="damageShare" label="Dmg%" />
+              <Th col="performanceScore" label="Wynik" />
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border/30">
+            {sorted.map((ch: any, i: number) => {
+              const pc = ch.performanceScore >= 70 ? "bg-green-500" : ch.performanceScore >= 50 ? "bg-yellow-500" : "bg-red-500";
+              const champUrl = `/champion/${region}/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}/${ch.championName}`;
+              const wins = ch.wins ?? Math.round((ch.winRate / 100) * ch.gamesPlayed);
+              const losses = ch.losses ?? (ch.gamesPlayed - wins);
+              const totalForBar = wins + losses || 1;
+              return (
+                <tr key={i} className="hover:bg-muted/15 transition-colors">
+                  <td className="py-2 px-2">
+                    <Link href={champUrl} className="flex items-center gap-2 group">
+                      <img src={`${DD}/champion/${ch.championName}.png`} alt="" className="w-6 h-6 rounded-full border border-border"
+                        onError={(e) => { e.currentTarget.src = FALLBACK_ICON; }} />
+                      <span className="text-xs font-semibold text-foreground group-hover:text-cyan-400 transition-colors">{ch.championName}</span>
+                    </Link>
+                  </td>
+                  <td className="py-2 px-2 text-center text-xs font-mono">{ch.gamesPlayed}</td>
+                  <td className="py-2 px-2">
+                    <div className="flex items-center gap-1 text-[9px] font-mono mb-0.5">
+                      <span className="text-win">{wins}W</span>
+                      <span className="text-muted-foreground/40">/</span>
+                      <span className="text-loss">{losses}L</span>
+                    </div>
+                    <div className="flex h-1 rounded-full overflow-hidden w-20">
+                      <div className="bg-win rounded-l-full" style={{ width: `${(wins / totalForBar) * 100}%` }} />
+                      <div className="bg-loss rounded-r-full flex-1" />
+                    </div>
+                  </td>
+                  <td className={`py-2 px-2 text-center text-xs font-mono font-semibold ${ch.winRate >= 50 ? "text-win" : "text-loss"}`}>{ch.winRate}%</td>
+                  <td className="py-2 px-2 text-center text-[10px] font-mono text-muted-foreground">
+                    {ch.avgKills != null ? (
+                      <span>
+                        <span className="text-foreground/80">{ch.avgKills.toFixed(1)}</span>
+                        <span className="text-muted-foreground/40">/</span>
+                        <span className="text-loss">{ch.avgDeaths?.toFixed(1)}</span>
+                        <span className="text-muted-foreground/40">/</span>
+                        <span className="text-foreground/80">{ch.avgAssists?.toFixed(1)}</span>
+                      </span>
+                    ) : "—"}
+                  </td>
+                  <td className="py-2 px-2 text-center text-xs font-mono">{ch.kda.toFixed(2)}</td>
+                  <td className="py-2 px-2 text-center text-xs font-mono">
+                    <span className={ch.killParticipation >= 60 ? "text-green-400" : ch.killParticipation >= 40 ? "text-yellow-400" : "text-red-400"}>
+                      {(ch.killParticipation ?? 0).toFixed(0)}%
+                    </span>
+                  </td>
+                  <td className="py-2 px-2 text-center text-xs font-mono">{ch.avgCsPerMin.toFixed(1)}</td>
+                  <td className="py-2 px-2 text-center text-xs font-mono">
+                    <span className={(ch.damageShare ?? 0) >= 25 ? "text-orange-400" : "text-muted-foreground"}>{(ch.damageShare ?? 0).toFixed(0)}%</span>
+                  </td>
+                  <td className="py-2 px-2">
+                    <div className="flex items-center gap-1.5 justify-center">
+                      <span className="text-[10px] font-mono text-muted-foreground w-5 text-right">{ch.performanceScore}</span>
+                      <div className="w-12 h-1 bg-muted/60 rounded-full overflow-hidden"><div className={`h-full ${pc}`} style={{ width: `${ch.performanceScore}%` }} /></div>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
 
@@ -1077,60 +1279,7 @@ function AnalysisSection({ data, isLoading, recentMatches, region, gameName, tag
       )}
 
       {/* Champion Breakdown Table */}
-      <div className="glass-panel p-4">
-        <p className="section-title"><Swords className="w-3.5 h-3.5 text-primary" /> Wyniki na bohaterach <InfoTooltip text="Statystyki z ostatnich 20 meczy pogrupowane po bohaterach. KDA = (Zabójstwa+Asysty)/Śmierci. KP% = udział w zabójstwach drużyny. CS/min = minionki na minutę. Dmg% = Twój procent obrażeń całej drużyny. Wynik = ogólna ocena 0–100." /></p>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left min-w-[700px]">
-            <thead>
-              <tr className="border-b border-border/50 text-[10px] uppercase tracking-wider text-muted-foreground">
-                <th className="pb-2 px-2 font-medium">Bohater</th>
-                <th className="pb-2 px-2 text-center font-medium">Mecze</th>
-                <th className="pb-2 px-2 text-center font-medium">WR</th>
-                <th className="pb-2 px-2 text-center font-medium">KDA</th>
-                <th className="pb-2 px-2 text-center font-medium">KP%</th>
-                <th className="pb-2 px-2 text-center font-medium">CS/min</th>
-                <th className="pb-2 px-2 text-center font-medium">Dmg%</th>
-                <th className="pb-2 px-2 text-center font-medium">Wynik</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/30">
-              {championBreakdown?.sort((a: any, b: any) => b.gamesPlayed - a.gamesPlayed).map((ch: any, i: number) => {
-                const pc = ch.performanceScore >= 70 ? "bg-green-500" : ch.performanceScore >= 50 ? "bg-yellow-500" : "bg-red-500";
-                const champUrl = `/champion/${region}/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}/${ch.championName}`;
-                return (
-                  <tr key={i} className="hover:bg-muted/15 transition-colors">
-                    <td className="py-2 px-2">
-                      <Link href={champUrl} className="flex items-center gap-2 group">
-                        <img src={`${DD}/champion/${ch.championName}.png`} alt="" className="w-6 h-6 rounded-full border border-border"
-                          onError={(e) => { e.currentTarget.src = FALLBACK_ICON; }} />
-                        <span className="text-xs font-semibold text-foreground group-hover:text-cyan-400 transition-colors">{ch.championName}</span>
-                      </Link>
-                    </td>
-                    <td className="py-2 px-2 text-center text-xs font-mono">{ch.gamesPlayed}</td>
-                    <td className={`py-2 px-2 text-center text-xs font-mono font-semibold ${ch.winRate >= 50 ? "text-win" : "text-loss"}`}>{ch.winRate}%</td>
-                    <td className="py-2 px-2 text-center text-xs font-mono">{ch.kda.toFixed(2)}</td>
-                    <td className="py-2 px-2 text-center text-xs font-mono">
-                      <span className={ch.killParticipation >= 60 ? "text-green-400" : ch.killParticipation >= 40 ? "text-yellow-400" : "text-red-400"}>
-                        {(ch.killParticipation ?? 0).toFixed(0)}%
-                      </span>
-                    </td>
-                    <td className="py-2 px-2 text-center text-xs font-mono">{ch.avgCsPerMin.toFixed(1)}</td>
-                    <td className="py-2 px-2 text-center text-xs font-mono">
-                      <span className={(ch.damageShare ?? 0) >= 25 ? "text-orange-400" : "text-muted-foreground"}>{(ch.damageShare ?? 0).toFixed(0)}%</span>
-                    </td>
-                    <td className="py-2 px-2">
-                      <div className="flex items-center gap-1.5 justify-center">
-                        <span className="text-[10px] font-mono text-muted-foreground w-5 text-right">{ch.performanceScore}</span>
-                        <div className="w-12 h-1 bg-muted/60 rounded-full overflow-hidden"><div className={`h-full ${pc}`} style={{ width: `${ch.performanceScore}%` }} /></div>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <ChampionBreakdownTable championBreakdown={championBreakdown} region={region} gameName={gameName} tagLine={tagLine} />
     </div>
   );
 }
@@ -1399,6 +1548,16 @@ export default function Profile() {
                   ? <div className="h-20 rounded-xl animate-pulse" style={{ background: "hsl(220,15%,94%)" }} />
                   : <><RankedCard entry={soloQ} />{flexQ && <RankedCard entry={flexQ} />}</>
                 }
+                {/* LP History */}
+                {puuid && (
+                  <div className="rounded-xl p-3" style={{ background: "white", border: "1px solid hsl(220,15%,88%)", borderRadius: "8px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                    <p className="text-[9px] uppercase tracking-[0.15em] font-bold mb-2 flex items-center gap-1" style={{ color: "hsl(200,90%,35%)" }}>
+                      <TrendingUp className="w-3 h-3" /> Historia LP
+                    </p>
+                    <LPHistoryChart puuid={puuid} />
+                  </div>
+                )}
+
                 {!isLoadingAnalysis && analysis?.predictedTier && (
                   <div className="rounded-xl p-3 relative overflow-hidden" style={{
                     background: "linear-gradient(135deg, hsl(258,60%,96%), white)",
