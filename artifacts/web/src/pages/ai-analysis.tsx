@@ -7,7 +7,7 @@ import {
   Shield, Swords, Eye, Target, Zap, BookOpen,
   Award, AlertTriangle, CheckCircle2, Lightbulb,
   RefreshCw, Sparkles, Users, Trophy,
-  ArrowRight, Clock, Activity, CreditCard, Lock
+  ArrowRight, Clock, Activity
 } from "lucide-react";
 import { useSearchSummoner, useGetSummonerRanked, useGetSummonerMastery } from "@workspace/api-client-react";
 
@@ -163,246 +163,6 @@ class AiErrorBoundary extends Component<{ children: ReactNode }, { hasError: boo
   }
 }
 
-function PaymentWall({ gameName, tagLine, puuid, region, authToken }: {
-  gameName: string; tagLine: string; puuid: string; region: string; authToken: string;
-}) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handlePay() {
-    setLoading(true);
-    setError(null);
-    try {
-      const currentUrl = window.location.origin + window.location.pathname.split("?")[0];
-      const profileUrl = `${window.location.origin}${BASE_URL}profile/${encodeURIComponent(region)}/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`;
-      const res = await fetch(`${BASE_URL}/api/stripe/create-ai-checkout`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
-        body: JSON.stringify({
-          puuid, region, gameName, tagLine,
-          successUrl: currentUrl,
-          cancelUrl: profileUrl,
-        }),
-      });
-      if (!res.ok) throw new Error("Błąd inicjowania płatności");
-      const data = await res.json();
-      if (data.url) window.location.href = data.url;
-    } catch (e: any) {
-      setError(e.message ?? "Błąd płatności");
-      setLoading(false);
-    }
-  }
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35 }}
-      style={{ ...CARD, padding: 28, textAlign: "center", marginBottom: 16 }}
-    >
-      <div style={{
-        width: 52, height: 52, borderRadius: 14,
-        background: "linear-gradient(135deg,#0A1628,#1a3a6b)",
-        border: "1px solid rgba(200,155,60,0.4)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        margin: "0 auto 14px",
-      }}>
-        <Brain style={{ width: 26, height: 26, color: "#C89B3C" }} />
-      </div>
-      <div style={{ fontWeight: 800, fontSize: 19, color: FG, fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: "0.02em", marginBottom: 6 }}>
-        Nexus AI — Analiza Gracza
-      </div>
-      <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.65, marginBottom: 18, maxWidth: 300, margin: "0 auto 18px" }}>
-        Otrzymaj szczegółowy raport AI dla{" "}
-        <strong style={{ color: FG }}>{gameName}#{tagLine}</strong>:
-        styl gry, słabe i mocne strony, wskazówki coachingowe i prognoza rangi.
-      </div>
-
-      <div style={{
-        display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8,
-        marginBottom: 20, textAlign: "left",
-      }}>
-        {[
-          { icon: Brain, text: "Analiza stylu gry i archetypów" },
-          { icon: Target, text: "Micro & macro skills" },
-          { icon: Lightbulb, text: "Min. 5 wskazówek coachingowych" },
-          { icon: TrendingUp, text: "Prognoza rangi i potencjał" },
-          { icon: Award, text: "Analiza pool championów" },
-          { icon: Eye, text: "Vision control & map awareness" },
-        ].map(({ icon: Icon, text }) => (
-          <div key={text} style={{ display: "flex", alignItems: "flex-start", gap: 7, padding: "7px 10px", background: "hsl(220,20%,97%)", borderRadius: 8, border: "1px solid hsl(220,15%,90%)" }}>
-            <Icon style={{ width: 11, height: 11, color: PRIMARY, flexShrink: 0, marginTop: 1 }} />
-            <span style={{ fontSize: 10.5, color: FG, lineHeight: 1.4 }}>{text}</span>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ marginBottom: 16, padding: "12px 16px", background: "hsl(152,50%,96%)", border: "1px solid hsl(152,45%,82%)", borderRadius: 10 }}>
-        <div style={{ fontSize: 11, color: "hsl(152,50%,35%)", fontWeight: 600, marginBottom: 2 }}>
-          ✓ Jednorazowa płatność — ważna przez 30 dni
-        </div>
-        <div style={{ fontSize: 10.5, color: "hsl(152,50%,40%)" }}>
-          Po opłaceniu możesz wielokrotnie odświeżać raport dla tego gracza
-        </div>
-      </div>
-
-      {error && (
-        <div style={{ marginBottom: 12, padding: "8px 12px", background: "hsl(350,50%,97%)", border: "1px solid hsl(350,55%,82%)", borderRadius: 8, fontSize: 11, color: "hsl(350,65%,45%)" }}>
-          {error}
-        </div>
-      )}
-
-      <button
-        onClick={handlePay}
-        disabled={loading}
-        style={{
-          width: "100%", padding: "13px 20px",
-          background: loading ? "hsl(220,15%,90%)" : "linear-gradient(135deg,hsl(200,90%,34%),hsl(200,90%,44%))",
-          color: loading ? MUTED : "white",
-          border: "none", borderRadius: 10, cursor: loading ? "not-allowed" : "pointer",
-          fontWeight: 700, fontSize: 15, fontFamily: "'Barlow Condensed',sans-serif",
-          letterSpacing: "0.04em", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-          transition: "all 0.2s",
-        }}
-      >
-        <CreditCard style={{ width: 16, height: 16 }} />
-        {loading ? "Przekierowuję do płatności..." : "Zapłać 9,99 zł i generuj raport"}
-      </button>
-
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, marginTop: 10 }}>
-        <Lock style={{ width: 10, height: 10, color: MUTED }} />
-        <span style={{ fontSize: 10, color: MUTED }}>Bezpieczna płatność — Stripe · BLIK · Karta · Przelewy24</span>
-      </div>
-    </motion.div>
-  );
-}
-
-const AUTH_KEY = "nexus_auth_token";
-
-function AuthModal({ onSuccess, onClose }: { onSuccess: (token: string, email: string) => void; onClose?: () => void }) {
-  const [tab, setTab] = useState<"login" | "register">("login");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setErr(null);
-    setLoading(true);
-    try {
-      const res = await fetch(`${BASE_URL}/api/auth/${tab}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setErr(data.error ?? "Błąd serwera"); return; }
-      localStorage.setItem(AUTH_KEY, data.token);
-      onSuccess(data.token, data.user.email);
-    } catch {
-      setErr("Błąd połączenia z serwerem");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <div style={{
-      position: "fixed", inset: 0, zIndex: 9999,
-      background: "rgba(10,22,40,0.7)", backdropFilter: "blur(4px)",
-      display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
-    }}>
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 12 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.25 }}
-        style={{ ...CARD, padding: 28, width: "100%", maxWidth: 360 }}
-      >
-        <div style={{ textAlign: "center", marginBottom: 20 }}>
-          <div style={{
-            width: 44, height: 44, borderRadius: 12,
-            background: "linear-gradient(135deg,#0A1628,#1a3a6b)",
-            border: "1px solid rgba(200,155,60,0.4)",
-            display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px",
-          }}>
-            <Brain style={{ width: 22, height: 22, color: "#C89B3C" }} />
-          </div>
-          <div style={{ fontWeight: 800, fontSize: 18, color: FG, fontFamily: "'Barlow Condensed',sans-serif" }}>
-            Konto Nexus Sight
-          </div>
-          <div style={{ fontSize: 11, color: MUTED, marginTop: 3 }}>
-            Zaloguj się, aby uzyskać dostęp do Analizy AI
-          </div>
-        </div>
-
-        <div style={{ display: "flex", gap: 6, marginBottom: 18, background: "hsl(220,20%,97%)", borderRadius: 8, padding: 3 }}>
-          {(["login", "register"] as const).map((t) => (
-            <button key={t} onClick={() => { setTab(t); setErr(null); }} style={{
-              flex: 1, padding: "7px 0", borderRadius: 6, border: "none", cursor: "pointer",
-              fontWeight: 700, fontSize: 12, fontFamily: "'Rajdhani',sans-serif",
-              background: tab === t ? "white" : "transparent",
-              color: tab === t ? FG : MUTED,
-              boxShadow: tab === t ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
-              transition: "all 0.2s",
-            }}>
-              {t === "login" ? "Zaloguj się" : "Zarejestruj się"}
-            </button>
-          ))}
-        </div>
-
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <div>
-            <label style={{ fontSize: 11, fontWeight: 600, color: MUTED, display: "block", marginBottom: 4 }}>Adres email</label>
-            <input
-              type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-              placeholder="twoj@email.pl" required autoComplete="email"
-              style={{
-                width: "100%", padding: "10px 12px", borderRadius: 8,
-                border: "1px solid hsl(220,15%,88%)", fontSize: 13, color: FG,
-                background: "white", outline: "none", boxSizing: "border-box",
-              }}
-            />
-          </div>
-          <div>
-            <label style={{ fontSize: 11, fontWeight: 600, color: MUTED, display: "block", marginBottom: 4 }}>Hasło</label>
-            <input
-              type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-              placeholder={tab === "register" ? "min. 6 znaków" : "••••••••"} required autoComplete={tab === "register" ? "new-password" : "current-password"}
-              style={{
-                width: "100%", padding: "10px 12px", borderRadius: 8,
-                border: "1px solid hsl(220,15%,88%)", fontSize: 13, color: FG,
-                background: "white", outline: "none", boxSizing: "border-box",
-              }}
-            />
-          </div>
-
-          {err && (
-            <div style={{ padding: "8px 12px", background: "hsl(350,50%,97%)", border: "1px solid hsl(350,55%,82%)", borderRadius: 7, fontSize: 11.5, color: "hsl(350,65%,45%)" }}>
-              {err}
-            </div>
-          )}
-
-          <button type="submit" disabled={loading} style={{
-            width: "100%", padding: "12px", marginTop: 4,
-            background: loading ? "hsl(220,15%,90%)" : `linear-gradient(135deg,hsl(200,90%,34%),hsl(200,90%,44%))`,
-            color: loading ? MUTED : "white", border: "none", borderRadius: 9,
-            fontWeight: 700, fontSize: 14, fontFamily: "'Barlow Condensed',sans-serif",
-            letterSpacing: "0.04em", cursor: loading ? "not-allowed" : "pointer",
-          }}>
-            {loading ? "Proszę czekać..." : tab === "login" ? "Zaloguj się" : "Utwórz konto"}
-          </button>
-        </form>
-
-        <div style={{ fontSize: 10, color: MUTED, textAlign: "center", marginTop: 12 }}>
-          <Lock style={{ width: 9, height: 9, display: "inline", verticalAlign: "middle", marginRight: 4 }} />
-          Dane są chronione. Nie wysyłamy spamu.
-        </div>
-      </motion.div>
-    </div>
-  );
-}
-
 function AiAnalysisInner() {
   const { region, gameName, tagLine } = useParams<{ region: string; gameName: string; tagLine: string }>();
   const [report, setReport] = useState<any>(null);
@@ -410,11 +170,6 @@ function AiAnalysisInner() {
   const [loadingStep, setLoadingStep] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [generatedAt, setGeneratedAt] = useState<number | null>(null);
-  const [authToken, setAuthToken] = useState<string | null>(() => localStorage.getItem(AUTH_KEY));
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [hasAccess, setHasAccess] = useState(false);
-  const [authChecked, setAuthChecked] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
   const fetchedRef = useRef(false);
 
   const { data: summonerData } = useSearchSummoner({ region, gameName, tagLine });
@@ -428,54 +183,8 @@ function AiAnalysisInner() {
 
   const steps = STEPS.map(s => s.label);
 
-  useEffect(() => {
-    if (!authToken) { setAuthChecked(true); return; }
-    fetch(`${BASE_URL}/api/auth/me`, { headers: { Authorization: `Bearer ${authToken}` } })
-      .then((r) => r.ok ? r.json() : Promise.reject())
-      .then((d) => setUserEmail(d.user.email))
-      .catch(() => { localStorage.removeItem(AUTH_KEY); setAuthToken(null); })
-      .finally(() => setAuthChecked(true));
-  }, [authToken]);
-
-  useEffect(() => {
-    if (!puuid || !authToken || !authChecked) return;
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const justPaid = urlParams.get("paid") === "1";
-    if (justPaid) {
-      window.history.replaceState({}, "", window.location.pathname);
-      verifyAfterPayment();
-    } else {
-      checkAccess();
-    }
-  }, [puuid, authToken, authChecked]);
-
-  async function checkAccess() {
-    if (!puuid || !authToken) return;
-    try {
-      const res = await fetch(`${BASE_URL}/api/stripe/check-access?puuid=${puuid}`, {
-        headers: { Authorization: `Bearer ${authToken}` },
-      });
-      const data = await res.json();
-      setHasAccess(data.hasAccess === true);
-    } catch { setHasAccess(false); }
-  }
-
-  async function verifyAfterPayment() {
-    if (!puuid || !authToken) return;
-    try {
-      const res = await fetch(`${BASE_URL}/api/stripe/verify-after-payment`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
-        body: JSON.stringify({ puuid }),
-      });
-      const data = await res.json();
-      if (data.hasAccess) { setHasAccess(true); }
-    } catch { /* ignore */ }
-  }
-
   async function generateReport() {
-    if (!puuid || !authToken) return;
+    if (!puuid) return;
     setLoading(true);
     setError(null);
     setReport(null);
@@ -487,10 +196,7 @@ function AiAnalysisInner() {
       setLoadingStep(steps[stepIdx]);
     }, 4500);
     try {
-      const res = await fetch(
-        `${BASE_URL}/api/summoner/${puuid}/ai-report?region=${region}&gameName=${encodeURIComponent(gameName)}`,
-        { headers: { Authorization: `Bearer ${authToken}` } }
-      );
+      const res = await fetch(`${BASE_URL}/api/summoner/${puuid}/ai-report?region=${region}&gameName=${encodeURIComponent(gameName)}`);
       clearInterval(interval);
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
@@ -504,25 +210,9 @@ function AiAnalysisInner() {
     }
   }
 
-  function handleAuthSuccess(token: string, email: string) {
-    setAuthToken(token);
-    setUserEmail(email);
-    setShowAuthModal(false);
-  }
-
-  function handleLogout() {
-    localStorage.removeItem(AUTH_KEY);
-    setAuthToken(null);
-    setUserEmail(null);
-    setHasAccess(false);
-    setReport(null);
-    fetchedRef.current = false;
-    setAuthChecked(false);
-  }
-
   useEffect(() => {
-    if (puuid && hasAccess && !fetchedRef.current) generateReport();
-  }, [puuid, hasAccess]);
+    if (puuid && !fetchedRef.current) generateReport();
+  }, [puuid]);
 
   const profileLink = `${BASE_URL}/profile/${region}/${gameName}/${tagLine}`;
 
@@ -592,86 +282,31 @@ function AiAnalysisInner() {
             {!soloQ && !loading && <span style={{ fontSize: 11, color: MUTED }}>Unranked</span>}
           </div>
 
-          {/* AI Badge / User Account */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-            {userEmail ? (
-              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 9, color: MUTED, fontWeight: 600 }}>Zalogowany</div>
-                  <div style={{ fontSize: 10, color: FG, fontWeight: 700, maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{userEmail}</div>
-                </div>
-                <button onClick={handleLogout} style={{
-                  background: "hsl(220,15%,96%)", border: "1px solid hsl(220,15%,88%)",
-                  borderRadius: 6, padding: "4px 8px", color: MUTED, fontSize: 10,
-                  fontWeight: 700, cursor: "pointer", fontFamily: "'Rajdhani',sans-serif",
-                }}>Wyloguj</button>
-              </div>
-            ) : (
-              <button onClick={() => setShowAuthModal(true)} style={{
-                display: "flex", alignItems: "center", gap: 5, padding: "5px 10px",
-                background: "linear-gradient(135deg,#0A1628,#1a3a6b)",
-                border: "1px solid rgba(200,155,60,0.4)", borderRadius: 7, cursor: "pointer",
-              }}>
-                <Brain style={{ width: 12, height: 12, color: "#C89B3C" }} />
-                <span style={{ fontSize: 9, fontWeight: 700, color: "#C89B3C", letterSpacing: "0.08em", fontFamily: "'Rajdhani',sans-serif" }}>ZALOGUJ</span>
-              </button>
-            )}
+          {/* AI Badge */}
+          <div style={{
+            display: "flex", alignItems: "center", gap: 5, padding: "5px 10px",
+            background: "linear-gradient(135deg,#0A1628,#1a3a6b)",
+            border: "1px solid rgba(200,155,60,0.4)", borderRadius: 7, flexShrink: 0,
+          }}>
+            <Brain style={{ width: 13, height: 13, color: "#C89B3C" }} />
+            <span style={{ fontSize: 9, fontWeight: 700, color: "#C89B3C", letterSpacing: "0.08em", fontFamily: "'Rajdhani',sans-serif" }}>NEXUS AI</span>
           </div>
         </div>
       </header>
 
-      {showAuthModal && <AuthModal onSuccess={handleAuthSuccess} onClose={() => setShowAuthModal(false)} />}
-
       {/* Content */}
       <div style={{ maxWidth: 520, margin: "0 auto", padding: "16px 14px 60px" }}>
-
-        {/* Not logged in — prompt to log in */}
-        {authChecked && !authToken && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}
-            style={{ ...CARD, padding: 28, textAlign: "center", marginBottom: 16 }}
-          >
-            <div style={{ width: 44, height: 44, borderRadius: 12, background: "linear-gradient(135deg,#0A1628,#1a3a6b)", border: "1px solid rgba(200,155,60,0.4)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
-              <Brain style={{ width: 22, height: 22, color: "#C89B3C" }} />
-            </div>
-            <div style={{ fontWeight: 800, fontSize: 18, color: FG, fontFamily: "'Barlow Condensed',sans-serif", marginBottom: 6 }}>Analiza AI — Nexus Sight</div>
-            <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.65, marginBottom: 18 }}>
-              Aby uzyskać dostęp do szczegółowego raportu AI, musisz posiadać konto Nexus Sight.
-            </div>
-            <button onClick={() => setShowAuthModal(true)} style={{
-              width: "100%", padding: "13px 20px",
-              background: "linear-gradient(135deg,hsl(200,90%,34%),hsl(200,90%,44%))",
-              color: "white", border: "none", borderRadius: 10, cursor: "pointer",
-              fontWeight: 700, fontSize: 15, fontFamily: "'Barlow Condensed',sans-serif",
-              letterSpacing: "0.04em", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-            }}>
-              <Users style={{ width: 16, height: 16 }} /> Zaloguj się lub załóż konto
-            </button>
-            <div style={{ fontSize: 10, color: MUTED, marginTop: 10 }}>Rejestracja jest darmowa. Płatność tylko za Analizę AI.</div>
-          </motion.div>
-        )}
-
-        {/* Logged in, no access — show PaymentWall */}
-        {authToken && !hasAccess && !loading && puuid && (
-          <PaymentWall
-            gameName={gameName}
-            tagLine={tagLine}
-            puuid={puuid}
-            region={region}
-            authToken={authToken}
-          />
-        )}
 
         {/* Loading */}
         {loading && <GeneratingCard step={loadingStep} />}
 
         {/* Error */}
-        {error && !loading && sessionId && (
+        {error && !loading && (
           <div style={{ ...CARD, padding: 20, textAlign: "center", marginBottom: 12 }}>
             <AlertTriangle style={{ width: 24, height: 24, color: "hsl(350,65%,48%)", margin: "0 auto 10px" }} />
             <div style={{ fontWeight: 700, color: FG, marginBottom: 6, fontSize: 14 }}>Błąd generowania raportu</div>
             <div style={{ fontSize: 12, color: MUTED, marginBottom: 14 }}>{error}</div>
-            <button onClick={() => generateReport()} style={{
+            <button onClick={generateReport} style={{
               background: "hsl(350,50%,97%)", border: "1px solid hsl(350,55%,82%)",
               borderRadius: 7, padding: "7px 16px", color: "hsl(350,65%,45%)", fontSize: 12,
               fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5,
@@ -693,7 +328,7 @@ function AiAnalysisInner() {
                   {new Date(generatedAt).toLocaleTimeString("pl-PL")}
                 </span>
               )}
-              <button onClick={() => generateReport()} style={{
+              <button onClick={generateReport} style={{
                 background: "white", border: "1px solid hsl(220,15%,88%)",
                 borderRadius: 7, padding: "5px 12px", color: MUTED, fontSize: 11,
                 fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5,

@@ -10,8 +10,8 @@
   },
   "private": true,
   "devDependencies": {
-    "prettier": "^3.8.1",
-    "typescript": "~5.9.2"
+    "typescript": "~5.9.2",
+    "prettier": "^3.8.1"
   },
   "pnpm": {
     "overrides": {
@@ -19,9 +19,5 @@
       "picomatch@2": "2.3.2",
       "picomatch@4": "4.0.4"
     }
-  },
-  "dependencies": {
-    "stripe": "^21.0.1",
-    "stripe-replit-sync": "^1.0.0"
   }
 }

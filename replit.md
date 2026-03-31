@@ -48,31 +48,6 @@ TypeScript pnpm monorepo, fully in Polish. Users search players by Riot ID acros
 - `artifacts/api-server/src/routes/analysis.ts` — Analysis engine (~940 lines, 22 algorithms)
 - `lib/api-spec/openapi.yaml` — API spec (source of truth)
 
-## Authentication (Email Accounts)
-- **DB table**: `public.users (id UUID PK, email TEXT UNIQUE, password_hash TEXT, created_at TIMESTAMPTZ)` — created at server start
-- **Password hashing**: Node.js `crypto.scryptSync` (no external package needed) — format: `${salt}:${hash}`
-- **JWT**: `jsonwebtoken` package; secret from `JWT_SECRET` env var (or random per process if not set — set in prod!); expires in 30 days
-- **Auth helpers**: `artifacts/api-server/src/lib/auth.ts` — hashPassword, verifyPassword, generateToken, verifyToken, getUserFromRequest
-- **Auth routes** (in `routes/auth.ts`):
-  - `POST /api/auth/register` — creates user, returns `{token, user}`
-  - `POST /api/auth/login` — validates password, returns `{token, user}`
-  - `GET /api/auth/me` — returns user info from JWT (requires `Authorization: Bearer <token>`)
-- **Frontend**: JWT stored in `localStorage` as `nexus_auth_token`; auth modal in `ai-analysis.tsx` with login/register tabs
-
-## Monetization — Stripe Payment (AI Analysis)
-- **Model**: One-time payment, 9.99 PLN (999 groszy) per player analysis, valid 30 days; tied to user account
-- **Connector**: Replit Stripe connector (ID: `connection:conn_stripe_01KN2NEVG7D47RDECJB4WS02KJ`)
-- **stripeClient.ts**: `artifacts/api-server/src/stripeClient.ts` — never cache Stripe client; uses `REPLIT_CONNECTORS_HOSTNAME` + `REPL_IDENTITY`/`WEB_REPL_RENEWAL` token
-- **Payment DB table**: `public.ai_analysis_payments (session_id, puuid, user_id UUID, status, created_at, paid_at, expires_at)` — created automatically; `user_id` ties payment to account
-- **Backend routes** (in `routes/stripe-payments.ts`):
-  - `POST /api/stripe/create-ai-checkout` — requires auth JWT; creates Stripe Checkout with user_id in metadata; BLIK+Card+P24 enabled
-  - `GET /api/stripe/check-access?puuid=` — requires auth JWT; checks if user has paid for this player
-  - `POST /api/stripe/verify-after-payment` — requires auth JWT + `{puuid}`; scans recent Stripe sessions to confirm payment
-  - `POST /api/stripe/webhook` — processes Stripe webhook events (must receive raw body; registered before `express.json()`)
-- **Payment guard**: `routes/ai-analysis.ts` → extracts JWT from Authorization header → checks `checkPaymentForUser(userId, puuid)` → returns 401/402 if needed
-- **Frontend flow**: `ai-analysis.tsx` → checks localStorage for JWT → validates via `/api/auth/me` → checks access via `/api/stripe/check-access` → shows AuthModal / login prompt / PaymentWall / report
-- **After Stripe redirect**: success URL has `?paid=1` → frontend calls `verify-after-payment` to confirm and unlock access
-
 ## Important Notes
 - Never edit generated files in `lib/api-client-react/src/generated/` or `lib/api-zod/src/generated/`
 - `refetchInterval` in react-query v5 does NOT work on errored queries — use `useEffect + setInterval + refetch()` workaround
@@ -80,4 +55,4 @@ TypeScript pnpm monorepo, fully in Polish. Users search players by Riot ID acros
 - Cache: all Riot API endpoints are cached server-side (search=60s, ranked=120s, matches=90s, mastery=300s, analysis=120s, live=30s, champion=180s)
 - `pushHistory` defined in BOTH home.tsx and profile.tsx (intentional duplicates)
 - `Link` from wouter renders its own `<a>` — never wrap in plain `<a>`
-- Workflows: "Start application" runs both API server (port 8080) and web (PORT env var); individual artifact workflows also exist — if "Start application" fails because port 8080 is occupied, restart individual `artifacts/api-server: API Server` workflow instead
+- Workflows: "Start application" runs both API server (port 8080) and web (PORT env var); individual artifact workflows also exist

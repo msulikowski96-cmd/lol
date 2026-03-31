@@ -3,8 +3,6 @@ import { ai } from "@workspace/integrations-gemini-ai";
 import { riotFetch } from "../lib/riot-fetch";
 import { cache } from "../lib/cache";
 import { getChampionName } from "../lib/ddragon";
-import { checkPaymentForUser } from "./stripe-payments";
-import { getUserFromRequest } from "../lib/auth";
 
 const router: IRouter = Router();
 
@@ -319,19 +317,7 @@ router.get("/:puuid/ai-report", async (req, res) => {
     return;
   }
 
-  const user = getUserFromRequest(req);
-  if (!user) {
-    res.status(401).json({ error: "login_required", message: "Musisz być zalogowany, aby wygenerować analizę AI" });
-    return;
-  }
-
-  const paid = await checkPaymentForUser(user.userId, puuid).catch(() => false);
-  if (!paid) {
-    res.status(402).json({ error: "payment_required", message: "Płatność wymagana do wygenerowania analizy AI" });
-    return;
-  }
-
-  const cacheKey = `ai-report:${region.toUpperCase()}:${puuid}:${user.userId}`;
+  const cacheKey = `ai-report:${region.toUpperCase()}:${puuid}`;
   const cached = cache.get(cacheKey);
   if (cached) {
     res.json(cached);
