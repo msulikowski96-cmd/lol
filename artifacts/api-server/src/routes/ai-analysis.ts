@@ -331,17 +331,20 @@ router.get("/:puuid/ai-report", async (req, res) => {
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: [{ role: "user", parts: [{ text: prompt }] }],
-      config: { maxOutputTokens: 8192 },
+      config: { maxOutputTokens: 16000 },
     });
 
-    const rawText = response.text ?? "";
+    const rawText = (response.text ?? "")
+      .replace(/^```(?:json)?\s*/m, "")
+      .replace(/```\s*$/m, "")
+      .trim();
 
     let parsed: any;
     try {
       const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-      parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : { error: "parse_failed", raw: rawText };
+      parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : { error: "parse_failed" };
     } catch {
-      parsed = { error: "parse_failed", raw: rawText };
+      parsed = { error: "parse_failed" };
     }
 
     const result = { report: parsed, generatedAt: Date.now() };

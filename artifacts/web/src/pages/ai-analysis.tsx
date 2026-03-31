@@ -655,10 +655,28 @@ function AiAnalysisInner() {
         {/* Parse error fallback */}
         {report?.error && !loading && (
           <div style={{
-            background: "rgba(255,255,255,0.55)", backdropFilter: "blur(10px)",
-            border: "1px solid rgba(0,90,150,0.12)", borderRadius: 16, padding: 20,
+            background: "rgba(255,107,107,0.08)", backdropFilter: "blur(10px)",
+            border: "1px solid rgba(244,67,54,0.2)", borderRadius: 16, padding: 24,
+            textAlign: "center",
           }}>
-            <p style={{ color: "#1a2a4a", fontSize: 13, lineHeight: 1.7 }}>{report.raw}</p>
+            <AlertTriangle style={{ width: 32, height: 32, color: "#F44336", margin: "0 auto 12px" }} />
+            <p style={{ color: "#F44336", fontWeight: 700, fontSize: 15, margin: "0 0 8px" }}>
+              Błąd generowania raportu
+            </p>
+            <p style={{ color: "#1a2a4a", fontSize: 13, lineHeight: 1.6, margin: "0 0 16px" }}>
+              AI nie mogło przetworzyć danych. Kliknij poniżej aby spróbować ponownie.
+            </p>
+            <button
+              onClick={() => generateReport()}
+              style={{
+                background: "linear-gradient(135deg,#0A1628,#1a3a6b)",
+                color: "#C89B3C", border: "none", borderRadius: 10,
+                padding: "10px 22px", fontWeight: 700, fontSize: 13, cursor: "pointer",
+                display: "inline-flex", alignItems: "center", gap: 6,
+              }}
+            >
+              <RefreshCw style={{ width: 14, height: 14 }} /> Spróbuj ponownie
+            </button>
           </div>
         )}
       </div>
