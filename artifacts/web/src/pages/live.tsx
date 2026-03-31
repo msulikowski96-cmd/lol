@@ -309,7 +309,7 @@ export default function LiveGame() {
   const b2 = useMemo(() => (inGame ? ((liveGame as any).bans ?? []).filter((b: any) => b.teamId === 200) : []), [liveGame, inGame]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="bg-background">
       <div className="grid-bg" style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", opacity: 0.3 }} />
 
       <div className="relative z-10 max-w-5xl mx-auto px-3 py-4 sm:px-6">

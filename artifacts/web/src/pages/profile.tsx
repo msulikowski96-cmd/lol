@@ -1119,7 +1119,7 @@ export default function Profile() {
   };
 
   if (profileError) return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4">
+    <div className="flex flex-col items-center justify-center p-4 py-20">
       <AlertCircle className="w-12 h-12 text-destructive mb-3" />
       <h2 className="font-display text-2xl mb-1">Nie znaleziono gracza</h2>
       <p className="text-sm text-muted-foreground mb-6">{gameName}#{tagLine} nie istnieje w regionie {region}.</p>
@@ -1135,7 +1135,7 @@ export default function Profile() {
   const flexQ = rankedStats?.find((r: any) => r.queueType === "RANKED_FLEX_SR");
 
   return (
-    <div className="min-h-screen pb-16">
+    <div className="pb-16">
 
       {/* Header */}
       <header className="relative border-b border-border overflow-hidden bg-white">

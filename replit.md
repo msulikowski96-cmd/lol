@@ -10,10 +10,13 @@ TypeScript pnpm monorepo, fully in Polish. Users search players by Riot ID acros
 - **Codegen**: `pnpm --filter @workspace/api-spec run codegen`
 
 ## Routes
-- `/` — Home page with search
+- `/` — Home page with search + FAQ + about section
 - `/profile/:region/:gameName/:tagLine` — Player profile (stats, matches, analysis)
 - `/live/:region/:gameName/:tagLine` — Live game page (OP.GG-style team view)
 - `/promo` — TikTok promo page
+- `/privacy` — Polityka Prywatności (Google AdSense compliance)
+- `/terms` — Regulamin
+- `/about` — O nas / kontakt
 
 ## Design System
 - Theme: Clean light mode
@@ -25,10 +28,14 @@ TypeScript pnpm monorepo, fully in Polish. Users search players by Riot ID acros
 - All content in Polish
 
 ## Key Files
-- `artifacts/web/src/index.css` — Design system CSS
-- `artifacts/web/src/pages/home.tsx` — Homepage
+- `artifacts/web/src/index.css` — Design system CSS (includes .prose-custom for legal pages)
+- `artifacts/web/src/pages/home.tsx` — Homepage (with FAQ section)
 - `artifacts/web/src/pages/profile.tsx` — Player profile
 - `artifacts/web/src/pages/live.tsx` — Live game page
+- `artifacts/web/src/pages/privacy.tsx` — Privacy Policy page
+- `artifacts/web/src/pages/terms.tsx` — Terms of Service page
+- `artifacts/web/src/pages/about.tsx` — About page
+- `artifacts/web/src/components/Footer.tsx` — Global footer with legal links
 - `artifacts/api-server/src/routes/summoner.ts` — All Riot API endpoints
 - `artifacts/api-server/src/routes/analysis.ts` — Analysis engine (~940 lines, 22 algorithms)
 - `lib/api-spec/openapi.yaml` — API spec (source of truth)

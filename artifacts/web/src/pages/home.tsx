@@ -66,6 +66,37 @@ const QUICK_SEARCH = [
   { name: "Caps", tag: "EUW", region: "EUW1" },
 ];
 
+const FAQ_ITEMS = [
+  {
+    q: "Jak sprawdzić statystyki gracza League of Legends?",
+    a: "Wpisz Riot ID gracza (nazwa i tag, np. Faker#T1) w wyszukiwarkę na stronie głównej, wybierz odpowiedni region i kliknij Szukaj. W ciągu kilku sekund zobaczysz pełny profil gracza z rangami, historią meczy i analizą AI.",
+  },
+  {
+    q: "Czym jest analiza AI w Nexus Sight?",
+    a: "Nasza analiza AI to zestaw 22 autorskich algorytmów, które analizują ostatnie mecze gracza i generują unikalne wskaźniki: archetyp stylu gry, wskaźnik tiltu, warunki zwycięstwa, krzywą mocy, analizę early game i spersonalizowane porady coachingowe.",
+  },
+  {
+    q: "Czy Nexus Sight jest darmowy?",
+    a: "Tak, Nexus Sight jest całkowicie darmowy. Nie wymaga rejestracji ani logowania. Wystarczy wpisać nazwę gracza i tag, aby zobaczyć pełne statystyki i analizę.",
+  },
+  {
+    q: "Jakie regiony są obsługiwane?",
+    a: "Obsługujemy wszystkie oficjalne serwery League of Legends: EUW, EUNE, NA, KR, BR, LAN, LAS, OCE, TR, RU, JP oraz serwery azjatyckie (PH, SG, TW, TH, VN).",
+  },
+  {
+    q: "Co to jest szacowana ranga AI?",
+    a: "Szacowana ranga to algorytm, który oblicza realny poziom gracza na podstawie faktycznych statystyk z meczy (CS/min, KDA, kontrola wardów, obiektywna gra), niezależnie od aktualnego LP. Dzięki temu możesz zobaczyć, na jakim poziomie naprawdę grasz.",
+  },
+  {
+    q: "Czy mogę sprawdzić, czy ktoś jest w aktywnej grze?",
+    a: "Tak! Nexus Sight automatycznie wykrywa, czy gracz jest w aktywnej grze. Jeśli tak, zobaczysz baner Live Game na profilu z linkiem do szczegółowego podglądu meczu — z rangami, runami, czarowniami i banami wszystkich 10 uczestników.",
+  },
+  {
+    q: "Skąd pochodzą dane?",
+    a: "Wszystkie dane pobieramy bezpośrednio z oficjalnego API Riot Games. Są to publicznie dostępne statystyki — dokładnie te same, które widoczne są w kliencie gry i na innych platformach typu OP.GG.",
+  },
+];
+
 export default function Home() {
   const [, setLocation] = useLocation();
   const [region, setRegion] = useState("EUW1");
@@ -91,7 +122,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen relative flex flex-col items-center justify-center px-4 overflow-hidden">
+    <div className="relative flex flex-col items-center justify-center px-4 overflow-hidden py-12">
 
       <div className="absolute inset-0 z-0 overflow-hidden">
         <div className="absolute inset-0 grid-bg opacity-40" />
@@ -313,10 +344,62 @@ export default function Home() {
         </motion.div>
 
         <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7, duration: 0.5 }}
+          className="w-full mt-12 mb-6"
+        >
+          <h2 className="text-lg font-bold text-foreground mb-1 text-center" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+            Najczęściej zadawane pytania
+          </h2>
+          <p className="text-xs text-muted-foreground text-center mb-5">Wszystko, co musisz wiedzieć o Nexus Sight</p>
+          <div className="space-y-3">
+            {FAQ_ITEMS.map((faq, i) => (
+              <details key={i} className="group glass-panel overflow-hidden">
+                <summary className="flex items-center justify-between px-4 py-3 cursor-pointer select-none text-sm font-semibold text-foreground hover:text-primary transition-colors">
+                  {faq.q}
+                  <ChevronRight className="w-4 h-4 text-muted-foreground group-open:rotate-90 transition-transform" />
+                </summary>
+                <div className="px-4 pb-3 text-[13px] text-muted-foreground leading-relaxed border-t border-border/50 pt-2">
+                  {faq.a}
+                </div>
+              </details>
+            ))}
+          </div>
+        </motion.div>
+
+        <motion.section
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.85, duration: 0.5 }}
+          className="w-full mt-6 mb-8 glass-panel p-5"
+        >
+          <h2 className="text-lg font-bold text-foreground mb-3" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+            Czym jest Nexus Sight?
+          </h2>
+          <div className="text-[13px] text-muted-foreground leading-relaxed space-y-3">
+            <p>
+              Nexus Sight to darmowe, polskojęzyczne narzędzie do analizy statystyk graczy League of Legends.
+              Wystarczy wpisać Riot ID dowolnego gracza (nazwa#tag), aby zobaczyć szczegółowe informacje o jego
+              rozgrywce — rangi, historię meczy, mistrzostwo bohaterów i głęboką analizę AI.
+            </p>
+            <p>
+              Nasze unikalne algorytmy analizy wykraczają poza standardowe statystyki. Obliczamy archetyp stylu gry
+              (np. „Agresywny Carry", „Strażnik Linii"), wskaźnik tiltu, warunki zwycięstwa, krzywą mocy
+              (w której fazie gry jesteś najsilniejszy) oraz szacowaną realną rangę opartą na faktycznym poziomie gry.
+            </p>
+            <p>
+              Aplikacja obsługuje wszystkie regiony League of Legends: EUW, EUNE, NA, KR, BR, LAN, LAS, OCE, TR, RU, JP
+              oraz serwery azjatyckie. Dane pobieramy bezpośrednio z oficjalnego API Riot Games — bez konieczności logowania.
+            </p>
+          </div>
+        </motion.section>
+
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.9 }}
-          className="mt-8 flex items-center gap-3"
+          className="mt-4 mb-2 flex items-center gap-3"
         >
           <div className="h-px flex-1 max-w-16" style={{ background: "linear-gradient(to right, transparent, hsl(220,15%,85%))" }} />
           <span className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground/50" style={{ fontFamily: "'Rajdhani',sans-serif" }}>
