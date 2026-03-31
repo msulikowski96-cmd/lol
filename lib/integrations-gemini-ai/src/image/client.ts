@@ -1,29 +1,45 @@
 import { GoogleGenAI, Modality } from "@google/genai";
 
-if (!process.env.AI_INTEGRATIONS_GEMINI_BASE_URL) {
-  throw new Error(
-    "AI_INTEGRATIONS_GEMINI_BASE_URL must be set. Did you forget to provision the Gemini AI integration?",
-  );
+const REPLIT_PROXY_PATTERN = /localhost|127\.0\.0\.1|modelfarm/;
+
+function createClient(): GoogleGenAI {
+  const baseUrl = process.env.AI_INTEGRATIONS_GEMINI_BASE_URL;
+  const apiKey = process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
+
+  if (!apiKey) {
+    throw new Error(
+      "AI_INTEGRATIONS_GEMINI_API_KEY nie jest skonfigurowane.",
+    );
+  }
+
+  const isReplitProxy = baseUrl && REPLIT_PROXY_PATTERN.test(baseUrl);
+
+  if (isReplitProxy) {
+    return new GoogleGenAI({
+      apiKey,
+      httpOptions: {
+        apiVersion: "",
+        baseUrl,
+      },
+    });
+  }
+
+  return new GoogleGenAI({ apiKey });
 }
 
-if (!process.env.AI_INTEGRATIONS_GEMINI_API_KEY) {
-  throw new Error(
-    "AI_INTEGRATIONS_GEMINI_API_KEY must be set. Did you forget to provision the Gemini AI integration?",
-  );
-}
+let _client: GoogleGenAI | null = null;
 
-export const ai = new GoogleGenAI({
-  apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
-  httpOptions: {
-    apiVersion: "",
-    baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
-  },
-});
+function getClient(): GoogleGenAI {
+  if (!_client) {
+    _client = createClient();
+  }
+  return _client;
+}
 
 export async function generateImage(
   prompt: string
 ): Promise<{ b64_json: string; mimeType: string }> {
-  const response = await ai.models.generateContent({
+  const response = await getClient().models.generateContent({
     model: "gemini-2.5-flash-image",
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     config: {
