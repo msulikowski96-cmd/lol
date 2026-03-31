@@ -2,8 +2,11 @@ import { Router, type IRouter } from "express";
 import { GetSummonerAnalysisResponse } from "@workspace/api-zod";
 import { riotFetch, handleRiotError } from "../lib/riot-fetch";
 import { cache } from "../lib/cache";
+import { riotLimit } from "../middlewares/rateLimit";
 
 const router: IRouter = Router();
+
+router.use(riotLimit);
 
 const REGION_TO_CLUSTER: Record<string, string> = {
   NA1: "americas", BR1: "americas", LA1: "americas", LA2: "americas",

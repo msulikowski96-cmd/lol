@@ -9,8 +9,11 @@ import {
 import { riotFetch, handleRiotError, RiotApiError } from "../lib/riot-fetch";
 import { cache } from "../lib/cache";
 import { getDDVersion, getChampionName, getChampionMap } from "../lib/ddragon";
+import { riotLimit } from "../middlewares/rateLimit";
 
 const router: IRouter = Router();
+
+router.use(riotLimit);
 
 const RIOT_API_KEY = process.env.RIOT_API_KEY ?? "";
 

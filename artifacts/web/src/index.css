@@ -271,23 +271,43 @@
     border: 1px solid hsl(220, 15%, 88%);
     border-radius: 10px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .mobile-tab-bar::-webkit-scrollbar {
+    display: none;
   }
 
   .mobile-tab {
     flex: 1;
+    min-width: 60px;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 2px;
-    padding: 8px 4px;
+    padding: 8px 6px;
     border-radius: 7px;
     font-size: 10px;
     font-family: var(--font-heading);
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.08em;
     transition: all 0.18s;
     border: 1px solid transparent;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 359px) {
+    .tab-label {
+      display: none;
+    }
+
+    .mobile-tab {
+      padding: 10px 8px;
+      min-width: 48px;
+    }
   }
 
   .mobile-tab-active {

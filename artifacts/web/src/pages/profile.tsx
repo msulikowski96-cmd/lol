@@ -1231,8 +1231,8 @@ export default function Profile() {
                 className={`mobile-tab ${tab.id === "live" ? (liveGame ? "mobile-tab-live" : "mobile-tab-inactive") : (mobileTab === tab.id ? "mobile-tab-active" : "mobile-tab-inactive")}`}
               >
                 {tab.id === "live" && liveGame && <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />}
-                <tab.icon className="w-3.5 h-3.5" />
-                {tab.label}
+                <tab.icon className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="tab-label">{tab.label}</span>
               </button>
             ))}
           </div>
