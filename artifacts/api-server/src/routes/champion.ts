@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { riotFetch, handleRiotError } from "../lib/riot-fetch";
 import { cache } from "../lib/cache";
 import { riotLimit } from "../middlewares/rateLimit";
+import { getChampionId } from "../lib/ddragon";
 
 const router: IRouter = Router();
 
@@ -54,8 +55,10 @@ router.get("/:puuid/champion/:championName", async (req, res) => {
   const cluster = REGION_TO_CLUSTER[region.toUpperCase()] ?? "europe";
 
   try {
-    // Fetch up to fetchCount matches to find enough for this champion
-    const matchListUrl = `https://${cluster}.api.riotgames.com/lol/match/v5/matches/by-puuid/${puuid}/ids?count=${fetchCount}`;
+    // Try to filter by champion ID so Riot returns only relevant matches
+    const championId = getChampionId(championName);
+    const champParam = championId != null ? `&champion=${championId}` : "";
+    const matchListUrl = `https://${cluster}.api.riotgames.com/lol/match/v5/matches/by-puuid/${puuid}/ids?count=${fetchCount}${champParam}`;
     const matchListRes = await riotFetch(matchListUrl);
     const matchIds = (await matchListRes.json()) as string[];
 
@@ -80,17 +83,19 @@ router.get("/:puuid/champion/:championName", async (req, res) => {
       summoner2Id: number;
     }
 
+    // Fetch all match details in parallel batches to avoid sequential blocking
+    const BATCH_SIZE = 8;
     const championMatches: MatchEntry[] = [];
 
-    for (const matchId of matchIds) {
+    async function fetchMatchEntry(matchId: string): Promise<MatchEntry | null> {
       try {
         const matchUrl = `https://${cluster}.api.riotgames.com/lol/match/v5/matches/${matchId}`;
         const matchRes = await riotFetch(matchUrl);
         const md = (await matchRes.json()) as any;
         const all: any[] = md.info?.participants ?? [];
         const p = all.find((x: any) => x.puuid === puuid);
-        if (!p) continue;
-        if (p.championName !== championName) continue;
+        if (!p) return null;
+        if (p.championName !== championName) return null;
 
         const myTeam = all.filter((x: any) => x.teamId === p.teamId);
         const teamKills = myTeam.reduce((s: number, x: any) => s + (x.kills ?? 0), 0);
@@ -98,12 +103,11 @@ router.get("/:puuid/champion/:championName", async (req, res) => {
         const gd = md.info.gameDuration as number;
         const dmg = p.totalDamageDealtToChampions as number;
         const win = p.win as boolean;
-
         const opp = all.find(
           (x: any) => x.teamId !== p.teamId && x.teamPosition === p.teamPosition && p.teamPosition
         );
 
-        championMatches.push({
+        return {
           matchId,
           win,
           kills: p.kills ?? 0,
@@ -122,8 +126,16 @@ router.get("/:puuid/champion/:championName", async (req, res) => {
           opponentChampion: opp ? (opp.championName as string) : null,
           summoner1Id: p.summoner1Id ?? 0,
           summoner2Id: p.summoner2Id ?? 0,
-        });
-      } catch { continue; }
+        };
+      } catch { return null; }
+    }
+
+    for (let i = 0; i < matchIds.length; i += BATCH_SIZE) {
+      const batch = matchIds.slice(i, i + BATCH_SIZE);
+      const results = await Promise.all(batch.map(fetchMatchEntry));
+      for (const entry of results) {
+        if (entry) championMatches.push(entry);
+      }
     }
 
     const total = championMatches.length;

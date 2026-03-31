@@ -55,4 +55,11 @@ export function getChampionMap(): Record<string, string> {
   return championMap;
 }
 
+export function getChampionId(championName: string): number | null {
+  for (const [id, name] of Object.entries(championMap)) {
+    if (name === championName) return Number(id);
+  }
+  return null;
+}
+
 refreshDataDragon().catch(() => {});
