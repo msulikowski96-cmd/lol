@@ -1160,24 +1160,70 @@ export default function Promo() {
     if (!webmBlob) return;
     setMp4State('loading');
     setMp4Progress(0);
+
     try {
       const { FFmpeg } = await import('@ffmpeg/ffmpeg');
-      const { fetchFile, toBlobURL } = await import('@ffmpeg/util');
+      const { fetchFile } = await import('@ffmpeg/util');
       const base = import.meta.env.BASE_URL;
       const ffmpeg = new FFmpeg();
+
+      // Track conversion progress (0-100)
       ffmpeg.on('progress', ({ progress }) => {
-        setMp4Progress(Math.round(progress * 100));
+        setMp4Progress(Math.max(0, Math.min(100, Math.round(progress * 100))));
       });
-      setMp4State('loading');
-      await ffmpeg.load({
-        coreURL: await toBlobURL(`${base}ffmpeg-core.js`, 'text/javascript'),
-        wasmURL: await toBlobURL(`${base}ffmpeg-core.wasm`, 'application/wasm'),
+
+      // Fetch WASM files manually with progress tracking
+      const fetchWithProgress = async (url: string, onProgress: (pct: number) => void) => {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
+        const total = Number(res.headers.get('content-length') || 0);
+        const reader = res.body!.getReader();
+        const chunks: Uint8Array[] = [];
+        let received = 0;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          chunks.push(value);
+          received += value.length;
+          if (total > 0) onProgress(Math.round((received / total) * 100));
+        }
+        const buf = new Uint8Array(received);
+        let pos = 0;
+        for (const c of chunks) { buf.set(c, pos); pos += c.length; }
+        return buf.buffer;
+      };
+
+      // Step 1: Load JS (fast, ~112KB)
+      setMp4Progress(2);
+      const coreJsBuf = await fetchWithProgress(`${base}ffmpeg-core.js`, () => {});
+      const coreJsBlob = new Blob([coreJsBuf], { type: 'text/javascript' });
+      const coreJsUrl = URL.createObjectURL(coreJsBlob);
+
+      // Step 2: Load WASM (~31MB) with download progress mapped to 2→50
+      const wasmBuf = await fetchWithProgress(`${base}ffmpeg-core.wasm`, (pct) => {
+        setMp4Progress(2 + Math.round(pct * 0.48));
       });
+      const wasmBlob = new Blob([wasmBuf], { type: 'application/wasm' });
+      const wasmUrl = URL.createObjectURL(wasmBlob);
+
+      setMp4Progress(50);
+      await ffmpeg.load({ coreURL: coreJsUrl, wasmURL: wasmUrl });
+      URL.revokeObjectURL(coreJsUrl);
+      URL.revokeObjectURL(wasmUrl);
+
+      // Step 3: Convert
       setMp4State('converting');
+      setMp4Progress(50);
       await ffmpeg.writeFile('input.webm', await fetchFile(webmBlob));
-      await ffmpeg.exec(['-i', 'input.webm', '-c:v', 'libx264', '-preset', 'fast', '-crf', '23', '-movflags', '+faststart', 'output.mp4']);
+      await ffmpeg.exec([
+        '-i', 'input.webm',
+        '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '26',
+        '-movflags', '+faststart',
+        'output.mp4',
+      ]);
+
       const data = await ffmpeg.readFile('output.mp4');
-      const mp4Blob = new Blob([data], { type: 'video/mp4' });
+      const mp4Blob = new Blob([data as ArrayBuffer], { type: 'video/mp4' });
       const url = URL.createObjectURL(mp4Blob);
       const a = document.createElement('a');
       a.href = url;
@@ -1250,10 +1296,10 @@ export default function Promo() {
                 {(mp4State === 'idle' || mp4State === 'done') && <Download className="w-3.5 h-3.5" />}
                 {mp4State === 'error' && <AlertTriangle className="w-3.5 h-3.5" />}
                 {mp4State === 'idle' && 'Eksportuj do MP4'}
-                {mp4State === 'loading' && 'Ładowanie ffmpeg…'}
+                {mp4State === 'loading' && `Pobieranie… ${mp4Progress}%`}
                 {mp4State === 'converting' && `Konwertowanie… ${mp4Progress}%`}
                 {mp4State === 'done' && 'MP4 gotowy!'}
-                {mp4State === 'error' && 'Błąd konwersji'}
+                {mp4State === 'error' && 'Błąd — spróbuj ponownie'}
               </button>
             </>
           )}
@@ -1263,10 +1309,17 @@ export default function Promo() {
             <motion.div
               className="h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full"
               initial={{ width: '0%' }}
-              animate={{ width: mp4State === 'loading' ? '15%' : `${mp4Progress}%` }}
-              transition={{ duration: 0.4 }}
+              animate={{ width: `${mp4Progress}%` }}
+              transition={{ duration: 0.3 }}
             />
           </div>
+        )}
+        {(mp4State === 'loading' || mp4State === 'converting') && (
+          <p className="text-[10px] text-muted-foreground text-center">
+            {mp4State === 'loading'
+              ? 'Pobieranie silnika konwersji (31 MB)…'
+              : 'Trwa konwersja do H.264 / MP4…'}
+          </p>
         )}
         <span className="text-[11px] text-muted-foreground/50">Scena {currentScene + 1}/{SCENE_COUNT}</span>
       </div>
