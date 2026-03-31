@@ -144,6 +144,85 @@ function TeamSection({ participants, team, maxDmg, selfPuuid, label, color }: { 
 
 type Insight = { text: string; type: "positive" | "negative" | "neutral" };
 
+function computePlayerScore(p: any): number {
+  const sup = p.teamPosition === "UTILITY";
+  const jung = p.teamPosition === "JUNGLE";
+  const kda = p.deaths === 0 ? (p.kills + p.assists) * 1.2 : (p.kills + p.assists) / p.deaths;
+  const kp = typeof p.killParticipation === "number" ? p.killParticipation : 0;
+
+  // KDA component (0-35)
+  const kdaScore = Math.min(35, (kda / (kda + 2)) * 48);
+
+  // KP component (0-20)
+  const kpScore = Math.min(20, (kp / 100) * 22);
+
+  // CS component (0-20, skip supports)
+  let csScore = 0;
+  if (!sup) {
+    const target = jung ? 5.5 : 7.5;
+    csScore = Math.min(20, (p.csPerMin / target) * 20);
+  } else {
+    csScore = 10; // supports get neutral CS score
+  }
+
+  // Vision component (0-15)
+  const visionTarget = sup ? 50 : 18;
+  const visionScore = Math.min(15, (p.visionScore / visionTarget) * 15);
+
+  // Death penalty (0 to -12)
+  const deathPenalty = Math.min(12, Math.max(0, (p.deaths - 2) * 2.5));
+
+  // Win bonus
+  const winBonus = p.win ? 7 : 0;
+
+  const raw = kdaScore + kpScore + csScore + visionScore - deathPenalty + winBonus;
+  return Math.round(Math.max(0, Math.min(100, raw)));
+}
+
+function scoreToGrade(score: number): { grade: string; color: string; arc: string } {
+  if (score >= 90) return { grade: "S+", color: "#f59e0b", arc: "#f59e0b" };
+  if (score >= 80) return { grade: "S",  color: "#f59e0b", arc: "#f59e0b" };
+  if (score >= 70) return { grade: "A",  color: "#10b981", arc: "#10b981" };
+  if (score >= 58) return { grade: "B",  color: "#38bdf8", arc: "#38bdf8" };
+  if (score >= 45) return { grade: "C",  color: "#94a3b8", arc: "#94a3b8" };
+  if (score >= 30) return { grade: "D",  color: "#f87171", arc: "#f87171" };
+  return                { grade: "F",  color: "#ef4444", arc: "#ef4444" };
+}
+
+function ScoreRing({ score }: { score: number }) {
+  const { grade, color } = scoreToGrade(score);
+  const r = 18;
+  const cx = 24, cy = 24;
+  const circumference = 2 * Math.PI * r;
+  const pct = score / 100;
+  const dash = circumference * pct;
+  const gap = circumference - dash;
+
+  return (
+    <div className="flex items-center gap-2 flex-shrink-0">
+      <div className="relative w-12 h-12">
+        <svg width="48" height="48" className="rotate-[-90deg]" viewBox="0 0 48 48">
+          <circle cx={cx} cy={cy} r={r} fill="none" stroke="hsl(220,15%,88%)" strokeWidth="4" />
+          <circle
+            cx={cx} cy={cy} r={r} fill="none"
+            stroke={color} strokeWidth="4"
+            strokeDasharray={`${dash} ${gap}`}
+            strokeLinecap="round"
+            style={{ transition: "stroke-dasharray 0.4s ease" }}
+          />
+        </svg>
+        <span className="absolute inset-0 flex items-center justify-center text-[11px] font-black" style={{ color }}>
+          {grade}
+        </span>
+      </div>
+      <div>
+        <p className="text-[9px] uppercase tracking-widest font-bold text-muted-foreground leading-none mb-0.5">Wynik</p>
+        <p className="text-xl font-black leading-none" style={{ color }}>{score}</p>
+      </div>
+    </div>
+  );
+}
+
 function isSupport(p: any) { return p.teamPosition === "UTILITY"; }
 function isJungle(p: any) { return p.teamPosition === "JUNGLE"; }
 
@@ -286,36 +365,42 @@ function PlayerInsightCard({ p, team, allParticipants }: { p: any; team: any[]; 
   const negatives = insights.filter(i => i.type === "negative");
   const neutrals = insights.filter(i => i.type === "neutral");
 
-  if (insights.length === 0) return null;
-
-  const score = positives.length - negatives.length;
-  const overallColor = score >= 2 ? "border-green-200 bg-green-50" : score <= -2 ? "border-red-200 bg-red-50" : "border-border bg-card";
+  const perfScore = computePlayerScore(p);
+  const borderStyle = perfScore >= 70 ? "border-green-200/60" : perfScore <= 35 ? "border-red-200/60" : "border-border/60";
 
   return (
-    <div className={`rounded-lg border ${overallColor} overflow-hidden`}>
+    <div className={`rounded-xl border ${borderStyle} bg-card overflow-hidden shadow-sm`}>
       <button
         onClick={() => setExpanded(v => !v)}
-        className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left hover:bg-muted/30 transition-colors"
+        className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-muted/20 transition-colors"
       >
-        <img src={`${dd}/champion/${p.championName}.png`} alt={p.championName}
-          className="w-7 h-7 rounded-lg border border-border flex-shrink-0"
-          onError={(e) => { e.currentTarget.src = `${BASE_URL}/images/fallback-champion.png`; }} />
-        <div className="flex-1 min-w-0">
-          <span className="text-xs font-semibold text-foreground truncate block">{p.summonerName}</span>
-          <span className="text-[9px] text-muted-foreground">{p.championName}</span>
+        {/* Score ring */}
+        <ScoreRing score={perfScore} />
+
+        {/* Champion icon + name */}
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <img src={`${dd}/champion/${p.championName}.png`} alt={p.championName}
+            className="w-8 h-8 rounded-lg border border-border flex-shrink-0"
+            onError={(e) => { e.currentTarget.src = `${BASE_URL}/images/fallback-champion.png`; }} />
+          <div className="min-w-0">
+            <span className="text-xs font-bold text-foreground truncate block">{p.summonerName}</span>
+            <span className="text-[9px] text-muted-foreground">{p.championName} · {p.kills}/{p.deaths}/{p.assists}</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+
+        {/* Insight counts + chevron */}
+        <div className="flex items-center gap-1.5 flex-shrink-0">
           {positives.length > 0 && (
-            <span className="flex items-center gap-0.5 text-[10px] font-bold text-green-600">
-              <TrendingUp className="w-3 h-3" /> {positives.length}
+            <span className="flex items-center gap-0.5 text-[10px] font-bold text-green-600 bg-green-50 rounded px-1 py-0.5">
+              <TrendingUp className="w-2.5 h-2.5" /> {positives.length}
             </span>
           )}
           {negatives.length > 0 && (
-            <span className="flex items-center gap-0.5 text-[10px] font-bold text-red-500">
-              <TrendingDown className="w-3 h-3" /> {negatives.length}
+            <span className="flex items-center gap-0.5 text-[10px] font-bold text-red-500 bg-red-50 rounded px-1 py-0.5">
+              <TrendingDown className="w-2.5 h-2.5" /> {negatives.length}
             </span>
           )}
-          {expanded ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground/50" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground/50" />}
+          {expanded ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground/40 ml-1" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground/40 ml-1" />}
         </div>
       </button>
 
