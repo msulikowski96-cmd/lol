@@ -1059,11 +1059,15 @@ const TOTAL_DURATION = SCENE_DURATIONS.reduce((a, b) => a + b, 0);
 const SCENE_COUNT = SCENE_DURATIONS.length;
 
 type RecordState = 'idle' | 'capturing' | 'recording' | 'done';
+type Mp4State = 'idle' | 'loading' | 'converting' | 'done' | 'error';
 
 export default function Promo() {
   const [currentScene, setCurrentScene] = useState(0);
   const [recordState, setRecordState] = useState<RecordState>('idle');
   const [countdown, setCountdown] = useState(0);
+  const [webmBlob, setWebmBlob] = useState<Blob | null>(null);
+  const [mp4State, setMp4State] = useState<Mp4State>('idle');
+  const [mp4Progress, setMp4Progress] = useState(0);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -1086,8 +1090,9 @@ export default function Promo() {
     setCurrentScene(0);
     setRecordState('capturing');
     setCountdown(Math.round(TOTAL_DURATION / 1000));
+    setWebmBlob(null);
+    setMp4State('idle');
 
-    // Hidden canvas that feeds the MediaRecorder
     const canvas = document.createElement('canvas');
     canvas.width = 540;
     canvas.height = 960;
@@ -1105,14 +1110,8 @@ export default function Promo() {
     recorder.onstop = () => {
       stream.getTracks().forEach(t => t.stop());
       const blob = new Blob(chunksRef.current, { type: mimeType });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'nexus-sight-promo.webm';
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      setWebmBlob(blob);
       setRecordState('done');
-      setTimeout(() => setRecordState('idle'), 5000);
     };
 
     recorder.start(200);
@@ -1122,7 +1121,6 @@ export default function Promo() {
       setCountdown(c => { if (c <= 1) { clearInterval(tick); return 0; } return c - 1; });
     }, 1000);
 
-    // html2canvas capture loop — runs as fast as possible
     const captureLoop = async () => {
       if (!capturingRef.current) return;
       try {
@@ -1136,10 +1134,9 @@ export default function Promo() {
         });
         ctx.drawImage(snap, 0, 0, 540, 960);
       } catch { /* skip frame on error */ }
-      if (capturingRef.current) setTimeout(captureLoop, 40); // ~25fps target
+      if (capturingRef.current) setTimeout(captureLoop, 40);
     };
 
-    // Wait a tick for the animation to reset to scene 0, then start capturing
     setTimeout(captureLoop, 150);
 
     setTimeout(() => {
@@ -1149,40 +1146,126 @@ export default function Promo() {
     }, TOTAL_DURATION + 600);
   };
 
+  const handleDownloadWebm = () => {
+    if (!webmBlob) return;
+    const url = URL.createObjectURL(webmBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'nexus-sight-promo.webm';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  };
+
+  const handleExportMp4 = async () => {
+    if (!webmBlob) return;
+    setMp4State('loading');
+    setMp4Progress(0);
+    try {
+      const { FFmpeg } = await import('@ffmpeg/ffmpeg');
+      const { fetchFile, toBlobURL } = await import('@ffmpeg/util');
+      const base = import.meta.env.BASE_URL;
+      const ffmpeg = new FFmpeg();
+      ffmpeg.on('progress', ({ progress }) => {
+        setMp4Progress(Math.round(progress * 100));
+      });
+      setMp4State('loading');
+      await ffmpeg.load({
+        coreURL: await toBlobURL(`${base}ffmpeg-core.js`, 'text/javascript'),
+        wasmURL: await toBlobURL(`${base}ffmpeg-core.wasm`, 'application/wasm'),
+      });
+      setMp4State('converting');
+      await ffmpeg.writeFile('input.webm', await fetchFile(webmBlob));
+      await ffmpeg.exec(['-i', 'input.webm', '-c:v', 'libx264', '-preset', 'fast', '-crf', '23', '-movflags', '+faststart', 'output.mp4']);
+      const data = await ffmpeg.readFile('output.mp4');
+      const mp4Blob = new Blob([data], { type: 'video/mp4' });
+      const url = URL.createObjectURL(mp4Blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'nexus-sight-promo.mp4';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      setMp4State('done');
+    } catch (err) {
+      console.error('MP4 export error:', err);
+      setMp4State('error');
+    }
+  };
+
   return (
     <div className="w-full h-screen bg-background overflow-hidden relative flex flex-col items-center justify-center font-sans select-none gap-4">
 
       {/* Controls bar */}
-      <div className="flex items-center gap-3 z-20 flex-wrap justify-center px-4">
-        {recordState === 'idle' && (
-          <button
-            onClick={handleRecord}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all hover:scale-105 active:scale-95"
-            style={{ background: "linear-gradient(135deg, hsl(42,92%,52%), hsl(38,85%,44%))", color: "hsl(228,32%,4%)", boxShadow: "0 4px 20px rgba(202,138,4,0.3)" }}
-          >
-            <Download className="w-4 h-4" />
-            Pobierz wideo (~60s)
-          </button>
-        )}
-        {recordState === 'capturing' && (
-          <div className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm text-muted-foreground"
-            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Przygotowuję nagranie…
-          </div>
-        )}
-        {recordState === 'recording' && (
-          <div className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold"
-            style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171" }}>
-            <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
-            Nagrywanie… {countdown}s
-          </div>
-        )}
-        {recordState === 'done' && (
-          <div className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold"
-            style={{ background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.3)", color: "#4ade80" }}>
-            <Download className="w-4 h-4" />
-            Pobrano! Plik .webm gotowy do TikToka
+      <div className="flex flex-col items-center gap-2 z-20 px-4 w-full max-w-[420px]">
+        <div className="flex items-center gap-2 flex-wrap justify-center w-full">
+          {recordState === 'idle' && (
+            <button
+              onClick={handleRecord}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all hover:scale-105 active:scale-95"
+              style={{ background: "linear-gradient(135deg, hsl(42,92%,52%), hsl(38,85%,44%))", color: "hsl(228,32%,4%)", boxShadow: "0 4px 20px rgba(202,138,4,0.3)" }}
+            >
+              <Video className="w-4 h-4" />
+              Nagraj wideo (~60s)
+            </button>
+          )}
+          {recordState === 'capturing' && (
+            <div className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm text-muted-foreground"
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Przygotowuję nagranie…
+            </div>
+          )}
+          {recordState === 'recording' && (
+            <div className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold"
+              style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171" }}>
+              <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
+              Nagrywanie… {countdown}s
+            </div>
+          )}
+          {recordState === 'done' && webmBlob && (
+            <>
+              <button
+                onClick={handleRecord}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-all hover:scale-105 active:scale-95"
+                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.7)" }}
+              >
+                <Video className="w-3.5 h-3.5" />
+                Nagraj ponownie
+              </button>
+              <button
+                onClick={handleDownloadWebm}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all hover:scale-105 active:scale-95"
+                style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", color: "#4ade80" }}
+              >
+                <Download className="w-3.5 h-3.5" />
+                Pobierz WebM
+              </button>
+              <button
+                onClick={handleExportMp4}
+                disabled={mp4State === 'loading' || mp4State === 'converting'}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all hover:scale-105 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
+                style={{ background: "linear-gradient(135deg, hsl(217,91%,50%), hsl(230,85%,45%))", color: "white", boxShadow: "0 4px 20px rgba(59,130,246,0.35)" }}
+              >
+                {mp4State === 'loading' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                {mp4State === 'converting' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                {(mp4State === 'idle' || mp4State === 'done') && <Download className="w-3.5 h-3.5" />}
+                {mp4State === 'error' && <AlertTriangle className="w-3.5 h-3.5" />}
+                {mp4State === 'idle' && 'Eksportuj do MP4'}
+                {mp4State === 'loading' && 'Ładowanie ffmpeg…'}
+                {mp4State === 'converting' && `Konwertowanie… ${mp4Progress}%`}
+                {mp4State === 'done' && 'MP4 gotowy!'}
+                {mp4State === 'error' && 'Błąd konwersji'}
+              </button>
+            </>
+          )}
+        </div>
+        {(mp4State === 'loading' || mp4State === 'converting') && (
+          <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+            <motion.div
+              className="h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full"
+              initial={{ width: '0%' }}
+              animate={{ width: mp4State === 'loading' ? '15%' : `${mp4Progress}%` }}
+              transition={{ duration: 0.4 }}
+            />
           </div>
         )}
         <span className="text-[11px] text-muted-foreground/50">Scena {currentScene + 1}/{SCENE_COUNT}</span>
