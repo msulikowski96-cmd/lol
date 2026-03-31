@@ -45,6 +45,16 @@ router.post("/stripe/create-ai-checkout", async (req: Request, res: Response) =>
     return;
   }
 
+  let safeSuccessUrl: string;
+  let safeCancelUrl: string;
+  try {
+    safeSuccessUrl = new URL(successUrl).toString();
+    safeCancelUrl = new URL(cancelUrl).toString();
+  } catch {
+    res.status(400).json({ error: "bad_request", message: "Nieprawidłowy successUrl lub cancelUrl" });
+    return;
+  }
+
   try {
     const stripe = await getUncachableStripeClient();
 
@@ -66,8 +76,8 @@ router.post("/stripe/create-ai-checkout", async (req: Request, res: Response) =>
         },
       ],
       mode: "payment",
-      success_url: `${successUrl}?paid=1`,
-      cancel_url: cancelUrl,
+      success_url: `${safeSuccessUrl}?paid=1`,
+      cancel_url: safeCancelUrl,
       metadata: {
         puuid,
         region,

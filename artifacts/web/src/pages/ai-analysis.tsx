@@ -173,8 +173,8 @@ function PaymentWall({ gameName, tagLine, puuid, region, authToken }: {
     setLoading(true);
     setError(null);
     try {
-      const currentUrl = window.location.href.split("?")[0];
-      const profileUrl = `${BASE_URL}/profile/${region}/${gameName}/${tagLine}`;
+      const currentUrl = window.location.origin + window.location.pathname.split("?")[0];
+      const profileUrl = `${window.location.origin}${BASE_URL}profile/${encodeURIComponent(region)}/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`;
       const res = await fetch(`${BASE_URL}/api/stripe/create-ai-checkout`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
