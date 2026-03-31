@@ -12,8 +12,11 @@ import {
   Brain, Zap, BookOpen, XCircle,
   Wifi, Clock, Star, GraduationCap, Timer,
   Layers, ArrowUpRight, ArrowDownRight, Info, Users,
-  Share2, Copy, CheckCheck, ChevronRight, RefreshCw, Crosshair, Activity
+  Share2, Copy, CheckCheck, ChevronRight, RefreshCw, Crosshair, Activity,
+  Heart, ExternalLink
 } from "lucide-react";
+import { toggleFavorite, isFavorite } from "@/lib/favorites";
+import { addRankSnapshot } from "@/lib/rankHistory";
 import {
   useSearchSummoner,
   useGetSummonerRanked,
@@ -329,7 +332,7 @@ function MatchParticipantRow({ p, isSelf }: { p: any; isSelf: boolean }) {
   );
 }
 
-function MatchRow({ match, index, selfPuuid }: { match: any; index: number; selfPuuid?: string }) {
+function MatchRow({ match, index, selfPuuid, region, gameName, tagLine }: { match: any; index: number; selfPuuid?: string; region?: string; gameName?: string; tagLine?: string }) {
   const [expanded, setExpanded] = useState(false);
   const w = match.win;
   const kda = match.deaths === 0 ? "Perf" : ((match.kills + match.assists) / match.deaths).toFixed(1);
@@ -372,6 +375,16 @@ function MatchRow({ match, index, selfPuuid }: { match: any; index: number; self
           <div className="text-[10px] text-muted-foreground">{match.cs} CS · {dur}</div>
         </div>
         {match.opScore !== undefined && <OpScoreBadge score={match.opScore} />}
+        {region && gameName && tagLine && match.matchId && (
+          <Link
+            href={`/match/${region}/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}/${match.matchId}`}
+            onClick={(e) => e.stopPropagation()}
+            className="flex-shrink-0 text-muted-foreground/30 hover:text-primary transition-colors"
+            title="Szczegóły meczu"
+          >
+            <ExternalLink className="w-3 h-3" />
+          </Link>
+        )}
         {hasParticipants && (
           <motion.div animate={{ rotate: expanded ? 180 : 0 }} transition={{ duration: 0.2 }} className="flex-shrink-0">
             <ChevronDown className="w-3.5 h-3.5 text-muted-foreground/50" />
@@ -1075,6 +1088,7 @@ export default function Profile() {
   const [mobileTab, setMobileTab] = useState<MobileTab>("analiza");
   const [matchCount, setMatchCount] = useState(10);
   const [shareState, setShareState] = useState<"idle" | "copied">("idle");
+  const [fav, setFav] = useState(false);
 
   const handleTabClick = (tabId: MobileTab) => {
     if (tabId === "live") {
@@ -1102,6 +1116,25 @@ export default function Profile() {
   useEffect(() => {
     if (profile?.gameName) pushHistory(profile.gameName, profile.tagLine ?? tagLine, region);
   }, [profile?.gameName]);
+
+  useEffect(() => {
+    setFav(isFavorite({ gameName, tagLine, region }));
+  }, [gameName, tagLine, region]);
+
+  useEffect(() => {
+    if (!puuid || !rankedStats) return;
+    const soloEntry = (rankedStats as any[]).find((r: any) => r.queueType === "RANKED_SOLO_5x5");
+    if (soloEntry?.tier && soloEntry?.rank && puuid) {
+      addRankSnapshot(puuid, {
+        date: Date.now(),
+        tier: soloEntry.tier,
+        rank: soloEntry.rank,
+        lp: soloEntry.leaguePoints ?? 0,
+        wins: soloEntry.wins ?? 0,
+        losses: soloEntry.losses ?? 0,
+      });
+    }
+  }, [puuid, rankedStats]);
 
   const handleShare = () => {
     navigator.clipboard.writeText(window.location.href).then(() => {
@@ -1184,6 +1217,20 @@ export default function Profile() {
               >
                 {shareState === "copied" ? <CheckCheck className="w-3 h-3" /> : <Share2 className="w-3 h-3" />}
                 {shareState === "copied" ? "Skopiowano!" : "Udostępnij"}
+              </button>
+              <button
+                onClick={() => {
+                  const next = toggleFavorite({ gameName, tagLine, region });
+                  setFav(next);
+                }}
+                title={fav ? "Usuń z ulubionych" : "Dodaj do ulubionych"}
+                className="flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-[4px] transition-all flex-shrink-0"
+                style={fav
+                  ? { background: "hsl(0,70%,97%)", border: "1px solid hsl(0,55%,82%)", color: "hsl(0,70%,55%)", fontFamily: "'Rajdhani',sans-serif", fontWeight: 700 }
+                  : { background: "hsl(220,15%,96%)", border: "1px solid hsl(220,15%,88%)", color: "hsl(220,10%,50%)", fontFamily: "'Rajdhani',sans-serif", fontWeight: 700 }}
+              >
+                <Heart className={`w-3 h-3 transition-all ${fav ? "fill-current" : ""}`} />
+                {fav ? "Ulubiony" : "Ulubione"}
               </button>
               {liveGame && (
                 <Link to={`/live/${region}/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`}>
@@ -1399,7 +1446,7 @@ export default function Profile() {
                   ? Array(5).fill(0).map((_, i) => <div key={i} className="h-14 rounded-lg animate-pulse" style={{ background: "hsl(220,15%,94%)" }} />)
                   : matches?.length === 0
                     ? <p className="text-xs text-muted-foreground text-center py-3">Brak historii</p>
-                    : matches?.map((m: any, i: number) => <MatchRow key={m.matchId} match={m} index={i} selfPuuid={puuid} />)
+                    : matches?.map((m: any, i: number) => <MatchRow key={m.matchId} match={m} index={i} selfPuuid={puuid} region={region} gameName={gameName} tagLine={tagLine} />)
                 }
               </div>
               {!isLoadingMatches && (matches?.length ?? 0) > 0 && (

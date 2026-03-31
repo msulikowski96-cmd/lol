@@ -12,7 +12,9 @@ import Privacy from "@/pages/privacy";
 import Terms from "@/pages/terms";
 import About from "@/pages/about";
 import Champion from "@/pages/champion";
+import MatchPage from "@/pages/match";
 import Footer from "@/components/Footer";
+import CookieConsent from "@/components/CookieConsent";
 import { setDDVersion } from "@/lib/constants";
 
 const BASE_URL = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -46,6 +48,7 @@ function Router() {
       <Route path="/promo" component={Promo} />
       <Route path="/profile/:region/:gameName/:tagLine" component={Profile} />
       <Route path="/champion/:region/:gameName/:tagLine/:championName" component={Champion} />
+      <Route path="/match/:region/:gameName/:tagLine/:matchId" component={MatchPage} />
       <Route path="/live/:region/:gameName/:tagLine" component={LiveGame} />
       <Route path="/privacy" component={Privacy} />
       <Route path="/terms" component={Terms} />
@@ -67,6 +70,7 @@ function App() {
             </div>
             <Footer />
           </div>
+          <CookieConsent />
         </WouterRouter>
         <Toaster />
       </TooltipProvider>

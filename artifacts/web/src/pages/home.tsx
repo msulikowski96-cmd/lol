@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, ChevronRight, BarChart3, Zap, Shield, Users, Clock, X, Activity } from "lucide-react";
+import { Search, ChevronRight, BarChart3, Zap, Shield, Users, Clock, X, Activity, Heart } from "lucide-react";
+import { getFavorites, toggleFavorite, type Favorite } from "@/lib/favorites";
 
 const HISTORY_KEY = "nexus_sight_history";
 const MAX_HISTORY = 8;
@@ -103,9 +104,13 @@ export default function Home() {
   const [gameName, setGameName] = useState("");
   const [tagLine, setTagLine] = useState("");
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [focused, setFocused] = useState(false);
 
-  useEffect(() => { setHistory(loadHistory()); }, []);
+  useEffect(() => {
+    setHistory(loadHistory());
+    setFavorites(getFavorites());
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -237,6 +242,60 @@ export default function Home() {
             </button>
           </div>
         </motion.form>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.38 }}
+          className="mb-4 w-full"
+        >
+          <AnimatePresence>
+            {favorites.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mb-4"
+              >
+                <div className="flex items-center gap-2 mb-2.5">
+                  <Heart className="w-3 h-3 text-red-400 fill-red-400" />
+                  <span className="data-label">Ulubieni gracze</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {favorites.map((f) => (
+                    <motion.div
+                      key={`${f.gameName}-${f.tagLine}-${f.region}`}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.85 }}
+                      className="flex items-center gap-0 rounded-[6px] overflow-hidden"
+                      style={{ background: "hsl(0,70%,97%)", border: "1px solid hsl(0,55%,88%)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+                    >
+                      <button
+                        onClick={() => setLocation(`/profile/${f.region}/${encodeURIComponent(f.gameName)}/${encodeURIComponent(f.tagLine)}`)}
+                        className="text-[11px] px-3 py-1.5 text-left transition-colors hover:bg-red-50"
+                        style={{ fontFamily: "'Rajdhani',sans-serif", fontWeight: 600 }}
+                      >
+                        <span className="font-bold text-foreground">{f.gameName}</span>
+                        <span className="text-red-400">#{f.tagLine}</span>
+                        <span className="ml-2 text-[9px] tracking-wider text-muted-foreground">{f.region}</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          toggleFavorite(f);
+                          setFavorites(getFavorites());
+                        }}
+                        className="pr-2.5 pl-1 text-red-300 hover:text-red-500 transition-colors"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
 
         <motion.div
           initial={{ opacity: 0 }}
