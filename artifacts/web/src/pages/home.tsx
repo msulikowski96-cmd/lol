@@ -3,6 +3,8 @@ import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, ChevronRight, BarChart3, Zap, Shield, Users, Clock, X, Activity, Heart } from "lucide-react";
 import { getFavorites, toggleFavorite, type Favorite } from "@/lib/favorites";
+import { usePageTitle } from "@/lib/usePageTitle";
+import AdBanner from "@/components/AdBanner";
 
 const HISTORY_KEY = "nexus_sight_history";
 const MAX_HISTORY = 8;
@@ -99,6 +101,7 @@ const FAQ_ITEMS = [
 ];
 
 export default function Home() {
+  usePageTitle();
   const [, setLocation] = useLocation();
   const [region, setRegion] = useState("EUW1");
   const [gameName, setGameName] = useState("");
@@ -402,6 +405,8 @@ export default function Home() {
           ))}
         </motion.div>
 
+        <AdBanner slot="1234567890" format="horizontal" className="w-full mt-10 mb-4" />
+
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -453,6 +458,8 @@ export default function Home() {
             </p>
           </div>
         </motion.section>
+
+        <AdBanner slot="3456789012" format="rectangle" className="w-full mt-6 mb-4" />
 
         <motion.div
           initial={{ opacity: 0 }}

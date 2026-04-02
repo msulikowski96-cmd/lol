@@ -8,6 +8,7 @@ import {
 } from "@workspace/api-client-react";
 
 import { DD, FALLBACK_ICON, SPELL_IMG, RUNE_STYLE_ICON, TIER_COLOR, TIER_LABEL } from "../lib/constants";
+import { usePageTitle } from "@/lib/usePageTitle";
 
 
 const GAME_MODE_LABEL: Record<string, string> = {
@@ -273,6 +274,7 @@ export default function LiveGame() {
   const region = params.region ?? "";
   const gameName = decodeURIComponent(params.gameName ?? "");
   const tagLine = decodeURIComponent(params.tagLine ?? "");
+  usePageTitle(`${gameName}#${tagLine} — Live Game`);
 
   const { data: summoner, isLoading: isSummonerLoading, error: summonerError } = useSearchSummoner({ gameName, tagLine, region }, {
     query: { enabled: !!gameName && !!tagLine && !!region },

@@ -1,7 +1,9 @@
 import { Link } from "wouter";
 import { ArrowLeft, Activity, BarChart3, Zap, Shield, Users, Brain, Target, TrendingUp } from "lucide-react";
+import { usePageTitle } from "@/lib/usePageTitle";
 
 export default function About() {
+  usePageTitle("O nas");
   return (
     <div className="bg-background">
       <div className="max-w-3xl mx-auto px-4 py-12">

@@ -11,6 +11,8 @@ import {
   BarChart3, Crosshair, ChevronRight, Info
 } from "lucide-react";
 import { useSearchSummoner, useGetSummonerRanked, useGetSummonerMastery } from "@workspace/api-client-react";
+import { usePageTitle } from "@/lib/usePageTitle";
+import AdBanner from "@/components/AdBanner";
 
 const BASE_URL = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -416,6 +418,7 @@ function AnalysisProseCard({ title, icon: Icon, text, color, accent }: { title: 
 
 function AiAnalysisInner() {
   const { region, gameName, tagLine } = useParams<{ region: string; gameName: string; tagLine: string }>();
+  usePageTitle(`${gameName}#${tagLine} — Analiza AI`);
   const [report, setReport] = useState<any>(null);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -995,6 +998,7 @@ function AiAnalysisInner() {
             </button>
           </div>
         )}
+        <AdBanner slot="4567890123" format="horizontal" className="mt-8 mb-4" />
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getConsent } from "./CookieConsent";
 
 interface AdBannerProps {
@@ -22,20 +22,32 @@ export default function AdBanner({
 }: AdBannerProps) {
   const ref = useRef<HTMLDivElement>(null);
   const pushed = useRef(false);
+  const [consent, setConsent] = useState(getConsent);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const current = getConsent();
+      if (current !== consent) setConsent(current);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [consent]);
 
   useEffect(() => {
     if (pushed.current) return;
-    if (getConsent() !== "accepted") return;
+    if (consent !== "accepted") return;
     if (!slot || slot === "TWOJ_SLOT_ID") return;
 
-    try {
-      window.adsbygoogle = window.adsbygoogle || [];
-      window.adsbygoogle.push({});
-      pushed.current = true;
-    } catch {
-      // ignore
-    }
-  }, [slot]);
+    const timer = setTimeout(() => {
+      try {
+        window.adsbygoogle = window.adsbygoogle || [];
+        window.adsbygoogle.push({});
+        pushed.current = true;
+      } catch {
+        // ignore
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [slot, consent]);
 
   if (!slot || slot === "TWOJ_SLOT_ID") return null;
 

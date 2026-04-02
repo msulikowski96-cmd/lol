@@ -5,6 +5,7 @@ import { ChevronLeft, Clock, Sword, Shield, Eye, Coins, Brain, TrendingUp, Trend
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
 import { getDDBase } from "@/lib/constants";
+import { usePageTitle } from "@/lib/usePageTitle";
 import { motion, AnimatePresence } from "framer-motion";
 
 const BASE_URL = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -669,6 +670,8 @@ export default function MatchPage() {
   const gameName = decodeURIComponent(params.gameName || "");
   const tagLine = decodeURIComponent(params.tagLine || "");
   const matchId = params.matchId as string;
+
+  usePageTitle(`Mecz ${matchId} — ${gameName}#${tagLine}`);
   const selfPuuid = params.selfPuuid as string | undefined;
 
   const { data, isLoading, error } = useQuery({

@@ -1,7 +1,9 @@
 import { Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
+import { usePageTitle } from "@/lib/usePageTitle";
 
 export default function Terms() {
+  usePageTitle("Regulamin");
   return (
     <div className="bg-background">
       <div className="max-w-3xl mx-auto px-4 py-12">

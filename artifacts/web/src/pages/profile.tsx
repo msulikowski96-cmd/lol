@@ -18,6 +18,8 @@ import {
 import { toggleFavorite, isFavorite } from "@/lib/favorites";
 import { addRankSnapshot, getRankHistory } from "@/lib/rankHistory";
 import BuildCalculator from "@/components/BuildCalculator";
+import { usePageTitle } from "@/lib/usePageTitle";
+import AdBanner from "@/components/AdBanner";
 import {
   useSearchSummoner,
   useGetSummonerRanked,
@@ -1590,6 +1592,7 @@ export default function Profile() {
   const region = params.region as string;
   const gameName = decodeURIComponent(params.gameName || "");
   const tagLine = decodeURIComponent(params.tagLine || "");
+  usePageTitle(`${gameName}#${tagLine} — Profil gracza LoL`);
   const [, navigate] = useLocation();
   const [mobileTab, setMobileTab] = useState<MobileTab>("analiza");
   const [matchCount, setMatchCount] = useState(10);
@@ -2032,6 +2035,7 @@ export default function Profile() {
               ) : (
                 <BuildCalculator />
               )}
+              <AdBanner slot="2345678901" format="rectangle" className="mt-6" />
             </div>
           </aside>
         </div>

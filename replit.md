@@ -52,6 +52,17 @@ TypeScript pnpm monorepo, fully in Polish. Users search players by Riot ID acros
 - `artifacts/web/src/lib/buildAlgorithm.ts` — Pure algorithm for build recommendations: champion DB (~140 champions with class/damageType/tags), analyzeEnemyTeam(), calculateBuild(). Returns items + runes based on enemy composition. No AI, all algorithmic logic.
 - `artifacts/web/src/components/BuildCalculator.tsx` — Build Calculator UI: champion picker modal with DDragon icons, enemy team slots (5x), result panel with items/boots/situational/runes with full icon support. Integrated as sub-tab in profile "Mecze" section.
 
+## AdSense & SEO
+- Google AdSense publisher ID: `ca-pub-7717242133259434`
+- AdSense script loads only after GDPR cookie consent (CookieConsent.tsx)
+- AdBanner component polls consent state and initializes ads reactively
+- ads.txt verified at `artifacts/web/public/ads.txt`
+- Dynamic page titles per route via `usePageTitle` hook (`artifacts/web/src/lib/usePageTitle.ts`)
+- Ad placements: home (2x), profile sidebar, AI analysis page
+- Structured data: WebApplication + FAQPage schemas in index.html
+- Noscript fallback with full SEO content in index.html for crawlers
+- sitemap.xml and robots.txt in `artifacts/web/public/`
+
 ## Important Notes
 - Never edit generated files in `lib/api-client-react/src/generated/` or `lib/api-zod/src/generated/`
 - `refetchInterval` in react-query v5 does NOT work on errored queries — use `useEffect + setInterval + refetch()` workaround

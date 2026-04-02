@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { getDDBase } from "@/lib/constants";
+import { usePageTitle } from "@/lib/usePageTitle";
 
 interface ChampionStats {
   championName: string;
@@ -127,6 +128,7 @@ function OpScoreBadge({ score }: { score: number }) {
 export default function Champion() {
   const params = useParams<{ region: string; gameName: string; tagLine: string; championName: string }>();
   const { region, gameName, tagLine, championName } = params;
+  usePageTitle(`${championName} — ${gameName}#${tagLine}`);
 
   const { data: summoner } = useQuery({
     queryKey: ["summoner", region, gameName, tagLine],
