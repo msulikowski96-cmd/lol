@@ -353,27 +353,40 @@ router.get("/:puuid/ai-report", async (req, res) => {
   }
 
   try {
-    const data = await fetchInternalData(puuid, region.toUpperCase());
-    const prompt = buildPrompt(data, gameName ?? "Gracz");
+    const timeoutMs = 60_000;
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("AI generation timed out")), timeoutMs)
+    );
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      config: { maxOutputTokens: 16000 },
-    });
+    const mainPromise = (async () => {
+      const data = await fetchInternalData(puuid, region.toUpperCase());
+      const prompt = buildPrompt(data, gameName ?? "Gracz");
 
-    const rawText = (response.text ?? "")
-      .replace(/^```(?:json)?\s*/m, "")
-      .replace(/```\s*$/m, "")
-      .trim();
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        config: { maxOutputTokens: 8192 },
+      });
 
-    let parsed: any;
-    try {
-      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-      parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : { error: "parse_failed" };
-    } catch {
-      parsed = { error: "parse_failed" };
-    }
+      const rawText = (response.text ?? "")
+        .replace(/^```(?:json)?\s*/m, "")
+        .replace(/```\s*$/m, "")
+        .trim();
+
+      let parsed: any;
+      try {
+        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+        parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : { error: "parse_failed" };
+      } catch {
+        parsed = { error: "parse_failed" };
+      }
+
+      return { data, parsed };
+    })();
+
+    const { data, parsed } = await Promise.race([mainPromise, timeoutPromise]);
+
+    if (res.headersSent || req.socket?.destroyed) return;
 
     const result = {
       report: parsed,
@@ -409,7 +422,12 @@ router.get("/:puuid/ai-report", async (req, res) => {
     cache.set(cacheKey, result, 300);
     res.json(result);
   } catch (err: any) {
-    res.status(500).json({ error: "ai_error", message: err?.message ?? "Unknown error" });
+    if (res.headersSent || req.socket?.destroyed) return;
+    const isTimeout = err?.message?.includes("timed out");
+    res.status(isTimeout ? 408 : 500).json({
+      error: isTimeout ? "timeout" : "ai_error",
+      message: err?.message ?? "Unknown error",
+    });
   }
 });
 
