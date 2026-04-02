@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { toggleFavorite, isFavorite } from "@/lib/favorites";
 import { addRankSnapshot, getRankHistory } from "@/lib/rankHistory";
+import BuildCalculator from "@/components/BuildCalculator";
 import {
   useSearchSummoner,
   useGetSummonerRanked,
@@ -1592,6 +1593,7 @@ export default function Profile() {
   const [, navigate] = useLocation();
   const [mobileTab, setMobileTab] = useState<MobileTab>("analiza");
   const [matchCount, setMatchCount] = useState(10);
+  const [matchSubTab, setMatchSubTab] = useState<"historia" | "kalkulator">("historia");
   const [shareState, setShareState] = useState<"idle" | "copied">("idle");
   const [fav, setFav] = useState(false);
 
@@ -1957,42 +1959,78 @@ export default function Profile() {
               );
             })()}
 
-            {/* Match History */}
+            {/* Match History + Build Calculator */}
             <div className={mobileTab === "rang" ? "hidden lg:block" : ""}>
-              <p className="section-title">
-                <Shield className="w-3.5 h-3.5 text-primary" /> Ostatnie mecze
-                <InfoTooltip align="right" text="Ostatnie gry rankingowe. W/L = wynik meczu. K/D/A = Zabójstwa/Śmierci/Asysty. CS = zabite minionki. Mała ikona na portrecie = bohater przeciwnika z Twojej linii. Liczba z prawej = OP Score (0–10). Kliknij mecz żeby zobaczyć wszystkich graczy." />
-              </p>
-              <div className="space-y-1.5">
-                {isLoadingMatches
-                  ? Array(5).fill(0).map((_, i) => <div key={i} className="h-14 rounded-lg animate-pulse" style={{ background: "hsl(220,15%,94%)" }} />)
-                  : matches?.length === 0
-                    ? <p className="text-xs text-muted-foreground text-center py-3">Brak historii</p>
-                    : matches?.map((m: any, i: number) => <MatchRow key={m.matchId} match={m} index={i} selfPuuid={puuid} region={region} gameName={gameName} tagLine={tagLine} />)
-                }
-              </div>
-              {!isLoadingMatches && (matches?.length ?? 0) > 0 && (
-                <div className="mt-2 flex gap-2">
-                  {matchCount < 30 && (
-                    <button
-                      onClick={() => setMatchCount(c => Math.min(c + 10, 30))}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs text-muted-foreground transition-all hover:text-primary hover:bg-muted"
-                      style={{ border: "1px solid hsl(220,15%,88%)" }}
-                    >
-                      <ChevronRight className="w-3.5 h-3.5" />
-                      Załaduj {Math.min(matchCount + 10, 30) - matchCount} więcej
-                    </button>
-                  )}
-                  {matchCount > 10 && (
-                    <button
-                      onClick={() => setMatchCount(10)}
-                      className="py-2 px-3 rounded-lg text-xs text-muted-foreground/50 transition-all hover:text-muted-foreground hover:bg-muted"
-                      style={{ border: "1px solid hsl(220,15%,90%)" }}
-                    >
-                      Zwiń
-                    </button>
-                  )}
+              <div className="flex items-center justify-between mb-3">
+                <p className="section-title mb-0">
+                  {matchSubTab === "historia"
+                    ? <><Shield className="w-3.5 h-3.5 text-primary" /> Ostatnie mecze</>
+                    : <><Swords className="w-3.5 h-3.5 text-primary" /> Kalkulator Buildu</>
+                  }
+                </p>
+                <div className="flex rounded-lg overflow-hidden flex-shrink-0" style={{ border: "1px solid hsl(220,15%,85%)" }}>
+                  <button
+                    onClick={() => setMatchSubTab("historia")}
+                    className="px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-wider transition-all"
+                    style={{
+                      fontFamily: "'Rajdhani',sans-serif",
+                      background: matchSubTab === "historia" ? "hsl(200,90%,35%)" : "white",
+                      color: matchSubTab === "historia" ? "white" : "hsl(220,10%,55%)",
+                    }}
+                  >
+                    Historia
+                  </button>
+                  <button
+                    onClick={() => setMatchSubTab("kalkulator")}
+                    className="px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-wider transition-all"
+                    style={{
+                      fontFamily: "'Rajdhani',sans-serif",
+                      background: matchSubTab === "kalkulator" ? "hsl(200,90%,35%)" : "white",
+                      color: matchSubTab === "kalkulator" ? "white" : "hsl(220,10%,55%)",
+                      borderLeft: "1px solid hsl(220,15%,85%)",
+                    }}
+                  >
+                    Kalkulator
+                  </button>
                 </div>
+              </div>
+
+              {matchSubTab === "historia" ? (
+                <>
+                  <div className="space-y-1.5">
+                    {isLoadingMatches
+                      ? Array(5).fill(0).map((_, i) => <div key={i} className="h-14 rounded-lg animate-pulse" style={{ background: "hsl(220,15%,94%)" }} />)
+                      : matches?.length === 0
+                        ? <p className="text-xs text-muted-foreground text-center py-3">Brak historii</p>
+                        : matches?.map((m: any, i: number) => <MatchRow key={m.matchId} match={m} index={i} selfPuuid={puuid} region={region} gameName={gameName} tagLine={tagLine} />)
+                    }
+                  </div>
+                  {!isLoadingMatches && (matches?.length ?? 0) > 0 && (
+                    <div className="mt-2 flex gap-2">
+                      {matchCount < 30 && (
+                        <button
+                          onClick={() => setMatchCount(c => Math.min(c + 10, 30))}
+                          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs text-muted-foreground transition-all hover:text-primary hover:bg-muted"
+                          style={{ border: "1px solid hsl(220,15%,88%)" }}
+                        >
+                          <ChevronRight className="w-3.5 h-3.5" />
+                          Załaduj {Math.min(matchCount + 10, 30) - matchCount} więcej
+                        </button>
+                      )}
+                      {matchCount > 10 && (
+                        <button
+                          onClick={() => setMatchCount(10)}
+                          className="py-2 px-3 rounded-lg text-xs text-muted-foreground/50 transition-all hover:text-muted-foreground hover:bg-muted"
+                          style={{ border: "1px solid hsl(220,15%,90%)" }}
+                        >
+                          Zwiń
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <BuildCalculator />
               )}
             </div>
           </aside>

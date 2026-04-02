@@ -15,7 +15,7 @@ args = ["pnpm", "store", "prune"]
 env = { "CI" = "true" }
 
 [workflows]
-runButton = "artifacts/api-server: API Server"
+runButton = "Start application"
 
 [[workflows.workflow]]
 name = "artifacts/web: web"
