@@ -3,13 +3,20 @@ import { GoogleGenAI } from "@google/genai";
 const REPLIT_PROXY_PATTERN = /localhost|127\.0\.0\.1|modelfarm/;
 
 function createClient(): GoogleGenAI {
+  const directKey = process.env.GEMINI_API_KEY;
   const baseUrl = process.env.AI_INTEGRATIONS_GEMINI_BASE_URL;
-  const apiKey = process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
+  const integrationKey = process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
+
+  const apiKey = directKey || integrationKey;
 
   if (!apiKey) {
     throw new Error(
-      "AI_INTEGRATIONS_GEMINI_API_KEY nie jest skonfigurowane.",
+      "Brak klucza API Gemini. Ustaw GEMINI_API_KEY lub skonfiguruj integrację AI.",
     );
+  }
+
+  if (directKey) {
+    return new GoogleGenAI({ apiKey: directKey });
   }
 
   const isReplitProxy = baseUrl && REPLIT_PROXY_PATTERN.test(baseUrl);
