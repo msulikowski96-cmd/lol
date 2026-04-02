@@ -919,23 +919,28 @@ function computeAnalysis(matches: MatchData[]) {
   }
   if (objectiveScore < 50) {
     const lpGain = Math.round(clamp((50 - objectiveScore) * 0.4, 2, 15));
-    improvementItems.push({ priority: 0, area: "Kontrola obiektywów", currentValue: `${avgDragonKills.toFixed(1)} smoków/mecz`, targetValue: `${(avgDragonKills * 1.5).toFixed(1)} smoków/mecz`, estimatedLpGain: lpGain, tip: `Po wygranej walce natychmiast idź na smoka/barona. Ogłaszaj cele drużynie 30 sek przed spawn.` });
+    const targetDragons = Math.max(avgDragonKills * 1.5, 0.5);
+    improvementItems.push({ priority: 0, area: "Kontrola obiektywów", currentValue: `${avgDragonKills.toFixed(1)} smoków, ${avgTurretKills.toFixed(1)} wież/mecz`, targetValue: `${targetDragons.toFixed(1)} smoków, ${(avgTurretKills + 1).toFixed(1)} wież/mecz`, estimatedLpGain: lpGain, tip: `Po wygranej walce natychmiast idź na smoka/barona. Ogłaszaj cele drużynie 30 sek przed spawn.` });
   }
   improvementItems.sort((a, b) => b.estimatedLpGain - a.estimatedLpGain);
   improvementItems.forEach((item, i) => { item.priority = i + 1; });
   const improvementRoadmap = improvementItems.slice(0, 5);
 
   // ─── Comeback Analysis ───
-  const comebackGames = validMatches.filter(m => {
-    const kda = computeKda(m.kills, m.deaths, m.assists);
+  const comebackGames: MatchData[] = [];
+  const snowballGames: MatchData[] = [];
+  const evenGames: MatchData[] = [];
+  for (const m of validMatches) {
     const cspm = m.gameDuration > 0 ? (m.cs / m.gameDuration) * 60 : 0;
-    return m.deaths > m.kills + 2 || (cspm < avgCsPerMin * 0.7 && m.gameDuration > 1200);
-  });
-  const snowballGames = validMatches.filter(m => {
-    const kda = computeKda(m.kills, m.deaths, m.assists);
-    return m.kills > m.deaths + 3 || (kda > avgKda * 1.4 && m.kills >= 5);
-  });
-  const evenGames = validMatches.filter(m => !comebackGames.includes(m) && !snowballGames.includes(m));
+    const mKda = computeKda(m.kills, m.deaths, m.assists);
+    if (m.deaths > m.kills + 2 || (cspm < avgCsPerMin * 0.7 && m.gameDuration > 1200)) {
+      comebackGames.push(m);
+    } else if (m.kills > m.deaths + 3 || (mKda > avgKda * 1.4 && m.kills >= 5)) {
+      snowballGames.push(m);
+    } else {
+      evenGames.push(m);
+    }
+  }
   const comebackWR = comebackGames.length > 0 ? (comebackGames.filter(m => m.win).length / comebackGames.length) * 100 : 0;
   const snowballWR = snowballGames.length > 0 ? (snowballGames.filter(m => m.win).length / snowballGames.length) * 100 : 0;
   const evenWR = evenGames.length > 0 ? (evenGames.filter(m => m.win).length / evenGames.length) * 100 : 0;
@@ -962,12 +967,13 @@ function computeAnalysis(matches: MatchData[]) {
   const avgSkillshotsDodged = mean(validMatches.map(m => m.skillshotsDodged));
   const totalLanded = validMatches.reduce((s, m) => s + m.skillshotsLanded, 0);
   const totalDodged = validMatches.reduce((s, m) => s + m.skillshotsDodged, 0);
-  const totalSkillshots = totalLanded + totalDodged;
-  const hitRateOverall = totalSkillshots > 0 ? (totalLanded / totalSkillshots) * 100 : 0;
-  const ssGrade = grade(clamp(hitRateOverall * 1.2, 0, 100));
-  const ssDesc = totalSkillshots > 10
-    ? `Celność: ${hitRateOverall.toFixed(0)}% (${totalLanded} trafień / ${totalSkillshots} prób). Średnio ${avgSkillshotsLanded.toFixed(0)} trafień i ${avgSkillshotsDodged.toFixed(0)} uników/mecz. ${hitRateOverall >= 65 ? "Precyzyjny gracz — skutecznie trafiasz umiejętności." : hitRateOverall >= 45 ? "Przyzwoita celność — trenuj predykcję ruchu przeciwnika." : "Niska celność — ćwicz timing i kąty umiejętności na botgame."}`
-    : "Za mało danych o skillshotach w tych meczach.";
+  const matchesWithSkillshotData = validMatches.filter(m => (m.skillshotsLanded + m.skillshotsDodged) > 0).length;
+  const totalSkillshotAttempts = totalLanded + totalDodged;
+  const hitRateOverall = totalSkillshotAttempts > 0 ? (totalLanded / totalSkillshotAttempts) * 100 : 0;
+  const ssGrade = totalSkillshotAttempts > 10 ? grade(clamp(hitRateOverall * 1.2, 0, 100)) : "F";
+  const ssDesc = totalSkillshotAttempts > 10
+    ? `Celność: ${hitRateOverall.toFixed(0)}% (${totalLanded} trafień / ${totalSkillshotAttempts} prób). Średnio ${(totalLanded / N).toFixed(0)} trafień i ${avgSkillshotsDodged.toFixed(0)} uników/mecz. ${hitRateOverall >= 65 ? "Precyzyjny gracz — skutecznie trafiasz umiejętności." : hitRateOverall >= 45 ? "Przyzwoita celność — trenuj predykcję ruchu przeciwnika." : "Niska celność — ćwicz timing i kąty umiejętności na botgame."}`
+    : matchesWithSkillshotData === 0 ? "Grasz bohaterami bez skillshotów — ta sekcja nie dotyczy Twojej puli." : "Za mało danych o skillshotach w tych meczach.";
   const skillshotStats = {
     avgLanded: Math.round(avgSkillshotsLanded * 10) / 10,
     avgDodged: Math.round(avgSkillshotsDodged * 10) / 10,

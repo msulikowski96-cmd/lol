@@ -973,15 +973,21 @@ function AnalysisSection({ data, isLoading, recentMatches, region, gameName, tag
           <p className="section-title"><Gauge className="w-3.5 h-3.5 text-primary" /> Porównanie z rangą <InfoTooltip text="Porównanie Twoich statystyk ze średnią graczy Twojej szacowanej rangi. Zielone = powyżej średniej, czerwone = poniżej. Procentowa różnica pokazuje jak daleko jesteś od typowego gracza na Twoim poziomie." /></p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {rankBenchmarks.map((b: any, i: number) => {
-              const isAbove = b.higherBetter ? b.pctDiff >= 0 : b.pctDiff >= 0;
+              const isGood = b.pctDiff >= 0;
               const absP = Math.abs(b.pctDiff);
-              const barW = Math.min(absP, 100);
+              const maxVal = Math.max(b.playerValue, b.tierAvg, 0.01);
+              const playerBarW = b.higherBetter
+                ? (b.playerValue / maxVal) * 100
+                : (b.tierAvg / maxVal) * 100;
+              const tierMarkerPos = b.higherBetter
+                ? (b.tierAvg / maxVal) * 100
+                : (b.playerValue / maxVal) * 100;
               return (
                 <div key={i} className="stat-card">
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-xs font-semibold text-foreground">{b.stat}</span>
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${isAbove ? "text-green-600 bg-green-50" : "text-red-500 bg-red-50"}`}>
-                      {isAbove ? "+" : "-"}{absP}%
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${isGood ? "text-green-600 bg-green-50" : "text-red-500 bg-red-50"}`}>
+                      {isGood ? "+" : ""}{b.pctDiff}%
                     </span>
                   </div>
                   <div className="flex items-center gap-3">
@@ -992,11 +998,11 @@ function AnalysisSection({ data, isLoading, recentMatches, region, gameName, tag
                       </div>
                       <div className="h-1.5 bg-muted/40 rounded-full overflow-hidden relative">
                         <div className="h-full rounded-full absolute left-0 top-0" style={{
-                          width: `${Math.min((b.playerValue / Math.max(b.playerValue, b.tierAvg, 0.01)) * 100, 100)}%`,
-                          background: isAbove ? "hsl(152,55%,48%)" : "hsl(0,60%,55%)",
+                          width: `${Math.min(playerBarW, 100)}%`,
+                          background: isGood ? "hsl(152,55%,48%)" : "hsl(0,60%,55%)",
                         }} />
                         <div className="absolute top-0 h-full w-px bg-foreground/40" style={{
-                          left: `${Math.min((b.tierAvg / Math.max(b.playerValue, b.tierAvg, 0.01)) * 100, 100)}%`,
+                          left: `${Math.min(tierMarkerPos, 100)}%`,
                         }} />
                       </div>
                     </div>
@@ -1074,7 +1080,7 @@ function AnalysisSection({ data, isLoading, recentMatches, region, gameName, tag
         )}
 
         {/* Skillshot Stats */}
-        {skillshotStats && skillshotStats.hitRate > 0 && (
+        {skillshotStats && (skillshotStats.hitRate > 0 || skillshotStats.avgDodged > 0) && (
           <div className="glass-panel p-4">
             <p className="section-title"><Sparkles className="w-3.5 h-3.5 text-primary" /> Celność skillshotów <InfoTooltip text="Stosunek trafionych umiejętności do unikniętych przez przeciwników. Wyższy % = lepsza precyzja. Celność powyżej 55% to dobry wynik na większości rang." /></p>
             <div className="flex items-center gap-3 mb-3">

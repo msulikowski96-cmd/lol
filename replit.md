@@ -45,7 +45,7 @@ TypeScript pnpm monorepo, fully in Polish. Users search players by Riot ID acros
 - `artifacts/api-server/src/lib/riot-fetch.ts` — Riot API wrapper with 429 retry logic (respects Retry-After)
 - `artifacts/api-server/src/routes/summoner.ts` — All Riot API endpoints (uses cache + riot-fetch)
 - `artifacts/api-server/src/routes/champion.ts` — Champion detail endpoint `/api/summoner/:puuid/champion/:name`
-- `artifacts/api-server/src/routes/analysis.ts` — Analysis engine (~940 lines, 22 algorithms)
+- `artifacts/api-server/src/routes/analysis.ts` — Analysis engine (~1000 lines, 27+ algorithms including rank benchmarks, improvement roadmap, comeback/snowball analysis, skillshot stats, match performance timeline)
 - `lib/api-spec/openapi.yaml` — API spec (source of truth)
 
 ## Important Notes
