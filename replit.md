@@ -47,6 +47,8 @@ TypeScript pnpm monorepo, fully in Polish. Users search players by Riot ID acros
 - `artifacts/api-server/src/routes/champion.ts` — Champion detail endpoint `/api/summoner/:puuid/champion/:name`
 - `artifacts/api-server/src/routes/analysis.ts` — Analysis engine (~1000 lines, 27+ algorithms including rank benchmarks, improvement roadmap, comeback/snowball analysis, skillshot stats, match performance timeline)
 - `lib/api-spec/openapi.yaml` — API spec (source of truth)
+- `artifacts/api-server/src/routes/ai-analysis.ts` — Gemini AI report engine: fetches 30 matches, computes aggregated stats, builds prompt with performance_radar/improvement_priorities/key_weaknesses_detailed/biggest_mistake_pattern/best_habit fields. Returns `{ report, stats, generatedAt }` — stats used for real-data visualizations.
+- `artifacts/web/src/pages/ai-analysis.tsx` — AI Analysis page: rich visualizations (StatsDashboard, RecentResultsBar, PerformanceRadar, ChampPoolVisual, ImprovementPriorities, KeyWeaknessCards, AnalysisProseCard). All prose sections now have colored icon headers.
 
 ## Important Notes
 - Never edit generated files in `lib/api-client-react/src/generated/` or `lib/api-zod/src/generated/`

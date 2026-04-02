@@ -7,7 +7,8 @@ import {
   Shield, Swords, Eye, Target, Zap, BookOpen,
   Award, AlertTriangle, CheckCircle2, Lightbulb,
   RefreshCw, Sparkles, Users, Trophy,
-  ArrowRight, Clock, Activity
+  Clock, Activity, Flame, XCircle, ArrowUpRight,
+  BarChart3, Crosshair, ChevronRight, Info
 } from "lucide-react";
 import { useSearchSummoner, useGetSummonerRanked, useGetSummonerMastery } from "@workspace/api-client-react";
 
@@ -23,6 +24,8 @@ const CARD: React.CSSProperties = {
 const PRIMARY = "hsl(200,90%,38%)";
 const FG = "hsl(220,25%,12%)";
 const MUTED = "hsl(220,10%,46%)";
+const WIN_COLOR = "#22c55e";
+const LOSS_COLOR = "#ef4444";
 
 const RATING_COLOR: Record<string, string> = {
   "S+": "hsl(45,90%,44%)", S: "hsl(45,90%,44%)", "A+": "hsl(152,60%,38%)", A: "hsl(152,60%,38%)",
@@ -30,10 +33,10 @@ const RATING_COLOR: Record<string, string> = {
   "D": "hsl(350,65%,48%)",
 };
 
-const PRIORITY_COLOR: Record<string, { bg: string; border: string; text: string; label: string }> = {
-  high: { bg: "hsl(350,50%,97%)", border: "hsl(350,55%,82%)", text: "hsl(350,65%,45%)", label: "Wysoki" },
-  medium: { bg: "hsl(38,80%,96%)", border: "hsl(38,70%,78%)", text: "hsl(38,75%,40%)", label: "Średni" },
-  low: { bg: "hsl(152,50%,96%)", border: "hsl(152,45%,78%)", text: "hsl(152,55%,36%)", label: "Niski" },
+const PRIORITY_COLOR: Record<string, { bg: string; border: string; text: string; label: string; numBg: string }> = {
+  high: { bg: "hsl(350,50%,97%)", border: "hsl(350,55%,82%)", text: "hsl(350,65%,45%)", label: "Wysoki", numBg: "hsl(350,65%,45%)" },
+  medium: { bg: "hsl(38,80%,96%)", border: "hsl(38,70%,78%)", text: "hsl(38,75%,40%)", label: "Średni", numBg: "hsl(38,75%,40%)" },
+  low: { bg: "hsl(152,50%,96%)", border: "hsl(152,45%,78%)", text: "hsl(152,55%,36%)", label: "Niski", numBg: "hsl(152,55%,36%)" },
 };
 
 const CATEGORY_ICON: Record<string, any> = {
@@ -52,6 +55,15 @@ const TIER_COLOR: Record<string, string> = {
   PLATINUM: "#4CBFAA", EMERALD: "#3AC48B", DIAMOND: "#57A8E7",
   MASTER: "#9B5CE8", GRANDMASTER: "#CF4B4B", CHALLENGER: "#E9BE5C",
 };
+
+const RADAR_DIMS = [
+  { key: "makro", label: "MAKRO", icon: Target, color: "hsl(200,90%,38%)" },
+  { key: "mikro", label: "MIKRO", icon: Swords, color: "hsl(38,90%,48%)" },
+  { key: "wizja", label: "WIZJA", icon: Eye, color: "hsl(258,65%,55%)" },
+  { key: "laning", label: "LANING", icon: Crosshair, color: "hsl(152,60%,38%)" },
+  { key: "teamfight", label: "TEAMFIGHT", icon: Users, color: "hsl(28,90%,50%)" },
+  { key: "konsekwencja", label: "KONSEKWENCJA", icon: Activity, color: "hsl(350,65%,48%)" },
+];
 
 function SectionTitle({ icon: Icon, children }: { icon: any; children: ReactNode }) {
   return (
@@ -84,6 +96,15 @@ function Card({ children, style, delay = 0, fullWidth = false }: {
 
 function Prose({ text }: { text: string }) {
   return <p style={{ fontSize: 12, lineHeight: 1.7, color: MUTED, margin: 0 }}>{text}</p>;
+}
+
+function StatBar({ value, max = 100, color }: { value: number; max?: number; color: string }) {
+  const pct = Math.min(100, (value / max) * 100);
+  return (
+    <div style={{ width: "100%", height: 4, borderRadius: 2, background: "hsl(220,15%,92%)", overflow: "hidden" }}>
+      <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 2, transition: "width 0.5s ease" }} />
+    </div>
+  );
 }
 
 function LoadingDots() {
@@ -126,8 +147,7 @@ function GeneratingCard({ step }: { step: string }) {
               display: "flex", alignItems: "center", gap: 9, padding: "8px 12px", borderRadius: 8,
               background: active ? "hsl(200,90%,95%)" : done ? "hsl(152,50%,96%)" : "hsl(220,15%,97%)",
               border: `1px solid ${active ? "hsl(200,80%,82%)" : done ? "hsl(152,45%,82%)" : "hsl(220,15%,90%)"}`,
-              opacity: done || active ? 1 : 0.5,
-              transition: "all 0.3s",
+              opacity: done || active ? 1 : 0.5, transition: "all 0.3s",
             }}>
               <Icon style={{ width: 12, height: 12, color: active ? PRIMARY : done ? "hsl(152,60%,38%)" : MUTED, flexShrink: 0 }} />
               <span style={{ fontSize: 11.5, fontWeight: active ? 600 : 400, color: active ? FG : done ? "hsl(152,60%,35%)" : MUTED, flex: 1 }}>
@@ -163,9 +183,241 @@ class AiErrorBoundary extends Component<{ children: ReactNode }, { hasError: boo
   }
 }
 
+function StatsDashboard({ stats }: { stats: any }) {
+  if (!stats) return null;
+  const wr = Number(stats.winRate ?? 0);
+  const kda = Number(stats.avgKda ?? 0);
+  const cspm = Number(stats.avgCsPerMin ?? 0);
+  const kp = Number(stats.avgKillParticipation ?? 0);
+  const dmgPct = Number(stats.avgDamagePct ?? 0);
+  const vision = Number(stats.avgVisionScore ?? 0);
+  const wards = Number(stats.avgWardsPlaced ?? 0);
+  const kills = Number(stats.avgKills ?? 0);
+  const deaths = Number(stats.avgDeaths ?? 0);
+  const assists = Number(stats.avgAssists ?? 0);
+  const recent5 = Number(stats.recent5wr ?? 0);
+  const totalGames = Number(stats.totalGames ?? 0);
+  const isSupport = stats.primaryRole === "UTILITY";
+
+  const wrColor = wr >= 55 ? WIN_COLOR : wr >= 50 ? "#eab308" : LOSS_COLOR;
+  const kdaColor = kda >= 3 ? WIN_COLOR : kda >= 2 ? "#eab308" : LOSS_COLOR;
+  const csColor = isSupport ? "#888" : cspm >= 6 ? WIN_COLOR : cspm >= 4.5 ? "#eab308" : LOSS_COLOR;
+  const kpColor = kp >= 65 ? WIN_COLOR : kp >= 50 ? "#eab308" : LOSS_COLOR;
+  const dmgColor = isSupport
+    ? (dmgPct >= 15 ? WIN_COLOR : dmgPct >= 10 ? "#eab308" : LOSS_COLOR)
+    : (dmgPct >= 30 ? WIN_COLOR : dmgPct >= 20 ? "#eab308" : LOSS_COLOR);
+  const visionColor = vision >= 25 ? WIN_COLOR : vision >= 15 ? "#eab308" : LOSS_COLOR;
+
+  const metricTiles = [
+    { label: "KDA", value: kda.toFixed(2), sub: `${kills.toFixed(1)}/${deaths.toFixed(1)}/${assists.toFixed(1)}`, color: kdaColor },
+    { label: "CS/min", value: isSupport ? "Support" : cspm.toFixed(1), sub: `${totalGames} meczy`, color: csColor },
+    { label: "Win Rate", value: `${Math.round(wr)}%`, sub: `ostat. 5: ${Math.round(recent5)}%`, color: wrColor },
+    { label: "Kill Part.", value: `${Math.round(kp)}%`, sub: "udział w zabójstwach", color: kpColor },
+    { label: "% DMG", value: `${Math.round(dmgPct)}%`, sub: "obrażeń w drużynie", color: dmgColor },
+    { label: "Vision", value: vision.toFixed(1), sub: `${wards.toFixed(1)} ward/mecz`, color: visionColor },
+  ];
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, marginBottom: 4 }}>
+      {metricTiles.map(({ label, value, sub, color }) => (
+        <div key={label} style={{
+          background: "hsl(220,15%,97%)", borderRadius: 8, padding: "9px 10px",
+          border: "1px solid hsl(220,15%,91%)",
+          borderTop: `3px solid ${color}`,
+        }}>
+          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: MUTED, textTransform: "uppercase", fontFamily: "'Rajdhani',sans-serif", marginBottom: 2 }}>{label}</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color, fontFamily: "'Barlow Condensed',sans-serif", lineHeight: 1.1 }}>{value}</div>
+          <div style={{ fontSize: 9, color: MUTED, marginTop: 2 }}>{sub}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function RecentResultsBar({ lastResults }: { lastResults: string }) {
+  if (!lastResults) return null;
+  const results = lastResults.split("").slice(0, 15);
+  return (
+    <div>
+      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: MUTED, textTransform: "uppercase", fontFamily: "'Rajdhani',sans-serif", marginBottom: 5 }}>Ostatnie wyniki</div>
+      <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
+        {results.map((r, i) => (
+          <div key={i} style={{
+            width: 20, height: 20, borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center",
+            background: r === "W" ? "hsl(152,50%,94%)" : "hsl(350,55%,95%)",
+            border: `1px solid ${r === "W" ? "hsl(152,45%,78%)" : "hsl(350,50%,82%)"}`,
+            fontSize: 9, fontWeight: 800, color: r === "W" ? WIN_COLOR : LOSS_COLOR,
+            fontFamily: "'Barlow Condensed',sans-serif",
+          }}>
+            {r}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PerformanceRadar({ radar }: { radar: any }) {
+  if (!radar) return null;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+      {RADAR_DIMS.map(({ key, label, icon: Icon, color }) => {
+        const val = radar[key] ?? 0;
+        return (
+          <div key={key}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <Icon style={{ width: 10, height: 10, color, flexShrink: 0 }} />
+                <span style={{ fontSize: 10, fontWeight: 700, color: FG, fontFamily: "'Rajdhani',sans-serif", letterSpacing: "0.05em" }}>{label}</span>
+              </div>
+              <span style={{ fontSize: 12, fontWeight: 800, color, fontFamily: "'Barlow Condensed',sans-serif" }}>{val}</span>
+            </div>
+            <div style={{ height: 5, borderRadius: 3, background: "hsl(220,15%,91%)", overflow: "hidden" }}>
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${val}%` }}
+                transition={{ duration: 0.6, delay: 0.1 }}
+                style={{ height: "100%", background: `linear-gradient(90deg, ${color}88, ${color})`, borderRadius: 3 }}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ChampPoolVisual({ champStats }: { champStats: any[] }) {
+  if (!champStats?.length) return null;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+      {champStats.map((c: any) => {
+        const wr = c.winRate;
+        const wrColor = wr >= 55 ? WIN_COLOR : wr >= 50 ? "#eab308" : LOSS_COLOR;
+        return (
+          <div key={c.name} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <img
+              src={`https://ddragon.leagueoflegends.com/cdn/img/champion/tiles/${c.name}_0.jpg`}
+              style={{ width: 28, height: 28, borderRadius: 6, objectFit: "cover", flexShrink: 0, border: "1px solid hsl(220,15%,88%)" }}
+              onError={(e) => {
+                const img = e.target as HTMLImageElement;
+                img.onerror = null;
+                img.src = "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png";
+              }}
+            />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: FG, fontFamily: "'Rajdhani',sans-serif" }}>{c.name}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 10, color: MUTED }}>{c.games}G · {c.kda} KDA</span>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: wrColor, fontFamily: "'Barlow Condensed',sans-serif" }}>{Math.round(wr)}%</span>
+                </div>
+              </div>
+              <div style={{ height: 4, borderRadius: 2, background: "hsl(220,15%,91%)", overflow: "hidden" }}>
+                <div style={{ height: "100%", width: `${Math.min(wr, 100)}%`, background: wrColor, borderRadius: 2, transition: "width 0.4s" }} />
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ImprovementPriorities({ priorities }: { priorities: any[] }) {
+  if (!priorities?.length) return null;
+  const LP_COLORS = ["hsl(350,65%,45%)", "hsl(350,55%,48%)", "hsl(38,75%,40%)", "hsl(38,70%,45%)", "hsl(200,90%,38%)", "hsl(200,80%,44%)"];
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+      {priorities.map((p: any, i: number) => {
+        const lpColor = LP_COLORS[i] ?? MUTED;
+        return (
+          <div key={i} style={{
+            display: "flex", gap: 10, padding: "10px 11px", borderRadius: 9,
+            background: "hsl(220,15%,98%)", border: "1px solid hsl(220,15%,90%)",
+          }}>
+            <div style={{
+              width: 22, height: 22, borderRadius: 6, flexShrink: 0,
+              background: lpColor, display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 11, fontWeight: 800, color: "white", fontFamily: "'Barlow Condensed',sans-serif",
+            }}>
+              {p.rank ?? i + 1}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 4, marginBottom: 3 }}>
+                <span style={{ fontWeight: 700, fontSize: 12, color: FG, fontFamily: "'Rajdhani',sans-serif" }}>{p.area}</span>
+                {p.lp_gain_estimate > 0 && (
+                  <span style={{
+                    fontSize: 10, fontWeight: 800, color: WIN_COLOR,
+                    background: "hsl(152,50%,95%)", border: "1px solid hsl(152,40%,80%)",
+                    borderRadius: 4, padding: "1px 6px", whiteSpace: "nowrap", flexShrink: 0,
+                    fontFamily: "'Barlow Condensed',sans-serif",
+                  }}>+{p.lp_gain_estimate} LP</span>
+                )}
+              </div>
+              <div style={{ display: "flex", gap: 8, marginBottom: 4 }}>
+                <div style={{ fontSize: 10, color: LOSS_COLOR, fontWeight: 600 }}>Teraz: {p.current}</div>
+                <div style={{ fontSize: 10, color: MUTED }}>→</div>
+                <div style={{ fontSize: 10, color: WIN_COLOR, fontWeight: 600 }}>Cel: {p.target}</div>
+              </div>
+              <p style={{ margin: 0, fontSize: 11, color: MUTED, lineHeight: 1.55 }}>{p.description}</p>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function KeyWeaknessCards({ weaknesses }: { weaknesses: any[] }) {
+  if (!weaknesses?.length) return null;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+      {weaknesses.map((w: any, i: number) => (
+        <div key={i} style={{
+          borderRadius: 9, padding: "10px 12px",
+          background: "hsl(350,50%,98%)", border: "1px solid hsl(350,40%,88%)",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+            <XCircle style={{ width: 11, height: 11, color: "hsl(350,65%,48%)", flexShrink: 0 }} />
+            <span style={{ fontWeight: 700, fontSize: 12, color: FG, fontFamily: "'Rajdhani',sans-serif", flex: 1 }}>{w.title}</span>
+            <span style={{
+              fontSize: 10, fontWeight: 800, color: "hsl(350,65%,45%)",
+              background: "white", border: "1px solid hsl(350,40%,82%)",
+              borderRadius: 4, padding: "1px 7px", fontFamily: "'Barlow Condensed',sans-serif",
+            }}>{w.stat}</span>
+          </div>
+          <p style={{ margin: "0 0 4px", fontSize: 11, color: MUTED, lineHeight: 1.55 }}>
+            <span style={{ color: "hsl(350,65%,45%)", fontWeight: 600 }}>Skutek: </span>{w.impact}
+          </p>
+          <p style={{ margin: 0, fontSize: 11, color: FG, lineHeight: 1.55 }}>
+            <span style={{ color: WIN_COLOR, fontWeight: 600 }}>Jak naprawić: </span>{w.fix}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AnalysisProseCard({ title, icon: Icon, text, color, accent }: { title: string; icon: any; text: string; color?: string; accent?: string }) {
+  const c = color ?? PRIMARY;
+  return (
+    <div style={{ ...CARD, padding: "13px 14px 12px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 9, paddingBottom: 8, borderBottom: "1px solid hsl(220,15%,92%)" }}>
+        <div style={{ width: 24, height: 24, borderRadius: 6, background: accent ?? "hsl(200,90%,95%)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <Icon style={{ width: 12, height: 12, color: c }} />
+        </div>
+        <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: c, fontFamily: "'Rajdhani',sans-serif" }}>{title}</span>
+      </div>
+      <p style={{ fontSize: 12, lineHeight: 1.75, color: MUTED, margin: 0 }}>{text}</p>
+    </div>
+  );
+}
+
 function AiAnalysisInner() {
   const { region, gameName, tagLine } = useParams<{ region: string; gameName: string; tagLine: string }>();
   const [report, setReport] = useState<any>(null);
+  const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -188,6 +440,7 @@ function AiAnalysisInner() {
     setLoading(true);
     setError(null);
     setReport(null);
+    setStats(null);
     fetchedRef.current = true;
     let stepIdx = 0;
     setLoadingStep(steps[0]);
@@ -201,6 +454,7 @@ function AiAnalysisInner() {
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       setReport(data.report);
+      setStats(data.stats ?? null);
       setGeneratedAt(data.generatedAt);
     } catch (e: any) {
       clearInterval(interval);
@@ -219,13 +473,13 @@ function AiAnalysisInner() {
   return (
     <div style={{ minHeight: "100vh", background: "hsl(220,20%,97%)" }}>
 
-      {/* Header — matches profile page style */}
+      {/* Header */}
       <header style={{
         position: "sticky", top: 0, zIndex: 40,
         background: "white", borderBottom: "1px solid hsl(220,15%,90%)",
         boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
       }}>
-        <div style={{ maxWidth: 520, margin: "0 auto", padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ maxWidth: 620, margin: "0 auto", padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}>
           <Link href={profileLink}>
             <button style={{
               display: "flex", alignItems: "center", gap: 4,
@@ -237,7 +491,6 @@ function AiAnalysisInner() {
             </button>
           </Link>
 
-          {/* Avatar */}
           <div style={{ position: "relative", flexShrink: 0 }}>
             <img
               src={`https://ddragon.leagueoflegends.com/cdn/profileicon/${(summonerData as any)?.profileIconId ?? 1}.png`}
@@ -255,7 +508,6 @@ function AiAnalysisInner() {
             )}
           </div>
 
-          {/* Name + rank */}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 5, flexWrap: "wrap" }}>
               <span style={{ fontWeight: 800, fontSize: 16, color: FG, fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: "0.02em" }}>
@@ -279,10 +531,8 @@ function AiAnalysisInner() {
                 <span style={{ fontSize: 11, color: MUTED }}>{soloQ.leaguePoints} LP · {soloQ.wins}W {soloQ.losses}L</span>
               </div>
             )}
-            {!soloQ && !loading && <span style={{ fontSize: 11, color: MUTED }}>Unranked</span>}
           </div>
 
-          {/* AI Badge */}
           <div style={{
             display: "flex", alignItems: "center", gap: 5, padding: "5px 10px",
             background: "linear-gradient(135deg,#0A1628,#1a3a6b)",
@@ -295,12 +545,10 @@ function AiAnalysisInner() {
       </header>
 
       {/* Content */}
-      <div style={{ maxWidth: 520, margin: "0 auto", padding: "16px 14px 60px" }}>
+      <div style={{ maxWidth: 620, margin: "0 auto", padding: "16px 14px 60px" }}>
 
-        {/* Loading */}
         {loading && <GeneratingCard step={loadingStep} />}
 
-        {/* Error */}
         {error && !loading && (
           <div style={{ ...CARD, padding: 20, textAlign: "center", marginBottom: 12 }}>
             <AlertTriangle style={{ width: 24, height: 24, color: "hsl(350,65%,48%)", margin: "0 auto 10px" }} />
@@ -317,11 +565,11 @@ function AiAnalysisInner() {
           </div>
         )}
 
-        {/* Report */}
         {report && !loading && !report.error && (
-          <div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+
             {/* Refresh bar */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, marginBottom: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
               {generatedAt && (
                 <span style={{ fontSize: 10, color: MUTED, display: "flex", alignItems: "center", gap: 4 }}>
                   <Clock style={{ width: 9, height: 9 }} />
@@ -338,296 +586,394 @@ function AiAnalysisInner() {
               </button>
             </div>
 
-            {/* Overall Rating — accent card */}
+            {/* Overall Rating Hero */}
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               style={{
                 background: "linear-gradient(135deg, hsl(200,90%,96%), white)",
                 border: "1px solid hsl(200,80%,82%)",
-                borderRadius: 14, padding: "18px 16px 16px", marginBottom: 10,
+                borderRadius: 14, padding: "18px 16px 16px",
               }}
             >
-              {/* Score row */}
-              <div style={{ display: "flex", alignItems: "center", gap: 0, marginBottom: 12 }}>
-                <div style={{ textAlign: "center", paddingRight: 16, borderRight: "1px solid hsl(220,15%,90%)" }}>
+              <div style={{ display: "flex", alignItems: "stretch", gap: 0, marginBottom: 14 }}>
+                <div style={{ textAlign: "center", paddingRight: 16, borderRight: "1px solid hsl(220,15%,90%)", marginRight: 16, flexShrink: 0 }}>
                   <div style={{
-                    fontSize: 44, fontWeight: 900, lineHeight: 1, fontFamily: "'Barlow Condensed',sans-serif",
+                    fontSize: 52, fontWeight: 900, lineHeight: 1, fontFamily: "'Barlow Condensed',sans-serif",
                     color: RATING_COLOR[report.overall_rating] ?? PRIMARY,
                   }}>
                     {report.overall_rating ?? "?"}
                   </div>
                   <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", color: MUTED, textTransform: "uppercase", marginTop: 2, fontFamily: "'Rajdhani',sans-serif" }}>OCENA</div>
                 </div>
-                <div style={{ display: "flex", gap: 0, flex: 1 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+                    {report.form_assessment && (
+                      <span style={{
+                        display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px",
+                        background: "white", border: `1px solid hsl(220,15%,88%)`,
+                        borderRadius: 20, fontSize: 11, fontWeight: 700, color: FORM_COLOR[report.form_assessment] ?? MUTED,
+                        fontFamily: "'Rajdhani',sans-serif",
+                      }}>
+                        <Activity style={{ width: 10, height: 10 }} />
+                        {report.form_assessment}
+                      </span>
+                    )}
+                    {report.playstyle_archetype && (
+                      <span style={{
+                        display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px",
+                        background: "linear-gradient(135deg,#0A1628,#1a3a6b)",
+                        borderRadius: 20, fontSize: 11, fontWeight: 700, color: "#C89B3C",
+                        fontFamily: "'Rajdhani',sans-serif",
+                      }}>
+                        <Zap style={{ width: 10, height: 10 }} />
+                        {report.playstyle_archetype}
+                      </span>
+                    )}
+                  </div>
                   {report.overall_score != null && (
-                    <div style={{ textAlign: "center", flex: 1, borderRight: report.consistency_score != null ? "1px solid hsl(220,15%,90%)" : "none" }}>
-                      <div style={{ fontSize: 32, fontWeight: 800, color: FG, fontFamily: "'Barlow Condensed',sans-serif" }}>{report.overall_score}</div>
-                      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", color: MUTED, textTransform: "uppercase", fontFamily: "'Rajdhani',sans-serif" }}>WYNIK</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                      <div style={{ flex: 1, height: 6, borderRadius: 3, background: "hsl(220,15%,90%)", overflow: "hidden" }}>
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${report.overall_score}%` }}
+                          transition={{ duration: 0.8 }}
+                          style={{ height: "100%", background: RATING_COLOR[report.overall_rating] ?? PRIMARY, borderRadius: 3 }}
+                        />
+                      </div>
+                      <span style={{ fontSize: 13, fontWeight: 800, color: FG, fontFamily: "'Barlow Condensed',sans-serif", flexShrink: 0 }}>
+                        {report.overall_score}/100
+                      </span>
                     </div>
                   )}
                   {report.consistency_score != null && (
-                    <div style={{ textAlign: "center", flex: 1 }}>
-                      <div style={{ fontSize: 32, fontWeight: 800, color: PRIMARY, fontFamily: "'Barlow Condensed',sans-serif" }}>{report.consistency_score}</div>
-                      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", color: MUTED, textTransform: "uppercase", fontFamily: "'Rajdhani',sans-serif" }}>KONSEKWENCJA</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{ flex: 1, height: 6, borderRadius: 3, background: "hsl(220,15%,90%)", overflow: "hidden" }}>
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${report.consistency_score}%` }}
+                          transition={{ duration: 0.8, delay: 0.1 }}
+                          style={{ height: "100%", background: PRIMARY, borderRadius: 3 }}
+                        />
+                      </div>
+                      <span style={{ fontSize: 13, fontWeight: 800, color: PRIMARY, fontFamily: "'Barlow Condensed',sans-serif", flexShrink: 0 }}>
+                        {report.consistency_score}<span style={{ fontSize: 9, fontWeight: 600, color: MUTED }}>/100 KON</span>
+                      </span>
                     </div>
                   )}
                 </div>
               </div>
-
-              {/* Chips */}
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
-                {report.form_assessment && (
-                  <span style={{
-                    display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px",
-                    background: "white", border: `1px solid hsl(220,15%,88%)`,
-                    borderRadius: 20, fontSize: 11, fontWeight: 700, color: FORM_COLOR[report.form_assessment] ?? MUTED,
-                    fontFamily: "'Rajdhani',sans-serif",
-                  }}>
-                    <Activity style={{ width: 10, height: 10 }} />
-                    {report.form_assessment}
-                  </span>
-                )}
-                {report.playstyle_archetype && (
-                  <span style={{
-                    display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px",
-                    background: "linear-gradient(135deg,#0A1628,#1a3a6b)",
-                    borderRadius: 20, fontSize: 11, fontWeight: 700, color: "#C89B3C",
-                    fontFamily: "'Rajdhani',sans-serif",
-                  }}>
-                    <Zap style={{ width: 10, height: 10 }} />
-                    {report.playstyle_archetype}
-                  </span>
-                )}
-              </div>
-
-              <p style={{ fontSize: 12.5, lineHeight: 1.7, color: FG, margin: 0 }}>
+              <p style={{ fontSize: 12.5, lineHeight: 1.75, color: FG, margin: 0 }}>
                 {report.executive_summary}
               </p>
             </motion.div>
 
-            {/* Grid of sections */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            {/* Stats Dashboard from real data */}
+            {stats && (
+              <Card delay={0.04}>
+                <SectionTitle icon={BarChart3}>Kluczowe Statystyki</SectionTitle>
+                <StatsDashboard stats={stats} />
+                <div style={{ marginTop: 10 }}>
+                  <RecentResultsBar lastResults={stats.lastResults} />
+                </div>
+              </Card>
+            )}
 
-              {/* Strengths & Weaknesses — full width */}
-              {(report.strengths?.length > 0 || report.weaknesses?.length > 0) && (
-                <Card delay={0.05} fullWidth>
-                  <SectionTitle icon={Award}>Mocne i słabe strony</SectionTitle>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                    <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 7 }}>
-                        <TrendingUp style={{ width: 11, height: 11, color: "hsl(152,60%,38%)" }} />
-                        <span style={{ fontSize: 9, fontWeight: 700, color: "hsl(152,60%,38%)", letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Rajdhani',sans-serif" }}>MOCNE</span>
-                      </div>
-                      {(report.strengths ?? []).map((s: string, i: number) => (
-                        <div key={i} style={{ display: "flex", gap: 5, marginBottom: 5 }}>
-                          <CheckCircle2 style={{ width: 11, height: 11, color: "hsl(152,60%,38%)", flexShrink: 0, marginTop: 2 }} />
-                          <span style={{ fontSize: 11, color: FG, lineHeight: 1.55 }}>{s}</span>
-                        </div>
-                      ))}
+            {/* Best habit + Biggest mistake — 2-col */}
+            {(report.best_habit || report.biggest_mistake_pattern) && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                {report.best_habit && (
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
+                    style={{
+                      borderRadius: 10, padding: "12px 13px",
+                      background: "hsl(152,50%,97%)", border: "1px solid hsl(152,45%,82%)",
+                    }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 6 }}>
+                      <TrendingUp style={{ width: 12, height: 12, color: WIN_COLOR, flexShrink: 0 }} />
+                      <span style={{ fontSize: 9, fontWeight: 700, color: WIN_COLOR, letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Rajdhani',sans-serif" }}>NAJLEPSZY NAWYK</span>
                     </div>
-                    <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 7 }}>
-                        <TrendingDown style={{ width: 11, height: 11, color: "hsl(350,65%,48%)" }} />
-                        <span style={{ fontSize: 9, fontWeight: 700, color: "hsl(350,65%,48%)", letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Rajdhani',sans-serif" }}>SŁABE</span>
-                      </div>
-                      {(report.weaknesses ?? []).map((w: string, i: number) => (
-                        <div key={i} style={{ display: "flex", gap: 5, marginBottom: 5 }}>
-                          <AlertTriangle style={{ width: 11, height: 11, color: "hsl(38,75%,40%)", flexShrink: 0, marginTop: 2 }} />
-                          <span style={{ fontSize: 11, color: FG, lineHeight: 1.55 }}>{w}</span>
-                        </div>
-                      ))}
+                    <p style={{ margin: 0, fontSize: 11.5, color: "hsl(152,40%,20%)", lineHeight: 1.65 }}>{report.best_habit}</p>
+                  </motion.div>
+                )}
+                {report.biggest_mistake_pattern && (
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+                    style={{
+                      borderRadius: 10, padding: "12px 13px",
+                      background: "hsl(350,50%,97%)", border: "1px solid hsl(350,40%,84%)",
+                    }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 6 }}>
+                      <Flame style={{ width: 12, height: 12, color: LOSS_COLOR, flexShrink: 0 }} />
+                      <span style={{ fontSize: 9, fontWeight: 700, color: "hsl(350,65%,48%)", letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Rajdhani',sans-serif" }}>GŁÓWNY BŁĄD</span>
                     </div>
-                  </div>
-                </Card>
-              )}
+                    <p style={{ margin: 0, fontSize: 11.5, color: "hsl(350,40%,20%)", lineHeight: 1.65 }}>{report.biggest_mistake_pattern}</p>
+                  </motion.div>
+                )}
+              </div>
+            )}
 
-              {/* Playstyle */}
-              {report.playstyle_description && (
-                <Card delay={0.08}>
-                  <SectionTitle icon={Zap}>Styl Gry</SectionTitle>
-                  <Prose text={report.playstyle_description} />
-                </Card>
-              )}
-
-              {/* Champion Pool */}
-              {report.champion_pool_analysis && (
-                <Card delay={0.1}>
-                  <SectionTitle icon={BookOpen}>Champion Pool</SectionTitle>
-                  <div style={{ display: "flex", gap: 5, marginBottom: 9, flexWrap: "wrap" }}>
-                    {(masteryData as any[])?.slice(0, 5).map((m: any) => (
-                      <div key={m.championId} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-                        <img
-                          src={`https://ddragon.leagueoflegends.com/cdn/img/champion/tiles/${m.championName ?? "Annie"}_0.jpg`}
-                          style={{ width: 32, height: 32, borderRadius: 6, border: "1px solid hsl(220,15%,88%)", objectFit: "cover" }}
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                        />
-                        <span style={{ fontSize: 8, color: MUTED, fontWeight: 600, maxWidth: 34, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {m.championName}
-                        </span>
+            {/* Strengths & Weaknesses */}
+            {(report.strengths?.length > 0 || report.weaknesses?.length > 0) && (
+              <Card delay={0.12}>
+                <SectionTitle icon={Award}>Mocne i słabe strony</SectionTitle>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 7 }}>
+                      <TrendingUp style={{ width: 11, height: 11, color: WIN_COLOR }} />
+                      <span style={{ fontSize: 9, fontWeight: 700, color: WIN_COLOR, letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Rajdhani',sans-serif" }}>MOCNE</span>
+                    </div>
+                    {(report.strengths ?? []).map((s: string, i: number) => (
+                      <div key={i} style={{ display: "flex", gap: 5, marginBottom: 6 }}>
+                        <CheckCircle2 style={{ width: 11, height: 11, color: WIN_COLOR, flexShrink: 0, marginTop: 2 }} />
+                        <span style={{ fontSize: 11, color: FG, lineHeight: 1.6 }}>{s}</span>
                       </div>
                     ))}
                   </div>
-                  <Prose text={report.champion_pool_analysis} />
-                </Card>
-              )}
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 7 }}>
+                      <TrendingDown style={{ width: 11, height: 11, color: LOSS_COLOR }} />
+                      <span style={{ fontSize: 9, fontWeight: 700, color: LOSS_COLOR, letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Rajdhani',sans-serif" }}>SŁABE</span>
+                    </div>
+                    {(report.weaknesses ?? []).map((w: string, i: number) => (
+                      <div key={i} style={{ display: "flex", gap: 5, marginBottom: 6 }}>
+                        <AlertTriangle style={{ width: 11, height: 11, color: "hsl(38,75%,40%)", flexShrink: 0, marginTop: 2 }} />
+                        <span style={{ fontSize: 11, color: FG, lineHeight: 1.6 }}>{w}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </Card>
+            )}
 
-              {/* Macro */}
+            {/* Performance Radar */}
+            {report.performance_radar && (
+              <Card delay={0.14}>
+                <SectionTitle icon={Activity}>Ocena Wydajności AI</SectionTitle>
+                <PerformanceRadar radar={report.performance_radar} />
+              </Card>
+            )}
+
+            {/* Champion Pool — real data visual + AI analysis */}
+            {(stats?.champStats?.length > 0 || report.champion_pool_analysis) && (
+              <Card delay={0.16}>
+                <SectionTitle icon={BookOpen}>Pool Championów</SectionTitle>
+                {stats?.champStats?.length > 0 && (
+                  <div style={{ marginBottom: 10 }}>
+                    <ChampPoolVisual champStats={stats.champStats} />
+                  </div>
+                )}
+                {report.champion_pool_analysis && <Prose text={report.champion_pool_analysis} />}
+              </Card>
+            )}
+
+            {/* Improvement Priorities */}
+            {report.improvement_priorities?.length > 0 && (
+              <Card delay={0.18}>
+                <SectionTitle icon={Trophy}>Priorytety Poprawy</SectionTitle>
+                <ImprovementPriorities priorities={report.improvement_priorities} />
+              </Card>
+            )}
+
+            {/* Detailed weakness cards */}
+            {report.key_weaknesses_detailed?.length > 0 && (
+              <Card delay={0.2}>
+                <SectionTitle icon={AlertTriangle}>Analiza Błędów</SectionTitle>
+                <KeyWeaknessCards weaknesses={report.key_weaknesses_detailed} />
+              </Card>
+            )}
+
+            {/* Analysis sections in 2-col grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+
               {report.macro_analysis && (
-                <Card delay={0.12}>
-                  <SectionTitle icon={Target}>Makro — Mapa</SectionTitle>
-                  <Prose text={report.macro_analysis} />
-                </Card>
+                <AnalysisProseCard
+                  title="Makro — Mapa"
+                  icon={Target}
+                  text={report.macro_analysis}
+                  color="hsl(200,90%,38%)"
+                  accent="hsl(200,90%,95%)"
+                />
               )}
 
-              {/* Micro */}
               {report.micro_analysis && (
-                <Card delay={0.14}>
-                  <SectionTitle icon={Swords}>Mikro — Mechanika</SectionTitle>
-                  <Prose text={report.micro_analysis} />
-                </Card>
+                <AnalysisProseCard
+                  title="Mikro — Mechanika"
+                  icon={Swords}
+                  text={report.micro_analysis}
+                  color="hsl(38,85%,48%)"
+                  accent="hsl(38,90%,95%)"
+                />
               )}
 
-              {/* Lane Phase */}
               {report.lane_phase_analysis && (
-                <Card delay={0.16}>
-                  <SectionTitle icon={Shield}>Faza Laningowa</SectionTitle>
-                  <Prose text={report.lane_phase_analysis} />
-                </Card>
+                <AnalysisProseCard
+                  title="Faza Laningowa"
+                  icon={Shield}
+                  text={report.lane_phase_analysis}
+                  color="hsl(152,60%,38%)"
+                  accent="hsl(152,60%,95%)"
+                />
               )}
 
-              {/* Teamfight */}
               {report.teamfight_analysis && (
-                <Card delay={0.18}>
-                  <SectionTitle icon={Users}>Teamfighty</SectionTitle>
-                  <Prose text={report.teamfight_analysis} />
-                </Card>
+                <AnalysisProseCard
+                  title="Teamfighty"
+                  icon={Users}
+                  text={report.teamfight_analysis}
+                  color="hsl(28,90%,50%)"
+                  accent="hsl(28,90%,95%)"
+                />
               )}
 
-              {/* Deaths */}
               {report.death_analysis && (
-                <Card delay={0.20}>
-                  <SectionTitle icon={AlertTriangle}>Analiza Zgonów</SectionTitle>
-                  <Prose text={report.death_analysis} />
-                </Card>
+                <AnalysisProseCard
+                  title="Analiza Zgonów"
+                  icon={AlertTriangle}
+                  text={report.death_analysis}
+                  color="hsl(350,65%,48%)"
+                  accent="hsl(350,65%,96%)"
+                />
               )}
 
-              {/* Vision */}
               {report.vision_analysis && (
-                <Card delay={0.22}>
-                  <SectionTitle icon={Eye}>Vision i Świadomość</SectionTitle>
-                  <Prose text={report.vision_analysis} />
-                </Card>
+                <AnalysisProseCard
+                  title="Vision i Świadomość"
+                  icon={Eye}
+                  text={report.vision_analysis}
+                  color="hsl(258,65%,55%)"
+                  accent="hsl(258,65%,96%)"
+                />
               )}
 
-              {/* Mental */}
+              {report.playstyle_description && (
+                <AnalysisProseCard
+                  title="Styl Gry"
+                  icon={Zap}
+                  text={report.playstyle_description}
+                />
+              )}
+
               {report.mental_game && (
-                <Card delay={0.24}>
-                  <SectionTitle icon={Brain}>Aspekt Mentalny</SectionTitle>
+                <div style={{ ...CARD, padding: "13px 14px 12px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 9, paddingBottom: 8, borderBottom: "1px solid hsl(220,15%,92%)" }}>
+                    <div style={{ width: 24, height: 24, borderRadius: 6, background: "hsl(258,60%,95%)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <Brain style={{ width: 12, height: 12, color: "hsl(258,60%,50%)" }} />
+                    </div>
+                    <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "hsl(258,60%,50%)", fontFamily: "'Rajdhani',sans-serif" }}>Aspekt Mentalny</span>
+                  </div>
                   <Prose text={report.mental_game} />
                   {report.consistency_comment && (
                     <div style={{
                       marginTop: 8, padding: "6px 10px", borderRadius: 7,
                       background: "hsl(200,90%,96%)", border: "1px solid hsl(200,80%,82%)",
                     }}>
-                      <span style={{ fontSize: 11, color: PRIMARY }}>{report.consistency_comment}</span>
+                      <span style={{ fontSize: 11, color: PRIMARY, fontStyle: "italic" }}>{report.consistency_comment}</span>
                     </div>
                   )}
-                </Card>
+                </div>
               )}
 
-              {/* Rank Prediction */}
               {report.rank_prediction && (
-                <Card delay={0.26}>
-                  <SectionTitle icon={Trophy}>Prognoza Rankingowa</SectionTitle>
+                <div style={{ ...CARD, padding: "13px 14px 12px", borderLeft: `3px solid ${PRIMARY}` }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 9, paddingBottom: 8, borderBottom: "1px solid hsl(220,15%,92%)" }}>
+                    <div style={{ width: 24, height: 24, borderRadius: 6, background: "hsl(200,90%,95%)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <Trophy style={{ width: 12, height: 12, color: PRIMARY }} />
+                    </div>
+                    <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: PRIMARY, fontFamily: "'Rajdhani',sans-serif" }}>Prognoza Rankingowa</span>
+                  </div>
                   <Prose text={report.rank_prediction} />
-                </Card>
-              )}
-
-              {/* Coaching Tips — full width */}
-              {report.coaching_tips?.length > 0 && (
-                <Card delay={0.3} fullWidth>
-                  <SectionTitle icon={Lightbulb}>Wskazówki Coachingowe</SectionTitle>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 }}>
-                    {report.coaching_tips.map((tip: any, i: number) => {
-                      const p = PRIORITY_COLOR[tip.priority] ?? PRIORITY_COLOR.medium;
-                      const Icon = CATEGORY_ICON[tip.category] ?? Lightbulb;
-                      return (
-                        <div key={i} style={{
-                          borderRadius: 9, padding: "10px 11px",
-                          background: p.bg, border: `1px solid ${p.border}`,
-                        }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                            <Icon style={{ width: 11, height: 11, color: p.text, flexShrink: 0 }} />
-                            <span style={{ fontWeight: 700, fontSize: 11.5, color: FG, flex: 1, fontFamily: "'Rajdhani',sans-serif" }}>{tip.title}</span>
-                            <span style={{
-                              fontSize: 8, fontWeight: 700, color: p.text,
-                              background: "white", borderRadius: 4, padding: "1px 5px", border: `1px solid ${p.border}`,
-                              fontFamily: "'Rajdhani',sans-serif",
-                            }}>
-                              {p.label}
-                            </span>
-                          </div>
-                          <p style={{ margin: 0, fontSize: 11, color: MUTED, lineHeight: 1.6 }}>{tip.description}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </Card>
-              )}
-
-              {/* Champion Recommendations — full width */}
-              {report.champion_recommendations?.length > 0 && (
-                <Card delay={0.35} fullWidth>
-                  <SectionTitle icon={Star}>Polecane Championy</SectionTitle>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 7 }}>
-                    {report.champion_recommendations.map((rec: any, i: number) => (
-                      <div key={i} style={{
-                        padding: "9px 10px", borderRadius: 9,
-                        background: "hsl(200,90%,97%)", border: "1px solid hsl(200,80%,86%)",
-                      }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}>
-                          <img
-                            src={`https://ddragon.leagueoflegends.com/cdn/img/champion/tiles/${rec.champion}_0.jpg`}
-                            style={{ width: 34, height: 34, borderRadius: 7, objectFit: "cover", flexShrink: 0, border: "1px solid hsl(200,80%,82%)" }}
-                            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                          />
-                          <div style={{ fontWeight: 700, fontSize: 12, color: FG, fontFamily: "'Rajdhani',sans-serif" }}>{rec.champion}</div>
-                        </div>
-                        <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5, marginBottom: rec.synergy ? 5 : 0 }}>{rec.reason}</div>
-                        {rec.synergy && (
-                          <div style={{ fontSize: 10, color: PRIMARY }}>
-                            <ArrowRight style={{ width: 8, height: 8, display: "inline", marginRight: 3 }} />
-                            {rec.synergy}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </Card>
+                </div>
               )}
 
             </div>
+
+            {/* Coaching Tips */}
+            {report.coaching_tips?.length > 0 && (
+              <Card delay={0.28}>
+                <SectionTitle icon={Lightbulb}>Wskazówki Coachingowe</SectionTitle>
+                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                  {report.coaching_tips.map((tip: any, i: number) => {
+                    const p = PRIORITY_COLOR[tip.priority] ?? PRIORITY_COLOR.medium;
+                    const Icon = CATEGORY_ICON[tip.category] ?? Lightbulb;
+                    return (
+                      <div key={i} style={{
+                        borderRadius: 9, padding: "10px 12px",
+                        background: p.bg, border: `1px solid ${p.border}`,
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 5 }}>
+                          <div style={{
+                            width: 20, height: 20, borderRadius: 5, flexShrink: 0,
+                            background: p.numBg, display: "flex", alignItems: "center", justifyContent: "center",
+                          }}>
+                            <Icon style={{ width: 10, height: 10, color: "white" }} />
+                          </div>
+                          <span style={{ fontWeight: 700, fontSize: 12, color: FG, flex: 1, fontFamily: "'Rajdhani',sans-serif" }}>{tip.title}</span>
+                          <span style={{
+                            fontSize: 8, fontWeight: 700, color: p.text,
+                            background: "white", borderRadius: 4, padding: "1px 5px", border: `1px solid ${p.border}`,
+                            fontFamily: "'Rajdhani',sans-serif",
+                          }}>
+                            {p.label}
+                          </span>
+                        </div>
+                        <p style={{ margin: 0, fontSize: 11.5, color: "hsl(220,15%,28%)", lineHeight: 1.65 }}>{tip.description}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+            )}
+
+            {/* Champion Recommendations */}
+            {report.champion_recommendations?.length > 0 && (
+              <Card delay={0.32}>
+                <SectionTitle icon={Star}>Polecane Championy</SectionTitle>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 7 }}>
+                  {report.champion_recommendations.map((rec: any, i: number) => (
+                    <div key={i} style={{
+                      padding: "9px 10px", borderRadius: 9,
+                      background: "hsl(200,90%,97%)", border: "1px solid hsl(200,80%,86%)",
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}>
+                        <img
+                          src={`https://ddragon.leagueoflegends.com/cdn/img/champion/tiles/${rec.champion}_0.jpg`}
+                          style={{ width: 34, height: 34, borderRadius: 7, objectFit: "cover", flexShrink: 0, border: "1px solid hsl(200,80%,82%)" }}
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                        />
+                        <div style={{ fontWeight: 700, fontSize: 12, color: FG, fontFamily: "'Rajdhani',sans-serif" }}>{rec.champion}</div>
+                      </div>
+                      <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.55, marginBottom: rec.synergy ? 5 : 0 }}>{rec.reason}</div>
+                      {rec.synergy && (
+                        <div style={{ fontSize: 10, color: PRIMARY, display: "flex", alignItems: "flex-start", gap: 3 }}>
+                          <ChevronRight style={{ width: 9, height: 9, marginTop: 1, flexShrink: 0 }} />
+                          {rec.synergy}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
 
             {/* Motivation quote */}
             {report.motivation_quote && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
+                transition={{ delay: 0.38 }}
                 style={{
-                  marginTop: 8, padding: "16px 18px",
+                  padding: "18px 20px",
                   background: "linear-gradient(135deg, hsl(45,90%,97%), white)",
                   border: "1px solid hsl(45,70%,84%)", borderRadius: 12, textAlign: "center",
                 }}
               >
-                <Sparkles style={{ width: 16, height: 16, color: "hsl(45,85%,45%)", margin: "0 auto 8px" }} />
-                <p style={{ fontStyle: "italic", fontSize: 13, color: FG, lineHeight: 1.7, margin: "0 0 6px", fontWeight: 600 }}>
+                <Sparkles style={{ width: 18, height: 18, color: "hsl(45,85%,45%)", margin: "0 auto 10px" }} />
+                <p style={{ fontStyle: "italic", fontSize: 13.5, color: FG, lineHeight: 1.75, margin: "0 0 8px", fontWeight: 600 }}>
                   "{report.motivation_quote}"
                 </p>
                 <span style={{ fontSize: 10, color: "hsl(45,85%,45%)", fontWeight: 700, fontFamily: "'Rajdhani',sans-serif" }}>— Nexus AI</span>
               </motion.div>
             )}
+
           </div>
         )}
 

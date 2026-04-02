@@ -302,10 +302,38 @@ Odpowiedz WYŁĄCZNIE w formacie JSON (bez markdown, bez znaczników kodu) o dok
   "rank_prediction": "2-3 zdania co gracz może osiągnąć jeśli będzie pracował nad słabymi stronami. Konkretna ranga docelowa.",
   "consistency_score": liczba_0_do_100,
   "consistency_comment": "1-2 zdania o konsekwencji wyników gracza",
-  "motivation_quote": "Krótkie, personalizowane motto/wyzwanie dla gracza nawiązujące do jego stylu gry i potencjału"
+  "motivation_quote": "Krótkie, personalizowane motto/wyzwanie dla gracza nawiązujące do jego stylu gry i potencjału",
+  "performance_radar": {
+    "makro": liczba_0_do_100,
+    "mikro": liczba_0_do_100,
+    "wizja": liczba_0_do_100,
+    "konsekwencja": liczba_0_do_100,
+    "teamfight": liczba_0_do_100,
+    "laning": liczba_0_do_100
+  },
+  "improvement_priorities": [
+    {
+      "rank": 1,
+      "area": "Krótka nazwa obszaru",
+      "current": "Obecna wartość lub opis problemu (np. '7.0 zgonów/mecz')",
+      "target": "Cel do osiągnięcia (np. '<5 zgonów/mecz')",
+      "description": "1-2 zdania konkretnego działania jak to poprawić",
+      "lp_gain_estimate": liczba_lp_do_zdobycia_szacunkowo
+    }
+  ],
+  "key_weaknesses_detailed": [
+    {
+      "title": "Krótki tytuł słabości",
+      "stat": "Statystyka lub wartość (np. '7.0 śmierci/mecz')",
+      "impact": "Dlaczego to szkodzi (1 zdanie)",
+      "fix": "Jak naprawić (1 zdanie)"
+    }
+  ],
+  "biggest_mistake_pattern": "1-2 zdania opisujące JEDEN główny, powtarzający się błąd gracza widoczny w danych — konkretny pattern (np. 'Gracz stale ginie w lategame gdy wróg ma engage, nie pozycjonując się za frontline')",
+  "best_habit": "1-2 zdania opisujące JEDNĄ najlepszą nawykową cechę gracza widoczną w danych"
 }
 
-WAŻNE: Coaching tips musi zawierać minimum 5 wskazówek, champion_recommendations minimum 3. Każda sekcja musi być szczegółowa i odwoływać się do konkretnych danych statystycznych gracza.`;
+WAŻNE: Coaching tips musi zawierać minimum 6 wskazówek, champion_recommendations minimum 3, improvement_priorities minimum 5, key_weaknesses_detailed minimum 3. Każda sekcja musi być szczegółowa i odwoływać się do konkretnych danych statystycznych gracza. performance_radar to liczby 0-100 oceniające każdy wymiar na podstawie danych — bądź precyzyjny i zróżnicowany (nie dawaj wszystkim 60).`;
 }
 
 router.get("/:puuid/ai-report", async (req, res) => {
@@ -347,7 +375,37 @@ router.get("/:puuid/ai-report", async (req, res) => {
       parsed = { error: "parse_failed" };
     }
 
-    const result = { report: parsed, generatedAt: Date.now() };
+    const result = {
+      report: parsed,
+      generatedAt: Date.now(),
+      stats: data.aggregated ? {
+        totalGames: data.aggregated.totalGames,
+        winRate: data.aggregated.winRate,
+        avgKda: data.aggregated.avgKda,
+        avgKills: data.aggregated.avgKills,
+        avgDeaths: data.aggregated.avgDeaths,
+        avgAssists: data.aggregated.avgAssists,
+        avgCsPerMin: data.aggregated.avgCsPerMin,
+        avgVisionScore: data.aggregated.avgVisionScore,
+        avgDamagePct: data.aggregated.avgDamagePct,
+        avgKillParticipation: data.aggregated.avgKillParticipation,
+        avgGoldPerMin: data.aggregated.avgGoldPerMin,
+        avgTimeDeadPct: data.aggregated.avgTimeDeadPct,
+        avgControlWards: data.aggregated.avgControlWards,
+        avgWardsPlaced: data.aggregated.avgWardsPlaced,
+        tiltedGames: data.aggregated.tiltedGames,
+        recent5wr: data.aggregated.recent5wr,
+        recent10wr: data.aggregated.recent10wr,
+        lastResults: data.aggregated.lastResults,
+        champStats: data.aggregated.champStats,
+        primaryRole: data.aggregated.primaryRole,
+        streakStr: data.aggregated.streakStr,
+        pentasTotal: data.aggregated.pentasTotal,
+        multiKills: data.aggregated.multiKills,
+        physicalDmgPct: data.aggregated.physicalDmgPct,
+        magicDmgPct: data.aggregated.magicDmgPct,
+      } : null,
+    };
     cache.set(cacheKey, result, 300);
     res.json(result);
   } catch (err: any) {
