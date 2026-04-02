@@ -356,6 +356,58 @@ export const GetSummonerAnalysisResponse = zod.object({
     strongestPhase: zod.string(),
     description: zod.string(),
   }),
+  rankBenchmarks: zod.array(
+    zod.object({
+      stat: zod.string(),
+      playerValue: zod.number(),
+      tierAvg: zod.number(),
+      pctDiff: zod.number(),
+      unit: zod.string(),
+      higherBetter: zod.boolean(),
+    }),
+  ),
+  improvementRoadmap: zod.array(
+    zod.object({
+      priority: zod.number(),
+      area: zod.string(),
+      currentValue: zod.string(),
+      targetValue: zod.string(),
+      estimatedLpGain: zod.number(),
+      tip: zod.string(),
+    }),
+  ),
+  comebackAnalysis: zod.object({
+    comebackWinRate: zod.number(),
+    snowballWinRate: zod.number(),
+    evenWinRate: zod.number(),
+    comebackGames: zod.number(),
+    snowballGames: zod.number(),
+    evenGames: zod.number(),
+    description: zod.string(),
+  }),
+  skillshotStats: zod.object({
+    avgLanded: zod.number(),
+    avgDodged: zod.number(),
+    hitRate: zod.number(),
+    grade: zod.string(),
+    description: zod.string(),
+  }),
+  matchTimeline: zod.array(
+    zod.object({
+      matchIndex: zod.number(),
+      matchId: zod.string(),
+      championName: zod.string(),
+      win: zod.boolean(),
+      kills: zod.number(),
+      deaths: zod.number(),
+      assists: zod.number(),
+      kda: zod.number(),
+      performanceScore: zod.number(),
+      csPerMin: zod.number(),
+      gameDuration: zod.number(),
+      gameEndTimestamp: zod.number(),
+    }),
+  ),
 });
 
 /**

@@ -159,6 +159,11 @@ function computeAnalysis(matches: MatchData[]) {
     tiltIndicator: { score: 0, description: "Za mało danych.", lossStreakKdaDrop: 0, isTilted: false },
     winConditions: { factors: [], summary: "Za mało meczy do analizy warunków zwycięstwa." },
     powerCurve: { phases: [], strongestPhase: "unknown", description: "Za mało meczy do analizy krzywej mocy." },
+    rankBenchmarks: [],
+    improvementRoadmap: [],
+    comebackAnalysis: { comebackWinRate: 0, snowballWinRate: 0, evenWinRate: 0, comebackGames: 0, snowballGames: 0, evenGames: 0, description: "Za mało danych." },
+    skillshotStats: { avgLanded: 0, avgDodged: 0, hitRate: 0, grade: "F", description: "Za mało danych." },
+    matchTimeline: [],
   };
   if (totalGames === 0) return empty;
 
@@ -859,6 +864,134 @@ function computeAnalysis(matches: MatchData[]) {
   }
   const powerCurve = { phases: pcPhases, strongestPhase, description: pcDesc };
 
+  // ─── Rank Benchmarks ───
+  const TIER_BENCHMARKS: Record<string, { kda: number; csPerMin: number; visionPerMin: number; kp: number; dmgPerMin: number; deaths: number }> = {
+    IRON:        { kda: 1.6, csPerMin: 3.8, visionPerMin: 0.25, kp: 42, dmgPerMin: 550, deaths: 7.2 },
+    BRONZE:      { kda: 2.0, csPerMin: 4.5, visionPerMin: 0.35, kp: 46, dmgPerMin: 620, deaths: 6.5 },
+    SILVER:      { kda: 2.4, csPerMin: 5.2, visionPerMin: 0.42, kp: 50, dmgPerMin: 700, deaths: 5.8 },
+    GOLD:        { kda: 2.8, csPerMin: 5.8, visionPerMin: 0.50, kp: 54, dmgPerMin: 780, deaths: 5.2 },
+    PLATINUM:    { kda: 3.2, csPerMin: 6.3, visionPerMin: 0.58, kp: 57, dmgPerMin: 850, deaths: 4.7 },
+    EMERALD:     { kda: 3.6, csPerMin: 6.8, visionPerMin: 0.65, kp: 60, dmgPerMin: 920, deaths: 4.2 },
+    DIAMOND:     { kda: 4.0, csPerMin: 7.2, visionPerMin: 0.72, kp: 63, dmgPerMin: 980, deaths: 3.8 },
+    MASTER:      { kda: 4.5, csPerMin: 7.6, visionPerMin: 0.80, kp: 65, dmgPerMin: 1050, deaths: 3.4 },
+    GRANDMASTER: { kda: 5.0, csPerMin: 8.0, visionPerMin: 0.85, kp: 67, dmgPerMin: 1100, deaths: 3.1 },
+    CHALLENGER:  { kda: 5.5, csPerMin: 8.5, visionPerMin: 0.90, kp: 70, dmgPerMin: 1200, deaths: 2.8 },
+  };
+  const predictedBenchmarkTier = tierEntry.tier;
+  const benchmarks = TIER_BENCHMARKS[predictedBenchmarkTier] ?? TIER_BENCHMARKS.SILVER;
+  const tierLabelForBench = TIER_LABELS_PL[predictedBenchmarkTier] ?? predictedBenchmarkTier;
+  const rankBenchmarks = [
+    { stat: "KDA", playerValue: Math.round(avgKda * 100) / 100, tierAvg: benchmarks.kda, pctDiff: Math.round(((avgKda - benchmarks.kda) / benchmarks.kda) * 100), unit: "", higherBetter: true },
+    { stat: "CS / min", playerValue: Math.round(avgCsPerMin * 10) / 10, tierAvg: benchmarks.csPerMin, pctDiff: Math.round(((avgCsPerMin - benchmarks.csPerMin) / benchmarks.csPerMin) * 100), unit: "", higherBetter: true },
+    { stat: "Wizja / min", playerValue: Math.round(avgVisionPerMin * 100) / 100, tierAvg: benchmarks.visionPerMin, pctDiff: Math.round(((avgVisionPerMin - benchmarks.visionPerMin) / benchmarks.visionPerMin) * 100), unit: "", higherBetter: true },
+    { stat: "Kill Participation", playerValue: Math.round(avgKillParticipation), tierAvg: benchmarks.kp, pctDiff: Math.round(((avgKillParticipation - benchmarks.kp) / benchmarks.kp) * 100), unit: "%", higherBetter: true },
+    { stat: "Obrażenia / min", playerValue: Math.round(avgDmgPerMin), tierAvg: benchmarks.dmgPerMin, pctDiff: Math.round(((avgDmgPerMin - benchmarks.dmgPerMin) / benchmarks.dmgPerMin) * 100), unit: "", higherBetter: true },
+    { stat: "Śmierci / mecz", playerValue: Math.round(avgDeaths * 10) / 10, tierAvg: benchmarks.deaths, pctDiff: Math.round(((benchmarks.deaths - avgDeaths) / benchmarks.deaths) * 100), unit: "", higherBetter: false },
+  ];
+
+  // ─── Improvement Roadmap ───
+  const improvementItems: { priority: number; area: string; currentValue: string; targetValue: string; estimatedLpGain: number; tip: string }[] = [];
+  if (!isSupport && avgCsPerMin < benchmarks.csPerMin * 1.05) {
+    const csGap = benchmarks.csPerMin - avgCsPerMin;
+    const lpGain = Math.round(clamp(csGap * 12, 3, 35));
+    improvementItems.push({ priority: 0, area: "CS / min", currentValue: `${avgCsPerMin.toFixed(1)}`, targetValue: `${(benchmarks.csPerMin * 1.1).toFixed(1)}`, estimatedLpGain: lpGain, tip: `Każdy 1 CS/min więcej ≈ 400 złota/min. Ćwicz last-hittowanie na botgame przez 10 min dziennie.` });
+  }
+  if (avgDeaths > benchmarks.deaths * 0.95) {
+    const deathGap = avgDeaths - benchmarks.deaths;
+    const lpGain = Math.round(clamp(deathGap * 10, 3, 30));
+    improvementItems.push({ priority: 0, area: "Mniej śmierci", currentValue: `${avgDeaths.toFixed(1)}/mecz`, targetValue: `< ${(benchmarks.deaths * 0.9).toFixed(1)}/mecz`, estimatedLpGain: lpGain, tip: `Każda uniknięta śmierć = ~300g mniej dla wroga + więcej czasu na grę. Graj pod wieżą bez wizji.` });
+  }
+  if (avgVisionPerMin < benchmarks.visionPerMin) {
+    const lpGain = Math.round(clamp((benchmarks.visionPerMin - avgVisionPerMin) * 30, 2, 20));
+    improvementItems.push({ priority: 0, area: "Wizja", currentValue: `${avgVisionPerMin.toFixed(2)}/min`, targetValue: `${(benchmarks.visionPerMin * 1.1).toFixed(2)}/min`, estimatedLpGain: lpGain, tip: `Kupuj pink warda przy każdym powrocie. Warduj przy obiektywach 90 sek przed spawn.` });
+  }
+  if (avgKillParticipation < benchmarks.kp) {
+    const lpGain = Math.round(clamp((benchmarks.kp - avgKillParticipation) * 0.8, 2, 20));
+    improvementItems.push({ priority: 0, area: "Obecność na mapie", currentValue: `${avgKillParticipation.toFixed(0)}% KP`, targetValue: `${Math.round(benchmarks.kp * 1.05)}% KP`, estimatedLpGain: lpGain, tip: `Patrz na minimapę co 5 sek. Rotuj do walk gdy Twoja fala jest pchnięta pod wrogą wieżę.` });
+  }
+  if (avgDmgPerMin < benchmarks.dmgPerMin) {
+    const lpGain = Math.round(clamp((benchmarks.dmgPerMin - avgDmgPerMin) / 30, 2, 18));
+    improvementItems.push({ priority: 0, area: "Obrażenia", currentValue: `${avgDmgPerMin.toFixed(0)}/min`, targetValue: `${Math.round(benchmarks.dmgPerMin * 1.05)}/min`, estimatedLpGain: lpGain, tip: `Wymieniaj ciosy na linii częściej (trade stance). Atakuj w walkach ciągle — każda sekunda bez ataku to strata.` });
+  }
+  if (consistencyScore < 55) {
+    const lpGain = Math.round(clamp((55 - consistencyScore) * 0.5, 3, 15));
+    improvementItems.push({ priority: 0, area: "Konsekwencja", currentValue: `CV: ${(coeffOfVariation * 100).toFixed(0)}%`, targetValue: `CV < 40%`, estimatedLpGain: lpGain, tip: `Ogranicz pulę bohaterów do 2-3. Grając wąską pulę eliminujesz mechaniczne błędy.` });
+  }
+  if (objectiveScore < 50) {
+    const lpGain = Math.round(clamp((50 - objectiveScore) * 0.4, 2, 15));
+    improvementItems.push({ priority: 0, area: "Kontrola obiektywów", currentValue: `${avgDragonKills.toFixed(1)} smoków/mecz`, targetValue: `${(avgDragonKills * 1.5).toFixed(1)} smoków/mecz`, estimatedLpGain: lpGain, tip: `Po wygranej walce natychmiast idź na smoka/barona. Ogłaszaj cele drużynie 30 sek przed spawn.` });
+  }
+  improvementItems.sort((a, b) => b.estimatedLpGain - a.estimatedLpGain);
+  improvementItems.forEach((item, i) => { item.priority = i + 1; });
+  const improvementRoadmap = improvementItems.slice(0, 5);
+
+  // ─── Comeback Analysis ───
+  const comebackGames = validMatches.filter(m => {
+    const kda = computeKda(m.kills, m.deaths, m.assists);
+    const cspm = m.gameDuration > 0 ? (m.cs / m.gameDuration) * 60 : 0;
+    return m.deaths > m.kills + 2 || (cspm < avgCsPerMin * 0.7 && m.gameDuration > 1200);
+  });
+  const snowballGames = validMatches.filter(m => {
+    const kda = computeKda(m.kills, m.deaths, m.assists);
+    return m.kills > m.deaths + 3 || (kda > avgKda * 1.4 && m.kills >= 5);
+  });
+  const evenGames = validMatches.filter(m => !comebackGames.includes(m) && !snowballGames.includes(m));
+  const comebackWR = comebackGames.length > 0 ? (comebackGames.filter(m => m.win).length / comebackGames.length) * 100 : 0;
+  const snowballWR = snowballGames.length > 0 ? (snowballGames.filter(m => m.win).length / snowballGames.length) * 100 : 0;
+  const evenWR = evenGames.length > 0 ? (evenGames.filter(m => m.win).length / evenGames.length) * 100 : 0;
+  let comebackDesc = "";
+  if (comebackGames.length >= 2 && snowballGames.length >= 2) {
+    if (comebackWR > 40) comebackDesc = `Silny mentalnie: ${comebackWR.toFixed(0)}% WR nawet gdy z tyłu (${comebackGames.length} meczy). Nie poddajesz się łatwo.`;
+    else if (snowballWR > 70) comebackDesc = `Gracz snowballowy: ${snowballWR.toFixed(0)}% WR gdy z przodu (${snowballGames.length} meczy), ale ${comebackWR.toFixed(0)}% gdy z tyłu. Musisz dominować wcześnie.`;
+    else comebackDesc = `Comeback: ${comebackWR.toFixed(0)}% WR z tyłu (${comebackGames.length} gier), Snowball: ${snowballWR.toFixed(0)}% z przodu (${snowballGames.length} gier). ${evenGames.length > 0 ? `Wyrównane: ${evenWR.toFixed(0)}% (${evenGames.length} gier).` : ""}`;
+  } else {
+    comebackDesc = `Za mało meczy w skrajnych sytuacjach do pełnej analizy. Ogólny WR: ${winRate.toFixed(0)}%.`;
+  }
+  const comebackAnalysis = {
+    comebackWinRate: Math.round(comebackWR * 10) / 10,
+    snowballWinRate: Math.round(snowballWR * 10) / 10,
+    evenWinRate: Math.round(evenWR * 10) / 10,
+    comebackGames: comebackGames.length,
+    snowballGames: snowballGames.length,
+    evenGames: evenGames.length,
+    description: comebackDesc,
+  };
+
+  // ─── Skillshot Stats ───
+  const avgSkillshotsLanded = mean(validMatches.map(m => m.skillshotsLanded));
+  const avgSkillshotsDodged = mean(validMatches.map(m => m.skillshotsDodged));
+  const totalLanded = validMatches.reduce((s, m) => s + m.skillshotsLanded, 0);
+  const totalDodged = validMatches.reduce((s, m) => s + m.skillshotsDodged, 0);
+  const totalSkillshots = totalLanded + totalDodged;
+  const hitRateOverall = totalSkillshots > 0 ? (totalLanded / totalSkillshots) * 100 : 0;
+  const ssGrade = grade(clamp(hitRateOverall * 1.2, 0, 100));
+  const ssDesc = totalSkillshots > 10
+    ? `Celność: ${hitRateOverall.toFixed(0)}% (${totalLanded} trafień / ${totalSkillshots} prób). Średnio ${avgSkillshotsLanded.toFixed(0)} trafień i ${avgSkillshotsDodged.toFixed(0)} uników/mecz. ${hitRateOverall >= 65 ? "Precyzyjny gracz — skutecznie trafiasz umiejętności." : hitRateOverall >= 45 ? "Przyzwoita celność — trenuj predykcję ruchu przeciwnika." : "Niska celność — ćwicz timing i kąty umiejętności na botgame."}`
+    : "Za mało danych o skillshotach w tych meczach.";
+  const skillshotStats = {
+    avgLanded: Math.round(avgSkillshotsLanded * 10) / 10,
+    avgDodged: Math.round(avgSkillshotsDodged * 10) / 10,
+    hitRate: Math.round(hitRateOverall * 10) / 10,
+    grade: ssGrade,
+    description: ssDesc,
+  };
+
+  // ─── Match Timeline ───
+  const matchTimeline = validMatches.map((m, i) => ({
+    matchIndex: i,
+    matchId: m.matchId,
+    championName: m.championName,
+    win: m.win,
+    kills: m.kills,
+    deaths: m.deaths,
+    assists: m.assists,
+    kda: Math.round(computeKda(m.kills, m.deaths, m.assists) * 100) / 100,
+    performanceScore: Math.round(computeGameScore(m)),
+    csPerMin: Math.round((m.gameDuration > 0 ? (m.cs / m.gameDuration) * 60 : 0) * 10) / 10,
+    gameDuration: m.gameDuration,
+    gameEndTimestamp: m.gameEndTimestamp,
+  }));
+
   return {
     overallScore, overallRating, totalGamesAnalyzed: N, winRate: Math.round(winRate * 10) / 10,
     metrics, championBreakdown, formTrend, strengths, weaknesses,
@@ -866,7 +999,7 @@ function computeAnalysis(matches: MatchData[]) {
     primaryRole: displayPrimaryRole, roleDistribution, currentStreak, bestGame, worstGame,
     coachingTips, championRecommendations, performanceByGameLength, damageTypeBreakdown,
     predictedTier, playstyleRadar, lanePhaseStats, objectiveStats, deathAnalysis, tiltIndicator,
-    winConditions, powerCurve,
+    winConditions, powerCurve, rankBenchmarks, improvementRoadmap, comebackAnalysis, skillshotStats, matchTimeline,
   };
 }
 

@@ -13,7 +13,7 @@ import {
   Wifi, Clock, Star, GraduationCap, Timer,
   Layers, ArrowUpRight, ArrowDownRight, Info, Users,
   Share2, Copy, CheckCheck, ChevronRight, RefreshCw, Crosshair, Activity,
-  Heart, ExternalLink
+  Heart, ExternalLink, Gauge, Map, Sparkles, RotateCcw
 } from "lucide-react";
 import { toggleFavorite, isFavorite } from "@/lib/favorites";
 import { addRankSnapshot, getRankHistory } from "@/lib/rankHistory";
@@ -779,7 +779,7 @@ function AnalysisSection({ data, isLoading, recentMatches, region, gameName, tag
     playstyleArchetype, playstyleDescription, criticalMistakes, gameplayPatterns, primaryRole, roleDistribution, currentStreak,
     bestGame, worstGame, coachingTips, championRecommendations, performanceByGameLength, damageTypeBreakdown,
     predictedTier, playstyleRadar, lanePhaseStats, objectiveStats, deathAnalysis, tiltIndicator,
-    winConditions, powerCurve } = data;
+    winConditions, powerCurve, rankBenchmarks, improvementRoadmap, comebackAnalysis, skillshotStats, matchTimeline } = data;
 
   const sc = overallScore >= 70 ? "text-green-400" : overallScore >= 50 ? "text-yellow-400" : "text-red-400";
   const sr = overallScore >= 70 ? "stroke-green-400" : overallScore >= 50 ? "stroke-yellow-400" : "stroke-red-400";
@@ -928,6 +928,185 @@ function AnalysisSection({ data, isLoading, recentMatches, region, gameName, tag
           </div>
         </div>
       )}
+
+      {/* Performance Timeline Chart */}
+      {matchTimeline?.length > 2 && (
+        <div className="glass-panel p-4">
+          <p className="section-title"><Activity className="w-3.5 h-3.5 text-primary" /> Oś czasu wydajności <InfoTooltip text="Wykres wydajności per mecz — od najstarszego (lewa) do najnowszego (prawa). Kolor słupka: zielony = wygrana, czerwony = porażka. Linia łącząca pokazuje trend wyników w czasie." /></p>
+          <div className="mt-3 overflow-x-auto">
+            <svg viewBox={`0 0 ${Math.max(matchTimeline.length * 48, 300)} 140`} className="w-full" style={{ minWidth: matchTimeline.length * 36 }}>
+              {[20, 40, 60, 80].map((y) => (
+                <g key={y}>
+                  <line x1="24" y1={120 - y} x2={matchTimeline.length * 48 - 8} y2={120 - y} stroke="hsl(220,15%,90%)" strokeWidth="0.5" strokeDasharray="3,3" />
+                  <text x="8" y={124 - y} fontSize="8" fill="hsl(220,10%,60%)" textAnchor="end">{y}</text>
+                </g>
+              ))}
+              {matchTimeline.slice().reverse().map((m: any, i: number, arr: any[]) => {
+                const x = 32 + i * 44;
+                const h = (m.performanceScore / 100) * 95;
+                const barColor = m.win ? "hsl(152,55%,48%)" : "hsl(0,65%,55%)";
+                const nextM = arr[i + 1];
+                const nx = nextM ? 32 + (i + 1) * 44 : 0;
+                const nh = nextM ? (nextM.performanceScore / 100) * 95 : 0;
+                return (
+                  <g key={m.matchId}>
+                    <rect x={x - 12} y={120 - h} width="24" height={h} rx="3" fill={barColor} opacity="0.7" />
+                    <text x={x} y={120 - h - 4} fontSize="8" fontWeight="700" fill={m.win ? "hsl(152,55%,40%)" : "hsl(0,60%,50%)"} textAnchor="middle">{m.performanceScore}</text>
+                    <text x={x} y={133} fontSize="7" fill="hsl(220,10%,55%)" textAnchor="middle">{m.kills}/{m.deaths}/{m.assists}</text>
+                    {nextM && <line x1={x} y1={120 - h} x2={nx} y2={120 - nh} stroke="hsl(200,80%,50%)" strokeWidth="1.5" opacity="0.6" />}
+                  </g>
+                );
+              })}
+            </svg>
+          </div>
+          <div className="flex items-center justify-center gap-4 mt-2">
+            <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground"><span className="w-3 h-3 rounded-sm" style={{ background: "hsl(152,55%,48%)" }} /> Wygrana</span>
+            <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground"><span className="w-3 h-3 rounded-sm" style={{ background: "hsl(0,65%,55%)" }} /> Porażka</span>
+            <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground"><span className="w-3 h-0.5" style={{ background: "hsl(200,80%,50%)" }} /> Trend</span>
+          </div>
+        </div>
+      )}
+
+      {/* Rank Benchmarks */}
+      {rankBenchmarks?.length > 0 && (
+        <div className="glass-panel p-4">
+          <p className="section-title"><Gauge className="w-3.5 h-3.5 text-primary" /> Porównanie z rangą <InfoTooltip text="Porównanie Twoich statystyk ze średnią graczy Twojej szacowanej rangi. Zielone = powyżej średniej, czerwone = poniżej. Procentowa różnica pokazuje jak daleko jesteś od typowego gracza na Twoim poziomie." /></p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {rankBenchmarks.map((b: any, i: number) => {
+              const isAbove = b.higherBetter ? b.pctDiff >= 0 : b.pctDiff >= 0;
+              const absP = Math.abs(b.pctDiff);
+              const barW = Math.min(absP, 100);
+              return (
+                <div key={i} className="stat-card">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-semibold text-foreground">{b.stat}</span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${isAbove ? "text-green-600 bg-green-50" : "text-red-500 bg-red-50"}`}>
+                      {isAbove ? "+" : "-"}{absP}%
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1">
+                      <div className="flex justify-between text-[9px] text-muted-foreground mb-0.5">
+                        <span>Ty: <span className="font-bold text-foreground">{b.playerValue}{b.unit}</span></span>
+                        <span>Ranga: {b.tierAvg}{b.unit}</span>
+                      </div>
+                      <div className="h-1.5 bg-muted/40 rounded-full overflow-hidden relative">
+                        <div className="h-full rounded-full absolute left-0 top-0" style={{
+                          width: `${Math.min((b.playerValue / Math.max(b.playerValue, b.tierAvg, 0.01)) * 100, 100)}%`,
+                          background: isAbove ? "hsl(152,55%,48%)" : "hsl(0,60%,55%)",
+                        }} />
+                        <div className="absolute top-0 h-full w-px bg-foreground/40" style={{
+                          left: `${Math.min((b.tierAvg / Math.max(b.playerValue, b.tierAvg, 0.01)) * 100, 100)}%`,
+                        }} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Improvement Roadmap */}
+      {improvementRoadmap?.length > 0 && (
+        <div className="glass-panel p-4">
+          <p className="section-title"><Map className="w-3.5 h-3.5 text-primary" /> Roadmapa poprawy <InfoTooltip text="Uporządkowana lista obszarów do poprawy, od najważniejszego. Szacowany zysk LP pokazuje przybliżony wpływ poprawy danego wskaźnika na Twój ranking. Skup się na pierwszym punkcie — przyniesie największy efekt." /></p>
+          <div className="space-y-2">
+            {improvementRoadmap.map((item: any) => (
+              <div key={item.priority} className="stat-card flex items-start gap-3">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-black text-sm"
+                  style={{
+                    background: item.priority === 1 ? "hsl(0,65%,95%)" : item.priority === 2 ? "hsl(30,70%,95%)" : "hsl(200,50%,95%)",
+                    color: item.priority === 1 ? "hsl(0,65%,45%)" : item.priority === 2 ? "hsl(30,70%,40%)" : "hsl(200,50%,40%)",
+                    border: `1px solid ${item.priority === 1 ? "hsl(0,50%,85%)" : item.priority === 2 ? "hsl(30,50%,85%)" : "hsl(200,40%,85%)"}`,
+                  }}
+                >#{item.priority}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-xs font-bold text-foreground">{item.area}</span>
+                    <span className="text-[10px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded">+~{item.estimatedLpGain} LP</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground mb-1">
+                    <span>Teraz: <span className="font-semibold text-red-500">{item.currentValue}</span></span>
+                    <ArrowUpRight className="w-3 h-3 text-primary" />
+                    <span>Cel: <span className="font-semibold text-green-600">{item.targetValue}</span></span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground leading-relaxed">{item.tip}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Comeback + Skillshot row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Comeback Analysis */}
+        {comebackAnalysis && (comebackAnalysis.comebackGames > 0 || comebackAnalysis.snowballGames > 0) && (
+          <div className="glass-panel p-4">
+            <p className="section-title"><RotateCcw className="w-3.5 h-3.5 text-primary" /> Comeback vs Snowball <InfoTooltip text="Jak grasz gdy jesteś z tyłu (więcej śmierci niż kills) vs gdy dominujesz (dużo więcej kills). Wysoki WR comebacków = silna mentalność i umiejętność gry od tyłu. Wysoki WR snowballi = dominacja wczesnej gry." /></p>
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              <div className="text-center stat-card py-2">
+                <p className={`text-sm font-bold ${comebackAnalysis.comebackWinRate >= 40 ? "text-green-400" : comebackAnalysis.comebackWinRate >= 25 ? "text-yellow-400" : "text-red-400"}`}>
+                  {comebackAnalysis.comebackWinRate.toFixed(0)}%
+                </p>
+                <p className="text-[10px] text-muted-foreground">Comeback WR</p>
+                <p className="text-[9px] text-muted-foreground/60">{comebackAnalysis.comebackGames} gier</p>
+              </div>
+              <div className="text-center stat-card py-2">
+                <p className={`text-sm font-bold ${comebackAnalysis.snowballWinRate >= 70 ? "text-green-400" : comebackAnalysis.snowballWinRate >= 50 ? "text-yellow-400" : "text-red-400"}`}>
+                  {comebackAnalysis.snowballWinRate.toFixed(0)}%
+                </p>
+                <p className="text-[10px] text-muted-foreground">Snowball WR</p>
+                <p className="text-[9px] text-muted-foreground/60">{comebackAnalysis.snowballGames} gier</p>
+              </div>
+              <div className="text-center stat-card py-2">
+                <p className={`text-sm font-bold ${comebackAnalysis.evenWinRate >= 50 ? "text-green-400" : "text-yellow-400"}`}>
+                  {comebackAnalysis.evenWinRate.toFixed(0)}%
+                </p>
+                <p className="text-[10px] text-muted-foreground">Wyrównane</p>
+                <p className="text-[9px] text-muted-foreground/60">{comebackAnalysis.evenGames} gier</p>
+              </div>
+            </div>
+            <p className="text-[10px] text-muted-foreground leading-relaxed">{comebackAnalysis.description}</p>
+          </div>
+        )}
+
+        {/* Skillshot Stats */}
+        {skillshotStats && skillshotStats.hitRate > 0 && (
+          <div className="glass-panel p-4">
+            <p className="section-title"><Sparkles className="w-3.5 h-3.5 text-primary" /> Celność skillshotów <InfoTooltip text="Stosunek trafionych umiejętności do unikniętych przez przeciwników. Wyższy % = lepsza precyzja. Celność powyżej 55% to dobry wynik na większości rang." /></p>
+            <div className="flex items-center gap-3 mb-3">
+              <GradeBadge
+                grade={skillshotStats.grade}
+                score={skillshotStats.hitRate}
+                color={skillshotStats.grade === "S+" || skillshotStats.grade === "S" ? "text-yellow-400" : skillshotStats.grade === "A" || skillshotStats.grade === "B" ? "text-green-400" : skillshotStats.grade === "C" ? "text-yellow-400" : "text-red-400"}
+              />
+              <div className="flex-1">
+                <div className="h-1.5 bg-muted/40 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full transition-all" style={{
+                    width: `${Math.min(skillshotStats.hitRate, 100)}%`,
+                    background: skillshotStats.hitRate >= 60 ? "hsl(152,55%,48%)" : skillshotStats.hitRate >= 40 ? "hsl(45,80%,50%)" : "hsl(0,60%,55%)",
+                  }} />
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1">Celność: {skillshotStats.hitRate}%</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <div className="text-center stat-card py-2">
+                <p className="text-sm font-bold text-green-400">{skillshotStats.avgLanded}</p>
+                <p className="text-[10px] text-muted-foreground">Trafienia/mecz</p>
+              </div>
+              <div className="text-center stat-card py-2">
+                <p className="text-sm font-bold text-blue-400">{skillshotStats.avgDodged}</p>
+                <p className="text-[10px] text-muted-foreground">Uniki/mecz</p>
+              </div>
+            </div>
+            <p className="text-[10px] text-muted-foreground leading-relaxed">{skillshotStats.description}</p>
+          </div>
+        )}
+      </div>
 
       {/* Metrics Grid */}
       <div className="glass-panel p-4">

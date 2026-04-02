@@ -111,8 +111,12 @@ externalPort = 3002
 localPort = 22333
 externalPort = 3003
 
+[[ports]]
+localPort = 22334
+externalPort = 3001
+
 [nix]
 channel = "stable-25_05"
 
 [objectStorage]
-defaultBucketID = "replit-objstore-991dba53-471a-47fc-b800-f479d808cb82"
+defaultBucketID = "replit-objstore-6156edb2-ffd1-4691-aefc-dd50f02480b2"
