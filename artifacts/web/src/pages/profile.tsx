@@ -722,12 +722,32 @@ function MatchRow({ match, index, selfPuuid, region, gameName, tagLine }: { matc
 
 function RankedCard({ entry }: { entry: any }) {
   const tier = entry?.tier ?? "UNRANKED";
-  const wr = entry ? Math.round((entry.wins / (entry.wins + entry.losses)) * 100) : 0;
+  const totalGames = entry ? entry.wins + entry.losses : 0;
+  const wr = totalGames ? Math.round((entry.wins / totalGames) * 100) : 0;
   const queueLabel = entry?.queueType === "RANKED_SOLO_5x5" ? "Solo / Duo" : entry?.queueType === "RANKED_FLEX_SR" ? "Flex 5v5" : "Rankingowe";
   const wrBarColor = wr >= 55 ? "#22c55e" : wr >= 50 ? "#eab308" : "#ef4444";
   const tierColor = TIER_COLOR[tier] ?? "#6B6B6B";
+
+  const lpToPromo = entry ? 100 - (entry.leaguePoints ?? 0) : 0;
+  const lpPct = entry ? Math.min(entry.leaguePoints ?? 0, 100) : 0;
+  const isApex = ["MASTER", "GRANDMASTER", "CHALLENGER"].includes(tier);
+
+  const avgLPPerGame = totalGames > 0 ? Math.round((wr / 100) * 22 - ((100 - wr) / 100) * 18) : 0;
+  const gamesToPromo = avgLPPerGame > 0 && !isApex ? Math.ceil(lpToPromo / avgLPPerGame) : null;
+
+  const NEXT_RANK: Record<string, string> = {
+    IV: "III", III: "II", II: "I", I: "następny tier",
+  };
+  const nextLabel = entry?.rank ? (entry.rank === "I" ? (() => {
+    const tiers = ["IRON","BRONZE","SILVER","GOLD","PLATINUM","EMERALD","DIAMOND"];
+    const idx = tiers.indexOf(tier);
+    if (idx >= 0 && idx < tiers.length - 1) return tiers[idx + 1] + " IV";
+    if (tier === "DIAMOND") return "Master";
+    return "Wyżej";
+  })() : `${tier} ${NEXT_RANK[entry.rank] ?? ""}`) : "";
+
   return (
-    <div className="relative overflow-hidden p-3 gradient-border-cyan"
+    <div className="relative overflow-hidden gradient-border-cyan"
       style={{
         background: "white",
         border: "1px solid hsl(220,15%,88%)",
@@ -735,18 +755,38 @@ function RankedCard({ entry }: { entry: any }) {
         borderLeft: `3px solid ${tierColor}`,
         boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
       }}>
-      <div className="flex items-center gap-3">
-        <div className="relative flex-shrink-0">
-          <img src={`https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-shared-components/global/default/${tier.toLowerCase()}.png`}
-            alt={tier} className="w-12 h-12 object-contain drop-shadow-lg" onError={(e) => { e.currentTarget.style.display = "none"; }} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="data-label mb-0.5">{queueLabel}</p>
-          <p className="text-sm font-bold leading-tight" style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, color: tierColor }}>
-            {tier}{entry?.rank ? ` ${entry.rank}` : ""}
-          </p>
-          {entry && (
-            <>
+      <div className="p-3">
+        <div className="flex items-center gap-3">
+          <div className="relative flex-shrink-0">
+            <img src={`https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-shared-components/global/default/${tier.toLowerCase()}.png`}
+              alt={tier} className="w-12 h-12 object-contain drop-shadow-lg" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <p className="data-label mb-0">{queueLabel}</p>
+              {entry?.hotStreak && (
+                <span className="flex items-center gap-0.5 text-[8px] font-bold px-1.5 py-0.5 rounded-[3px]"
+                  style={{ background: "hsl(25,90%,95%)", color: "hsl(25,85%,48%)", fontFamily: "'Rajdhani',sans-serif", letterSpacing: "0.05em" }}>
+                  <Flame className="w-2.5 h-2.5" /> SERIA
+                </span>
+              )}
+              {entry?.veteran && (
+                <span className="flex items-center gap-0.5 text-[8px] font-bold px-1.5 py-0.5 rounded-[3px]"
+                  style={{ background: "hsl(258,50%,95%)", color: "hsl(258,60%,50%)", fontFamily: "'Rajdhani',sans-serif", letterSpacing: "0.05em" }}>
+                  <Award className="w-2.5 h-2.5" /> WETERAN
+                </span>
+              )}
+              {entry?.freshBlood && (
+                <span className="flex items-center gap-0.5 text-[8px] font-bold px-1.5 py-0.5 rounded-[3px]"
+                  style={{ background: "hsl(152,50%,95%)", color: "hsl(152,55%,35%)", fontFamily: "'Rajdhani',sans-serif", letterSpacing: "0.05em" }}>
+                  <Sparkles className="w-2.5 h-2.5" /> NOWY
+                </span>
+              )}
+            </div>
+            <p className="text-sm font-bold leading-tight" style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, color: tierColor }}>
+              {tier}{entry?.rank ? ` ${entry.rank}` : ""}
+            </p>
+            {entry && (
               <div className="flex items-center gap-2 text-xs mt-1">
                 <span className="text-foreground font-bold" style={{ fontFamily: "'Barlow Condensed',sans-serif" }}>
                   {entry.leaguePoints} <span className="text-muted-foreground font-normal text-[10px]">LP</span>
@@ -755,13 +795,66 @@ function RankedCard({ entry }: { entry: any }) {
                 <span className="text-muted-foreground text-[10px]">{entry.wins}W {entry.losses}L</span>
                 <span className={`font-bold text-[10px] ml-auto ${wr >= 50 ? "text-win" : "text-loss"}`}>{wr}%</span>
               </div>
-              <div className="mt-1.5 w-full h-0.5 rounded-full overflow-hidden" style={{ background: "hsl(220,15%,90%)" }}>
-                <div className="h-full rounded-full transition-all" style={{ width: `${wr}%`, background: wrBarColor, opacity: 0.8 }} />
-              </div>
-            </>
-          )}
+            )}
+          </div>
         </div>
+
+        {entry && !isApex && (
+          <div className="mt-2.5">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[9px] text-muted-foreground">Postęp do awansu</span>
+              <span className="text-[9px] font-bold" style={{ color: tierColor, fontFamily: "'Barlow Condensed',sans-serif" }}>
+                {nextLabel}
+              </span>
+            </div>
+            <div className="relative w-full h-2 rounded-full overflow-hidden" style={{ background: "hsl(220,15%,92%)" }}>
+              <div className="h-full rounded-full transition-all duration-500" style={{
+                width: `${lpPct}%`,
+                background: `linear-gradient(90deg, ${tierColor}88, ${tierColor})`,
+              }} />
+              <div className="absolute top-0 right-0 h-full w-px" style={{ background: "hsl(220,15%,82%)" }} />
+            </div>
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-[9px] text-muted-foreground">{entry.leaguePoints}/100 LP</span>
+              {gamesToPromo !== null && gamesToPromo > 0 && (
+                <span className="text-[9px] text-muted-foreground">
+                  ~{gamesToPromo} {gamesToPromo === 1 ? "gra" : gamesToPromo < 5 ? "gry" : "gier"} do promo
+                </span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
+
+      {entry && (
+        <div className="px-3 pb-2.5 pt-0">
+          <div className="grid grid-cols-3 gap-1.5">
+            <div className="text-center py-1.5 rounded-[5px]" style={{ background: "hsl(220,15%,96%)" }}>
+              <p className="text-[10px] font-bold" style={{ fontFamily: "'Barlow Condensed',sans-serif", color: "hsl(220,25%,20%)" }}>{totalGames}</p>
+              <p className="text-[8px] text-muted-foreground uppercase tracking-wider" style={{ fontFamily: "'Rajdhani',sans-serif" }}>Gier</p>
+            </div>
+            <div className="text-center py-1.5 rounded-[5px]" style={{ background: "hsl(220,15%,96%)" }}>
+              <p className="text-[10px] font-bold" style={{ fontFamily: "'Barlow Condensed',sans-serif", color: wrBarColor }}>{wr}%</p>
+              <p className="text-[8px] text-muted-foreground uppercase tracking-wider" style={{ fontFamily: "'Rajdhani',sans-serif" }}>WR</p>
+            </div>
+            <div className="text-center py-1.5 rounded-[5px]" style={{ background: "hsl(220,15%,96%)" }}>
+              <p className="text-[10px] font-bold" style={{ fontFamily: "'Barlow Condensed',sans-serif", color: avgLPPerGame > 0 ? "#22c55e" : avgLPPerGame < 0 ? "#ef4444" : "#888" }}>
+                {avgLPPerGame > 0 ? `+${avgLPPerGame}` : avgLPPerGame}
+              </p>
+              <p className="text-[8px] text-muted-foreground uppercase tracking-wider" style={{ fontFamily: "'Rajdhani',sans-serif" }}>LP/mecz</p>
+            </div>
+          </div>
+
+          <div className="mt-2 w-full h-1 rounded-full overflow-hidden flex" style={{ background: "hsl(220,15%,92%)" }}>
+            <div className="h-full rounded-l-full" style={{ width: `${wr}%`, background: "#22c55e" }} />
+            <div className="h-full rounded-r-full" style={{ width: `${100 - wr}%`, background: "#ef4444" }} />
+          </div>
+          <div className="flex items-center justify-between mt-0.5">
+            <span className="text-[8px] font-bold" style={{ color: "#22c55e" }}>{entry.wins}W</span>
+            <span className="text-[8px] font-bold" style={{ color: "#ef4444" }}>{entry.losses}L</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
