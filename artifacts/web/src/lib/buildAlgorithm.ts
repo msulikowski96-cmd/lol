@@ -209,25 +209,25 @@ export interface BuildResult {
   };
 }
 
-const CDRAGON = "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images";
+const DD_RUNES = "https://ddragon.leagueoflegends.com/cdn/img/perk-images";
 
 const RUNE_KEYSTONES = {
-  conqueror: { id: 8010, name: "Zdobywca", imgPath: `${CDRAGON}/Styles/Precision/Conqueror/Conqueror.png`, description: "Zbieraj stosy w walce, zyskując %AP/%AD i leczenie" },
-  pressTheAttack: { id: 8005, name: "Nacisk Ataku", imgPath: `${CDRAGON}/Styles/Precision/PressTheAttack/PressTheAttack.png`, description: "3 ataki → wróg dostaje 12% więcej obrażeń przez 6s" },
-  lethalTempo: { id: 8008, name: "Śmiertelne Tempo", imgPath: `${CDRAGON}/Styles/Precision/LethalTempo/LethalTempoTemp.png`, description: "Atak zwiększa szybkość ataku, limit AS przekroczony" },
-  fleetFootwork: { id: 8021, name: "Zwinne Ruchy", imgPath: `${CDRAGON}/Styles/Precision/FleetFootwork/FleetFootwork.png`, description: "Naenergetyzowane ataki leczą i dają MS" },
-  electrocute: { id: 8112, name: "Elektrokuza", imgPath: `${CDRAGON}/Styles/Domination/Electrocute/Electrocute.png`, description: "3 ataki/czary → wybuch obrażeń" },
-  darkHarvest: { id: 8128, name: "Mroczne Żniwa", imgPath: `${CDRAGON}/Styles/Domination/DarkHarvest/DarkHarvest.png`, description: "Zbieraj dusze od wrogów poniżej 50% HP" },
-  predator: { id: 8120, name: "Drapieżnik", imgPath: `${CDRAGON}/Styles/Domination/Predator/Predator.png`, description: "Aktywny sprint do celu z obrażeniami" },
-  hailOfBlades: { id: 9923, name: "Grad Ostrzy", imgPath: `${CDRAGON}/Styles/Domination/HailOfBlades/HailOfBlades.png`, description: "Pierwsze 3 ataki z 110% szybkością ataku" },
-  arcaneComet: { id: 8229, name: "Arkana Kometa", imgPath: `${CDRAGON}/Styles/Sorcery/ArcaneComet/ArcaneComet.png`, description: "Trafienie czarem → komet lecący do celu" },
-  phaseRush: { id: 8214, name: "Skok Fazy", imgPath: `${CDRAGON}/Styles/Sorcery/PhaseRush/PhaseRush.png`, description: "3 ataki/czary → ogromny MS przez 4s" },
-  summonAery: { id: 8214, name: "Przywołaj Aery", imgPath: `${CDRAGON}/Styles/Sorcery/SummonAery/SummonAery.png`, description: "Ataki i czary wysyłają Aery do poranionego wroga lub sojusznika" },
-  graspOfTheUndying: { id: 8437, name: "Uchwyt Nieśmiertelności", imgPath: `${CDRAGON}/Styles/Resolve/GraspOfTheUndying/GraspOfTheUndying.png`, description: "Co 4s następny atak leczy, zwiększa max HP" },
-  aftershock: { id: 8439, name: "Weteran Wstrząsu", imgPath: `${CDRAGON}/Styles/Resolve/VeteranAftershock/VeteranAftershock.png`, description: "Zaimmobilizuj wroga → chwilowy armor/MR i eksplozja" },
-  guardian: { id: 8465, name: "Strażnik", imgPath: `${CDRAGON}/Styles/Resolve/Guardian/Guardian.png`, description: "Chroń sojusznika → tarcza dla was obojga" },
-  glacialAugment: { id: 8351, name: "Lodowe Wspomaganie", imgPath: `${CDRAGON}/Styles/Inspiration/GlacialAugment/GlacialAugment.png`, description: "Podstawowe ataki spowalniają, tworząc lodowe strefy" },
-  firstStrike: { id: 8360, name: "Pierwszy Cios", imgPath: `${CDRAGON}/Styles/Inspiration/FirstStrike/FirstStrike.png`, description: "Inicjuj walkę → złoto za obrażenia" },
+  conqueror:        { id: 8010, name: "Zdobywca",              imgPath: `${DD_RUNES}/Styles/Precision/Conqueror/Conqueror.png`,                       description: "Zbieraj stosy w walce, zyskując %AP/%AD i leczenie" },
+  pressTheAttack:   { id: 8005, name: "Nacisk Ataku",          imgPath: `${DD_RUNES}/Styles/Precision/PressTheAttack/PressTheAttack.png`,               description: "3 ataki → wróg dostaje 12% więcej obrażeń przez 6s" },
+  lethalTempo:      { id: 8008, name: "Śmiertelne Tempo",      imgPath: `${DD_RUNES}/Styles/Precision/LethalTempo/LethalTempo.png`,                     description: "Atak zwiększa szybkość ataku, limit AS przekroczony" },
+  fleetFootwork:    { id: 8021, name: "Zwinne Ruchy",          imgPath: `${DD_RUNES}/Styles/Precision/FleetFootwork/FleetFootwork.png`,                 description: "Naenergetyzowane ataki leczą i dają MS" },
+  electrocute:      { id: 8112, name: "Elektrokuza",           imgPath: `${DD_RUNES}/Styles/Domination/Electrocute/Electrocute.png`,                    description: "3 ataki/czary → wybuch obrażeń" },
+  darkHarvest:      { id: 8128, name: "Mroczne Żniwa",         imgPath: `${DD_RUNES}/Styles/Domination/DarkHarvest/DarkHarvest.png`,                   description: "Zbieraj dusze od wrogów poniżej 50% HP" },
+  predator:         { id: 8120, name: "Drapieżnik",            imgPath: `${DD_RUNES}/Styles/Domination/Predator/Predator.png`,                          description: "Aktywny sprint do celu z obrażeniami" },
+  hailOfBlades:     { id: 9923, name: "Grad Ostrzy",           imgPath: `${DD_RUNES}/Styles/Domination/HailOfBlades/HailOfBlades.png`,                  description: "Pierwsze 3 ataki z 110% szybkością ataku" },
+  arcaneComet:      { id: 8229, name: "Arkana Kometa",         imgPath: `${DD_RUNES}/Styles/Sorcery/ArcaneComet/ArcaneComet.png`,                       description: "Trafienie czarem → komet lecący do celu" },
+  phaseRush:        { id: 8214, name: "Skok Fazy",             imgPath: `${DD_RUNES}/Styles/Sorcery/PhaseRush/PhaseRush.png`,                           description: "3 ataki/czary → ogromny MS przez 4s" },
+  summonAery:       { id: 8230, name: "Przywołaj Aery",        imgPath: `${DD_RUNES}/Styles/Sorcery/SummonAery/SummonAery.png`,                         description: "Ataki i czary wysyłają Aery do poranionego wroga lub sojusznika" },
+  graspOfTheUndying:{ id: 8437, name: "Uchwyt Nieśmiertelności",imgPath: `${DD_RUNES}/Styles/Resolve/GraspOfTheUndying/GraspOfTheUndying.png`,          description: "Co 4s następny atak leczy, zwiększa max HP" },
+  aftershock:       { id: 8439, name: "Weteran Wstrząsu",      imgPath: `${DD_RUNES}/Styles/Resolve/VeteranAftershock/VeteranAftershock.png`,            description: "Zaimmobilizuj wroga → chwilowy armor/MR i eksplozja" },
+  guardian:         { id: 8465, name: "Strażnik",              imgPath: `${DD_RUNES}/Styles/Resolve/Guardian/Guardian.png`,                             description: "Chroń sojusznika → tarcza dla was obojga" },
+  glacialAugment:   { id: 8351, name: "Lodowe Wspomaganie",    imgPath: `${DD_RUNES}/Styles/Inspiration/GlacialAugment/GlacialAugment.png`,             description: "Podstawowe ataki spowalniają, tworząc lodowe strefy" },
+  firstStrike:      { id: 8360, name: "Pierwszy Cios",         imgPath: `${DD_RUNES}/Styles/Inspiration/FirstStrike/FirstStrike.png`,                   description: "Inicjuj walkę → złoto za obrażenia" },
 };
 
 const RUNE_PATHS = {
@@ -240,29 +240,29 @@ const RUNE_PATHS = {
 
 const SUBRUNES: Record<string, { name: string; imgPath: string }[]> = {
   precision: [
-    { name: "Triumf", imgPath: `${CDRAGON}/Styles/Precision/Triumph.png` },
-    { name: "Legendarna Żywotność", imgPath: `${CDRAGON}/Styles/Precision/LegendBloodline/LegendBloodline.png` },
-    { name: "Zamach", imgPath: `${CDRAGON}/Styles/Precision/CoupDeGrace/CoupDeGrace.png` },
+    { name: "Triumf",               imgPath: `${DD_RUNES}/Styles/Precision/Triumph/Triumph.png` },
+    { name: "Leg. Żywotność",       imgPath: `${DD_RUNES}/Styles/Precision/LegendBloodline/LegendBloodline.png` },
+    { name: "Zamach",               imgPath: `${DD_RUNES}/Styles/Precision/CoupDeGrace/CoupDeGrace.png` },
   ],
   dominationSub: [
-    { name: "Smak Krwi", imgPath: `${CDRAGON}/Styles/Domination/TasteOfBlood/GreenTerror_TasteOfBlood.png` },
-    { name: "Żniwiarz Ocznodołów", imgPath: `${CDRAGON}/Styles/Domination/EyeballCollection/EyeballCollection.png` },
-    { name: "Łowca Żbójów", imgPath: `${CDRAGON}/Styles/Domination/TreasureHunter/TreasureHunter.png` },
+    { name: "Smak Krwi",            imgPath: `${DD_RUNES}/Styles/Domination/TasteOfBlood/GreenTerror_TasteOfBlood.png` },
+    { name: "Kolekcja Gałek",       imgPath: `${DD_RUNES}/Styles/Domination/EyeballCollection/EyeballCollection.png` },
+    { name: "Łowca Skarbów",        imgPath: `${DD_RUNES}/Styles/Domination/TreasureHunter/TreasureHunter.png` },
   ],
   sorcerySub: [
-    { name: "Przepływ Many", imgPath: `${CDRAGON}/Styles/Sorcery/ManaflowBand/ManaflowBand.png` },
-    { name: "Transcendencja", imgPath: `${CDRAGON}/Styles/Sorcery/Transcendence/Transcendence.png` },
-    { name: "Zbieranie Burz", imgPath: `${CDRAGON}/Styles/Sorcery/GatheringStorm/GatheringStorm.png` },
+    { name: "Przepływ Many",        imgPath: `${DD_RUNES}/Styles/Sorcery/ManaflowBand/ManaflowBand.png` },
+    { name: "Transcendencja",       imgPath: `${DD_RUNES}/Styles/Sorcery/Transcendence/Transcendence.png` },
+    { name: "Zbieranie Burz",       imgPath: `${DD_RUNES}/Styles/Sorcery/GatheringStorm/GatheringStorm.png` },
   ],
   resolveSub: [
-    { name: "Zbroja Kości", imgPath: `${CDRAGON}/Styles/Resolve/BonePlating/BonePlating.png` },
-    { name: "Drugi Oddech", imgPath: `${CDRAGON}/Styles/Resolve/SecondWind/SecondWind.png` },
-    { name: "Niespożyte Siły", imgPath: `${CDRAGON}/Styles/Resolve/Unflinching/Unflinching.png` },
+    { name: "Zbroja Kości",         imgPath: `${DD_RUNES}/Styles/Resolve/BonePlating/BonePlating.png` },
+    { name: "Drugi Oddech",         imgPath: `${DD_RUNES}/Styles/Resolve/SecondWind/SecondWind.png` },
+    { name: "Nieugięty",            imgPath: `${DD_RUNES}/Styles/Resolve/Unflinching/Unflinching.png` },
   ],
   inspirationSub: [
-    { name: "Magiczne Obuwie", imgPath: `${CDRAGON}/Styles/Inspiration/MagicalFootwear/MagicalFootwear.png` },
-    { name: "Kosmiczny Wgląd", imgPath: `${CDRAGON}/Styles/Inspiration/CosmicInsight/CosmicInsight.png` },
-    { name: "Droga do Tortu", imgPath: `${CDRAGON}/Styles/Inspiration/BiscuitDelivery/BiscuitDelivery.png` },
+    { name: "Magiczne Obuwie",      imgPath: `${DD_RUNES}/Styles/Inspiration/MagicalFootwear/MagicalFootwear.png` },
+    { name: "Kosmiczny Wgląd",      imgPath: `${DD_RUNES}/Styles/Inspiration/CosmicInsight/CosmicInsight.png` },
+    { name: "Dostawa Herbatników",  imgPath: `${DD_RUNES}/Styles/Inspiration/BiscuitDelivery/BiscuitDelivery.png` },
   ],
 };
 
@@ -474,16 +474,15 @@ function buildAssassin(ta: TeamAnalysis, profile: ChampProfile): Omit<BuildResul
   }
 
   if (isAP) {
-    coreItems.push({ id: 4645, name: "Shadowflame", reason: "Core AP assassina — ogromny burst" });
-    coreItems.push({ id: 3285, name: "Szał Ludena", reason: "Mobilność i obrażenia przy inicjacji" });
-    coreItems.push({ id: 3157, name: "Klepsydra Zhonya", reason: "Aktywna nietykalność — kluczowa dla melee maga" });
-    reasoning.push("AP Assassin: Shadowflame → Szał Ludena → Zhonya — klasyczny core.");
+    coreItems.push({ id: 4645, name: "Shadowflame", reason: "Core AP assassina — ogromny burst i MagPen" });
+    coreItems.push({ id: 3089, name: "Czapka Rabadona", reason: "Mnoży całkowite AP o 35% — niezbędna" });
+    coreItems.push({ id: 3157, name: "Klepsydra Zhonya", reason: "Aktywna nietykalność — kluczowa po wskoku w cel" });
+    reasoning.push("AP Assassin: Shadowflame → Rabadon → Zhonya — maksymalny burst z ochroną przy wejściu.");
   } else {
-    coreItems.push({ id: 6691, name: "Ostrze Nocy", reason: "Burst + tarcza vs czarów po wbiciu w cel" });
-    coreItems.push({ id: 3814, name: "Krawędź Nocy", reason: "Blokuje jeden czar — idealne vs maga/poke" });
-    coreItems.push({ id: 3142, name: "Buty Jowisza... Miecz Ducha", reason: "Szybkość i zabójcze obrażenia" });
-    coreItems[2] = { id: 3142, name: "Призрак Jowisza", reason: "Przyspieszenie i lethality" };
-    reasoning.push("AD Assassin: Ostrze Nocy → Krawędź Nocy dla maksymalnego burstu i tarcza vs CC.");
+    coreItems.push({ id: 6691, name: "Ostrze Nocy", reason: "Burst + pasywna tarcza vs czarów po wbiciu w cel" });
+    coreItems.push({ id: 3814, name: "Krawędź Nocy", reason: "Blokuje jeden czar — idealne vs poke i engage" });
+    coreItems.push({ id: 3142, name: "Widmo Jowisza", reason: "Lethality + MS do startu walki — must-have AD assassin" });
+    reasoning.push("AD Assassin: Ostrze Nocy → Krawędź Nocy → Widmo Jowisza — klasyczny burst z ochroną.");
   }
 
   if (ta.tankCount >= 2) {
@@ -514,26 +513,40 @@ function buildRunesAssassin(ta: TeamAnalysis, profile: ChampProfile): RuneData {
   };
 }
 
-function buildFighter(ta: TeamAnalysis, _profile: ChampProfile): Omit<BuildResult, "teamAnalysis"> {
+function buildFighter(ta: TeamAnalysis, profile: ChampProfile): Omit<BuildResult, "teamAnalysis"> {
   const reasoning: string[] = [];
   const coreItems: ItemRec[] = [];
   const situational: ItemRec[] = [];
+  const isAP = profile.damageType === "AP";
+  const hasMobility = profile.tags?.includes("mobility");
   let boots: ItemRec = { id: 3047, name: "Płytowane Nagolenniki" };
 
-  if (ta.apThreat >= 3) {
+  if (ta.apThreat >= 3 || ta.heavyCC) {
     boots = { id: 3111, name: "Trzewiki Merkurego" };
-    reasoning.push("Dużo AP — Trzewiki Merkurego dla MR i tenacity.");
-  } else if (ta.heavyCC) {
-    boots = { id: 3111, name: "Trzewiki Merkurego" };
-    reasoning.push("Wiele CC — tenacity z Trzewików Merkurego jest priorytetem.");
+    reasoning.push(ta.heavyCC ? "Wiele CC — tenacity z Trzewików Merkurego jest priorytetem." : "Dużo AP — Trzewiki Merkurego dla MR i tenacity.");
+  } else if (isAP) {
+    boots = { id: 3020, name: "Buty Czarnoksiężnika" };
+    reasoning.push("AP fighter — Buty Czarnoksiężnika dla penetracji magicznej.");
   } else {
     reasoning.push("Płytowane Nagolenniki vs AD — zmniejszają obrażenia AA o 12%.");
   }
 
-  coreItems.push({ id: 3078, name: "Trójca Sił", reason: "Proc po każdym czarze — świetny dla fighterów z niskim CD" });
-  coreItems.push({ id: 6333, name: "Taniec Śmierci", reason: "Opóźnia obrażenia i leczy — niezbędne dla przeżycia" });
-  coreItems.push({ id: 3053, name: "Wzmocnienie Steraka", reason: "Tarcza przy niskim HP — ratuje w walce" });
-  reasoning.push("Core fighter: Trójca Sił + Taniec Śmierci + Tarcza Steraka.");
+  if (isAP) {
+    coreItems.push({ id: 3152, name: "Berło Archangela", reason: "AP + Tarcza z many — core dla AP fighterów z dużym kosztem many" });
+    coreItems.push({ id: 6653, name: "Towarzysz Liandry", reason: "Obrażenia % HP — świetny gdy wróg zbiera HP" });
+    coreItems.push({ id: 3157, name: "Klepsydra Zhonya", reason: "Aktywna nietykalność — kluczowa dla AP melee fightera" });
+    reasoning.push("AP Fighter: Berło Archangela / Towarzysz Liandry → Zhonya — burst z przeżywalnością.");
+  } else {
+    if (hasMobility || profile.tags?.includes("burst")) {
+      coreItems.push({ id: 6333, name: "Taniec Śmierci", reason: "Opóźnia odebrane obrażenia i leczy — niezbędne dla przeżycia" });
+      coreItems.push({ id: 3071, name: "Topór Czerni", reason: "ArPen redukujący pancerz — świetny vs ciężkich wrogów" });
+    } else {
+      coreItems.push({ id: 3078, name: "Trójca Sił", reason: "Proc po każdym czarze — świetny dla fighterów z krótkim CD" });
+      coreItems.push({ id: 6333, name: "Taniec Śmierci", reason: "Opóźnia obrażenia i leczy — niezbędne dla przeżycia" });
+    }
+    coreItems.push({ id: 3053, name: "Wzmocnienie Steraka", reason: "Tarcza przy niskim HP — ratuje w walce 1v1 i teamfight" });
+    reasoning.push("Core fighter: " + (hasMobility ? "Taniec Śmierci + Topór Czerni" : "Trójca Sił + Taniec Śmierci") + " + Tarcza Steraka.");
+  }
 
   if (ta.apThreat >= 2) {
     situational.push({ id: 4401, name: "Siła Natury", reason: "Bardzo wysokie MR — konieczne vs AP" });
@@ -542,27 +555,32 @@ function buildFighter(ta: TeamAnalysis, _profile: ChampProfile): Omit<BuildResul
   }
   if (ta.tankCount >= 2) {
     situational.push({ id: 3153, name: "Ostrze Króla Ruin", reason: "Zadaje % aktualnego HP — najlepszy vs tanki" });
-    situational.push({ id: 3071, name: "Topór Czerni", reason: "Stackuje 6x redukcję pancerza vs tanki" });
-    reasoning.push("Dużo tanków — Ostrze Króla Ruin lub Topór Czerni przebijają ich pancerz.");
+    reasoning.push("Dużo tanków — Ostrze Króla Ruin przebija ich pancerz przez % HP.");
   }
   if (ta.healingPresence) {
-    situational.push({ id: 3076, name: "Kolec Brambletu", reason: "Antyheal w zasięgu AA — daj wcześnie vs heal" });
+    situational.push({ id: 3076, name: "Kolec Brambletu", reason: "Antyheal w zasięgu AA — kup wcześnie vs heal comp" });
     reasoning.push("Leczenie u wrogów — Kolec Brambletu redukuje je przez AA.");
   }
+  situational.push({ id: 3026, name: "Anioł Strażnik", reason: "Drugie życie — pick gdy ahead lub vs assassinów" });
 
-  const runes = buildRunesFighter(ta);
+  const runes = buildRunesFighter(ta, profile);
   return { coreItems, boots, situationalItems: situational, runes, reasoning };
 }
 
-function buildRunesFighter(ta: TeamAnalysis): RuneData {
-  const keystone = ta.tankCount >= 2 ? RUNE_KEYSTONES.conqueror : RUNE_KEYSTONES.conqueror;
+function buildRunesFighter(ta: TeamAnalysis, profile: ChampProfile): RuneData {
+  const isAP = profile.damageType === "AP";
+  const hasBurst = profile.tags?.includes("burst");
+  let keystone = RUNE_KEYSTONES.conqueror;
+  if (hasBurst && !isAP) keystone = RUNE_KEYSTONES.pressTheAttack;
+  else if (isAP) keystone = RUNE_KEYSTONES.conqueror;
+
   return {
     keystone,
     primaryPath: RUNE_PATHS.precision,
     secondaryPath: ta.apThreat >= 2 ? RUNE_PATHS.resolve : RUNE_PATHS.domination,
     primaryRunes: SUBRUNES.precision,
     secondaryRunes: ta.apThreat >= 2 ? SUBRUNES.resolveSub.slice(0, 2) : SUBRUNES.dominationSub.slice(0, 2),
-    shards: ["AD Adaptacyjne", "AD Adaptacyjne", "HP"],
+    shards: [isAP ? "AP Adaptacyjne" : "AD Adaptacyjne", isAP ? "AP Adaptacyjne" : "AD Adaptacyjne", "HP"],
   };
 }
 
