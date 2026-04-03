@@ -1,8 +1,13 @@
 import { Router, type IRouter } from "express";
-import { ai } from "@workspace/integrations-gemini-ai";
+import OpenAI from "openai";
 import { riotFetch } from "../lib/riot-fetch";
 import { cache } from "../lib/cache";
 import { getChampionName } from "../lib/ddragon";
+
+const nvidiaClient = new OpenAI({
+  baseURL: "https://integrate.api.nvidia.com/v1",
+  apiKey: process.env.NVIDIA_API_KEY ?? "",
+});
 
 const router: IRouter = Router();
 
@@ -362,13 +367,23 @@ router.get("/:puuid/ai-report", async (req, res) => {
       const data = await fetchInternalData(puuid, region.toUpperCase());
       const prompt = buildPrompt(data, gameName ?? "Gracz");
 
-      const response = await ai.models.generateContent({
-        model: "gemini-2.0-flash",
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        config: { maxOutputTokens: 8192 },
-      });
+      const nvidiaParams: any = {
+        model: "meta/llama-3.3-70b-instruct",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.2,
+        top_p: 0.7,
+        max_tokens: 4096,
+        stream: true,
+      };
+      const stream = nvidiaClient.chat.completions.create(nvidiaParams) as any;
 
-      const rawText = (response.text ?? "")
+      let fullText = "";
+      for await (const chunk of await stream) {
+        const content = chunk?.choices?.[0]?.delta?.content;
+        if (content) fullText += content;
+      }
+
+      const rawText = fullText
         .replace(/^```(?:json)?\s*/m, "")
         .replace(/```\s*$/m, "")
         .trim();
