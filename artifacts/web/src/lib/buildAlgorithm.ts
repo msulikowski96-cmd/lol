@@ -198,15 +198,7 @@ export interface BuildResult {
   situationalItems: ItemRec[];
   runes: RuneData;
   reasoning: string[];
-  teamAnalysis: {
-    apThreat: number;
-    adThreat: number;
-    tankCount: number;
-    squishyCount: number;
-    healingPresence: boolean;
-    heavyCC: boolean;
-    engageHeavy: boolean;
-  };
+  teamAnalysis: TeamAnalysis;
 }
 
 const DD_RUNES = "https://ddragon.leagueoflegends.com/cdn/img/perk-images";
@@ -273,32 +265,74 @@ export function getChampProfile(championId: string): ChampProfile {
   return { class: "FIGHTER", damageType: "HYBRID" };
 }
 
+// Champions dealing % of current/max HP as damage
+const PERCENT_HP_CHAMPS = new Set([
+  "Vayne", "Fiora", "KogMaw", "Chogath", "Garen", "Darius", "Viego",
+  "Belveth", "Kayle", "Gangplank",
+]);
+
+// Champions who are strong split-pushers
+const SPLIT_PUSH_CHAMPS = new Set([
+  "Tryndamere", "Fiora", "Jax", "Camille", "Nasus", "Yorick", "Garen",
+  "Riven", "Renekton", "Irelia", "Shen",
+]);
+
+// Champions with notable shields
+const SHIELD_CHAMPS = new Set([
+  "Janna", "Lulu", "Karma", "Sona", "Seraphine", "Milio", "Rakan",
+  "Sivir", "Taric", "Sett", "Garen",
+]);
+
 interface TeamAnalysis {
-  apThreat: number;
-  adThreat: number;
-  tankCount: number;
-  squishyCount: number;
+  apThreat: number;         // 0–5 weighted AP damage score
+  adThreat: number;         // 0–5 weighted AD damage score
+  tankCount: number;        // full tanks + 0.5 for fighters
+  squishyCount: number;     // mages + marksmen + assassins
+  assassinCount: number;    // dive/burst one-shot threats
+  pokeCount: number;        // ranged sustained poke sources
+  diverCount: number;       // fighters diving backline
   healingPresence: boolean;
-  heavyCC: boolean;
-  engageHeavy: boolean;
+  shieldPresence: boolean;
+  heavyCC: boolean;         // 2+ champions with CC tag
+  engageHeavy: boolean;     // 2+ champions with engage tag
+  percentHPThreat: boolean; // Vayne, Fiora, Kog'Maw, etc.
+  splitPushThreat: boolean; // split-push heavy enemy
 }
 
 function analyzeEnemyTeam(enemies: string[]): TeamAnalysis {
   let apThreat = 0, adThreat = 0, tankCount = 0, squishyCount = 0;
-  let healingPresence = false, ccCount = 0, engageCount = 0;
+  let assassinCount = 0, pokeCount = 0, diverCount = 0;
+  let healingPresence = false, shieldPresence = false;
+  let ccCount = 0, engageCount = 0;
+  let percentHPThreat = false, splitPushThreat = false;
 
   for (const e of enemies) {
     if (!e) continue;
     const p = getChampProfile(e);
-    if (p.damageType === "AP") apThreat++;
-    else if (p.damageType === "AD") adThreat++;
+
+    // Damage type weighting
+    if (p.damageType === "AP") apThreat += 1;
+    else if (p.damageType === "AD") adThreat += 1;
     else { apThreat += 0.5; adThreat += 0.5; }
-    if (p.class === "TANK") { tankCount++; squishyCount = Math.max(0, squishyCount); }
-    else if (p.class === "FIGHTER") { tankCount += 0.5; }
-    else if (["MAGE", "MARKSMAN", "ASSASSIN"].includes(p.class)) { squishyCount++; }
+
+    // Tankiness
+    if (p.class === "TANK") tankCount += 1;
+    else if (p.class === "FIGHTER") { tankCount += 0.5; diverCount += 0.5; }
+    else if (p.class === "ASSASSIN") { squishyCount += 1; assassinCount += 1; }
+    else if (p.class === "MAGE") { squishyCount += 1; if (p.isRanged && p.tags?.includes("poke")) pokeCount += 1; }
+    else if (p.class === "MARKSMAN") { squishyCount += 1; if (p.tags?.includes("poke")) pokeCount += 0.5; }
+    else if (p.class === "SUPPORT") { /* supports don't add to squishy/tank */ }
+
+    // Specials
     if (p.hasHealing) healingPresence = true;
+    if (SHIELD_CHAMPS.has(e)) shieldPresence = true;
+    if (PERCENT_HP_CHAMPS.has(e)) percentHPThreat = true;
+    if (SPLIT_PUSH_CHAMPS.has(e)) splitPushThreat = true;
     if (p.tags?.includes("cc")) ccCount++;
     if (p.tags?.includes("engage")) engageCount++;
+
+    // Divers: fighters/tanks who jump on backline
+    if (p.tags?.includes("mobility") && (p.class === "FIGHTER" || p.class === "TANK")) diverCount += 0.5;
   }
 
   return {
@@ -306,262 +340,332 @@ function analyzeEnemyTeam(enemies: string[]): TeamAnalysis {
     adThreat: Math.round(adThreat),
     tankCount: Math.round(tankCount),
     squishyCount: Math.round(squishyCount),
+    assassinCount,
+    pokeCount: Math.round(pokeCount),
+    diverCount: Math.round(diverCount),
     healingPresence,
+    shieldPresence,
     heavyCC: ccCount >= 2,
     engageHeavy: engageCount >= 2,
+    percentHPThreat,
+    splitPushThreat,
   };
 }
 
+// ─── MARKSMAN ────────────────────────────────────────────────────────────────
 function buildMarksman(ta: TeamAnalysis, profile: ChampProfile): Omit<BuildResult, "teamAnalysis"> {
   const reasoning: string[] = [];
   const coreItems: ItemRec[] = [];
   const situational: ItemRec[] = [];
   let boots: ItemRec = { id: 3006, name: "Buty Berserkera" };
 
-  if (ta.apThreat >= 3) {
+  // BOOTS
+  if (ta.heavyCC || ta.assassinCount >= 2) {
     boots = { id: 3111, name: "Trzewiki Merkurego" };
-    reasoning.push("Dużo AP u przeciwników — Trzewiki Merkurego dają MR i tenacity.");
-  } else if (ta.engageHeavy) {
+    reasoning.push(ta.assassinCount >= 2 ? "Dużo assassinów — Trzewiki Merkurego dla tenacity i MR." : "Wiele CC — Trzewiki Merkurego kluczowe dla przeżycia.");
+  } else if (ta.engageHeavy || ta.diverCount >= 2) {
     boots = { id: 3047, name: "Płytowane Nagolenniki" };
-    reasoning.push("Dużo engage'u — Płytowane Nagolenniki zmniejszają obrażenia od AA.");
+    reasoning.push("Ciężki engage/diverzy — Nagolenniki zmniejszają obrażenia od AA o 12%.");
   } else {
-    reasoning.push("Buty Berserkera — standardowy wybór dla ADC, dają szybkość ataku.");
+    reasoning.push("Buty Berserkera — standardowy wybór, dają AS dla ADC.");
   }
 
+  // MYTHIC / FIRST ITEM
   if (ta.tankCount >= 2) {
-    coreItems.push({ id: 6672, name: "Niszczyciel Krakena", reason: "Zadaje % aktualnego HP — idealny przeciw tankom" });
-    reasoning.push("Wiele tanków — Niszczyciel Krakena bije w % HP.");
+    coreItems.push({ id: 6672, name: "Niszczyciel Krakena", reason: "Zadaje % aktualnego HP — niezbędny vs grubych wrogów" });
+    reasoning.push("2+ tanki w składzie — Niszczyciel Krakena rozbija ich punkty życia.");
+    coreItems.push({ id: 3036, name: "Władanie Lorda Dominika", reason: "40% ArPen + bonus vs wysokiego HP — must vs tanki" });
   } else if (profile.tags?.includes("poke")) {
-    coreItems.push({ id: 3095, name: "Opróżniacz Burz", reason: "Silne obrażenia z dala — dobry dla ADC z pokeiem" });
-    reasoning.push("Twój champion ma poke — Opróżniacz Burz wzmacnia ataki z dystansu.");
+    coreItems.push({ id: 3095, name: "Opróżniacz Burz", reason: "Spowalnia i zadaje obrażenia z naładowania — dobry na otwartej przestrzeni" });
+    reasoning.push("Opróżniacz Burz wzmacnia ataki AA i spowalnia cel.");
+    coreItems.push({ id: 3031, name: "Ostrze Nieskończoności", reason: "Maksymalizuje critta — 2. item dla ADC crit" });
   } else {
-    coreItems.push({ id: 3031, name: "Ostrze Nieskończoności", reason: "Core item — maksymalizuje obrażenia z critta" });
-    reasoning.push("Standardowy core — Ostrze Nieskończoności dla maksymalnych obrażeń.");
+    coreItems.push({ id: 3031, name: "Ostrze Nieskończoności", reason: "Core crit ADC — ogromne obrażenia z każdego critta" });
+    reasoning.push("Infinity Edge jako 1. item — fundament buildu crit dla ADC.");
+    coreItems.push({ id: 3085, name: "Huragan Runaan", reason: "Trafienia obszarowe — raises DPS w teamfightach" });
   }
+  coreItems.push({ id: 3046, name: "Tancerz Widm", reason: "Tarcza przy niskim HP — chroni przed zostaniem oneshot" });
 
-  if (ta.squishyCount >= 3) {
-    coreItems.push({ id: 3094, name: "Szybkostrzał Cannona", reason: "Zasięg i obrażenia na odległych celach" });
-  } else {
-    coreItems.push({ id: 3085, name: "Huragan Runaan", reason: "Obrażenia obszarowe — dobry w walce wielu wrogów" });
-  }
-  coreItems.push({ id: 3046, name: "Tancerz Widm", reason: "Tarcza przy niskim HP — zapewnia przeżycie" });
-
+  // SITUACYJNE
   if (ta.healingPresence) {
-    situational.push({ id: 3033, name: "Przypomnienie Śmiertelnika", reason: "Antyheal — niezbędny, gdy wróg ma leczenie" });
-    reasoning.push("Przeciwnik ma leczenie — rozważ Przypomnienie Śmiertelnika jak najszybciej.");
+    situational.push({ id: 3033, name: "Przypomnienie Śmiertelnika", reason: "Antyheal na trafieniu — kup 2. lub 3. vs heal comp" });
+    reasoning.push("Wróg ma leczenie — Śmiertelnik jest priorytetem zaraz po core.");
   }
-  if (ta.apThreat >= 2) {
-    situational.push({ id: 3156, name: "Paszcza Malmortusa", reason: "Tarcza vs AP — ratuje życie w burst'ach AP" });
-    reasoning.push("Mocny AP — Paszcza Malmortusa daje tarczę blokującą AP.");
+  if (ta.assassinCount >= 1 || ta.diverCount >= 2) {
+    situational.push({ id: 3026, name: "Anioł Strażnik", reason: "Drugie życie — niezbędne gdy assassini lub diverzy cię ścigają" });
+    reasoning.push("Assassini/diverzy celują w ciebie — Anioł Strażnik daje drugie życie.");
   }
-  if (ta.engageHeavy) {
-    situational.push({ id: 3139, name: "Scimitar Merkurego", reason: "Aktywne usuwanie CC — kluczowe vs engage" });
-    reasoning.push("Dużo CC/engage — Scimitar Merkurego usuwa stany aktywnie.");
+  if (ta.apThreat >= 2 || ta.assassinCount >= 1) {
+    situational.push({ id: 3156, name: "Paszcza Malmortusa", reason: "Tarcza vs AP burst — ratuje przed oneshot assassina AP" });
+    reasoning.push("AP/assassin zagrożenie — Paszcza Malmortusa blokuje burst.");
   }
-  situational.push({ id: 3026, name: "Anioł Strażnik", reason: "Drugie życie — pick vs assassinów i diverów" });
-  situational.push({ id: 3036, name: "Władanie Lorda Dominika", reason: "Penetracja pancerza — konieczny vs pełnych tanków" });
+  if (ta.heavyCC || ta.engageHeavy) {
+    situational.push({ id: 3139, name: "Scimitar Merkurego", reason: "Aktywne usuwanie CC — kluczowe gdy wróg cię zamrozi" });
+    reasoning.push("Dużo CC — Scimitar aktywnie usuwa stany.");
+  }
+  if (ta.tankCount < 2) {
+    situational.push({ id: 3094, name: "Szybkostrzał Cannona", reason: "Zwiększony zasięg AA — bezpieczne strzelanie z daleka" });
+  }
+  if (ta.tankCount >= 2 && !coreItems.find(i => i.id === 3036)) {
+    situational.push({ id: 3036, name: "Władanie Lorda Dominika", reason: "Penetracja pancerza + bonus vs HP — wymagany vs full tank" });
+  }
 
   const runes = buildRunesMarksman(ta, profile);
   return { coreItems, boots, situationalItems: situational, runes, reasoning };
 }
 
 function buildRunesMarksman(ta: TeamAnalysis, profile: ChampProfile): RuneData {
-  const isOnHit = ["KogMaw", "Kaisa", "Varus"].includes(profile as unknown as string);
   const hasMobility = profile.tags?.includes("mobility");
-
   let keystone = RUNE_KEYSTONES.fleetFootwork;
   if (ta.tankCount >= 2) keystone = RUNE_KEYSTONES.lethalTempo;
-  else if (ta.squishyCount >= 3 && !hasMobility) keystone = RUNE_KEYSTONES.pressTheAttack;
-  else if (ta.engageHeavy) keystone = RUNE_KEYSTONES.fleetFootwork;
+  else if (ta.squishyCount >= 3) keystone = hasMobility ? RUNE_KEYSTONES.fleetFootwork : RUNE_KEYSTONES.pressTheAttack;
+  else if (ta.engageHeavy || ta.assassinCount >= 1) keystone = RUNE_KEYSTONES.fleetFootwork;
 
   return {
     keystone,
     primaryPath: RUNE_PATHS.precision,
-    secondaryPath: ta.apThreat >= 2 ? RUNE_PATHS.resolve : RUNE_PATHS.domination,
+    secondaryPath: (ta.apThreat >= 2 || ta.assassinCount >= 1) ? RUNE_PATHS.resolve : RUNE_PATHS.domination,
     primaryRunes: SUBRUNES.precision,
-    secondaryRunes: ta.apThreat >= 2 ? SUBRUNES.resolveSub.slice(0, 2) : SUBRUNES.dominationSub.slice(0, 2),
-    shards: ["Szybkość Ataku", "Obrażenia Adaptacyjne", "HP"],
+    secondaryRunes: (ta.apThreat >= 2 || ta.assassinCount >= 1) ? SUBRUNES.resolveSub.slice(0, 2) : SUBRUNES.dominationSub.slice(0, 2),
+    shards: ["Szybkość Ataku", "AD Adaptacyjne", "HP"],
   };
 }
 
+// ─── MAGE ─────────────────────────────────────────────────────────────────────
 function buildMage(ta: TeamAnalysis, profile: ChampProfile): Omit<BuildResult, "teamAnalysis"> {
   const reasoning: string[] = [];
   const coreItems: ItemRec[] = [];
   const situational: ItemRec[] = [];
-  let boots: ItemRec = { id: 3020, name: "Buty Czarnoksiężnika" };
-
-  if (ta.adThreat >= 3) {
-    boots = { id: 3158, name: "Buty Lucidity" };
-    reasoning.push("Wiele AD — Buty Lucidity lub rozważ Płytowane Nagolenniki zależnie od meczu.");
-  } else if (ta.heavyCC) {
-    boots = { id: 3111, name: "Trzewiki Merkurego" };
-    reasoning.push("Dużo CC — Trzewiki Merkurego dają tenacity, kluczowe dla maga.");
-  } else {
-    reasoning.push("Buty Czarnoksiężnika — standardowy wybór dla maga, dają MagPen.");
-  }
-
   const isPoke = profile.tags?.includes("poke");
   const isBurst = profile.tags?.includes("burst");
+  let boots: ItemRec = { id: 3020, name: "Buty Czarnoksiężnika" };
 
-  if (ta.tankCount >= 2) {
-    coreItems.push({ id: 3100, name: "Udrękę Liandry", reason: "Obrażenia % max HP — idealna vs tanków" });
-    reasoning.push("Wiele tanków — Udręka Liandry boli tanków przez % HP.");
-    coreItems.push({ id: 3135, name: "Laska Próżni", reason: "40% MagPen — konieczna vs tanków z dużym MR" });
-    reasoning.push("Uzupełnij Laską Próżni dla penetracji magicznej vs tanki.");
-  } else if (isBurst || ta.squishyCount >= 3) {
-    coreItems.push({ id: 4645, name: "Shadowflame", reason: "Ogromny AP + MagPen vs squishies" });
-    coreItems.push({ id: 3285, name: "Szał Ludena", reason: "Poke i burst na otwarcie walki" });
-    reasoning.push("Dużo wrogów bez pancerza — Shadowflame + Szał Ludena dla maksymalnego burstu.");
-  } else if (isPoke) {
-    coreItems.push({ id: 3285, name: "Szał Ludena", reason: "Najlepszy item do poke'u z dystansu" });
-    coreItems.push({ id: 4645, name: "Shadowflame", reason: "Wzmacnia kolejne czary" });
-    reasoning.push("Twój champion świetnie poke'uje — Szał Ludena to must-have.");
+  // BOOTS
+  if (ta.heavyCC || ta.assassinCount >= 1) {
+    boots = { id: 3111, name: "Trzewiki Merkurego" };
+    reasoning.push(ta.assassinCount >= 1 ? "Assassin w składzie — Trzewiki Merkurego dla tenacity i MR." : "Wiele CC — Trzewiki Merkurego kluczowe dla maga.");
+  } else if (ta.adThreat >= 3 && ta.assassinCount === 0) {
+    boots = { id: 3158, name: "Buty Lucidity" };
+    reasoning.push("Mało burst-threat — Buty Lucidity dla CDR i częstszych czarów.");
   } else {
-    coreItems.push({ id: 3285, name: "Szał Ludena", reason: "Core dla większości magów" });
-    coreItems.push({ id: 4645, name: "Shadowflame", reason: "Ogromny flat AP + MagPen" });
-    reasoning.push("Klasyczny core maga: Szał Ludena + Shadowflame.");
+    reasoning.push("Buty Czarnoksiężnika — standardowy wybór, dają penetrację magiczną.");
   }
 
-  coreItems.push({ id: 3089, name: "Czapka Rabadona", reason: "Mnoży AP o 35% — zawsze 3. lub 4. item" });
-  reasoning.push("Czapka Rabadona jako 3. item wielokrotnie zwiększa całkowite AP.");
-
-  if (ta.adThreat >= 3) {
-    situational.push({ id: 3157, name: "Klepsydra Zhonya", reason: "Aktywna nietykalność — ratuje vs AD/assassinów" });
-    reasoning.push("Mocny AD/assassini — Klepsydra Zhonya jest absolutnie konieczna.");
+  // CORE
+  if (ta.tankCount >= 2) {
+    coreItems.push({ id: 6653, name: "Udręka Liandry", reason: "Obrażenia % max HP — niszczy tanki z dużym HP" });
+    coreItems.push({ id: 3135, name: "Laska Próżni", reason: "40% penetracji magicznej — obowiązkowa vs tanki z MR" });
+    reasoning.push("2+ tanki — Udręka Liandry + Laska Próżni to najlepszy anty-tank core dla maga.");
+    coreItems.push({ id: 3089, name: "Czapka Rabadona", reason: "35% bonus AP — skaluje wszystkie obrażenia" });
+  } else if (isBurst) {
+    coreItems.push({ id: 4645, name: "Shadowflame", reason: "Flat AP + penetracja — eksploduje squishies" });
+    coreItems.push({ id: 3089, name: "Czapka Rabadona", reason: "Mnoży AP o 35% — obowiązkowy 2. item" });
+    coreItems.push({ id: 3135, name: "Laska Próżni", reason: "Penetracja magiczna — gdy wróg zbiera MR" });
+    reasoning.push("Burst mage: Shadowflame → Rabadon → Laska Próżni — maksymalny oneshot.");
+  } else if (isPoke) {
+    coreItems.push({ id: 3285, name: "Towarzyszy Ludena", reason: "Eksplodujący pocisk co czar — idealny do poke" });
+    coreItems.push({ id: 4645, name: "Shadowflame", reason: "Wzmacnia każdy czar flat AP" });
+    coreItems.push({ id: 3089, name: "Czapka Rabadona", reason: "Mnoży AP — 3. item priorytet" });
+    reasoning.push("Poke mage: Luden → Shadowflame → Rabadon — obrażenia z dystansu.");
+  } else {
+    coreItems.push({ id: 4645, name: "Shadowflame", reason: "Core większości magów — AP + MagPen" });
+    coreItems.push({ id: 3089, name: "Czapka Rabadona", reason: "35% bonus AP — obowiązkowy zawsze" });
+    coreItems.push({ id: 3135, name: "Laska Próżni", reason: "40% penetracji magicznej — vs MR" });
+    reasoning.push("Standard mage: Shadowflame → Rabadon → Laska Próżni.");
   }
-  if (ta.apThreat >= 2) {
-    situational.push({ id: 3102, name: "Zasłona Banshee", reason: "Blokuje jeden czar AP — ochrona vs poke i CC" });
-    reasoning.push("AP i CC u wrogów — Zasłona Banshee blokuje jedno trafienie.");
+
+  // SITUACYJNE
+  if (ta.assassinCount >= 1 || ta.adThreat >= 3) {
+    situational.push({ id: 3157, name: "Klepsydra Zhonya", reason: "Aktywna nietykalność — ratuje przed assassinem/AD" });
+    reasoning.push("Assassin/AD — Klepsydra Zhonya jest absolutnie konieczna.");
+  }
+  if (ta.pokeCount >= 2 || ta.apThreat >= 2) {
+    situational.push({ id: 3102, name: "Zasłona Banshee", reason: "Blokuje jeden czar — vs CC lub poke AP" });
+    reasoning.push("Dużo AP/poke — Zasłona Banshee absorbuje jeden cios.");
   }
   if (ta.healingPresence) {
-    situational.push({ id: 3165, name: "Morellonomikon", reason: "Antyheal — obniża leczenie o 40%" });
-    reasoning.push("Leczenie u wrogów — Morellonomikon redukuje je o 40%.");
+    situational.push({ id: 3165, name: "Morellonomikon", reason: "Antyheal 40% — kup wcześnie vs heal comp" });
+    reasoning.push("Leczenie u wrogów — Morellonomikon jako 2. item zamiast sytuacyjnego.");
   }
-  situational.push({ id: 3135, name: "Laska Próżni", reason: "40% MagPen — zakup gdy wróg zbiera MR" });
+  if (ta.shieldPresence) {
+    reasoning.push("Wróg ma tarcze — Shadowflame je przebija dodatkową penetracją.");
+  }
+  if (!(ta.assassinCount >= 1 || ta.adThreat >= 3)) {
+    situational.push({ id: 3157, name: "Klepsydra Zhonya", reason: "Nietykalność po engage lub dla survivalu" });
+  }
 
   const runes = buildRunesMage(ta, profile);
   return { coreItems, boots, situationalItems: situational, runes, reasoning };
 }
 
-function buildRunesMage(ta: TeamAnalysis, _profile: ChampProfile): RuneData {
-  const isPoke = _profile.tags?.includes("poke");
+function buildRunesMage(ta: TeamAnalysis, profile: ChampProfile): RuneData {
+  const isPoke = profile.tags?.includes("poke");
+  const isBurst = profile.tags?.includes("burst");
   let keystone = isPoke ? RUNE_KEYSTONES.arcaneComet : RUNE_KEYSTONES.electrocute;
   if (ta.tankCount >= 3) keystone = RUNE_KEYSTONES.arcaneComet;
+  else if (isBurst && ta.assassinCount === 0) keystone = RUNE_KEYSTONES.electrocute;
 
+  const primary = isPoke ? RUNE_PATHS.sorcery : RUNE_PATHS.domination;
   return {
     keystone,
-    primaryPath: isPoke ? RUNE_PATHS.sorcery : RUNE_PATHS.domination,
-    secondaryPath: isPoke ? RUNE_PATHS.domination : RUNE_PATHS.sorcery,
+    primaryPath: primary,
+    secondaryPath: (ta.assassinCount >= 1 || ta.adThreat >= 2) ? RUNE_PATHS.resolve : RUNE_PATHS.sorcery,
     primaryRunes: isPoke ? SUBRUNES.sorcerySub : SUBRUNES.dominationSub,
-    secondaryRunes: isPoke ? SUBRUNES.dominationSub.slice(0, 2) : SUBRUNES.sorcerySub.slice(0, 2),
-    shards: ["AP Adaptacyjne", "AP Adaptacyjne", "HP/Armor/MR"],
+    secondaryRunes: (ta.assassinCount >= 1 || ta.adThreat >= 2) ? SUBRUNES.resolveSub.slice(0, 2) : SUBRUNES.sorcerySub.slice(0, 2),
+    shards: ["AP Adaptacyjne", "AP Adaptacyjne", ta.assassinCount >= 1 ? "Armor" : "HP"],
   };
 }
 
+// ─── ASSASSIN ────────────────────────────────────────────────────────────────
 function buildAssassin(ta: TeamAnalysis, profile: ChampProfile): Omit<BuildResult, "teamAnalysis"> {
   const reasoning: string[] = [];
   const coreItems: ItemRec[] = [];
   const situational: ItemRec[] = [];
   const isAP = profile.damageType === "AP";
-  let boots: ItemRec = isAP ? { id: 3020, name: "Buty Czarnoksiężnika" } : { id: 3142, name: "Buty Jowisza... Ionian" };
+  let boots: ItemRec = isAP ? { id: 3020, name: "Buty Czarnoksiężnika" } : { id: 3158, name: "Buty Lucidity" };
 
+  // BOOTS
   if (ta.heavyCC) {
     boots = { id: 3111, name: "Trzewiki Merkurego" };
-    reasoning.push("Wiele CC — Trzewiki Merkurego dają tenacity, kluczowe dla assassina.");
+    reasoning.push("Dużo CC — Trzewiki Merkurego kluczowe żeby nie zostawać przypiętym po wskoku.");
   } else {
-    reasoning.push(isAP ? "Buty Czarnoksiężnika dla penetracji magicznej." : "Buty Lucidity dla skrócenia cooldownów.");
+    reasoning.push(isAP ? "Buty Czarnoksiężnika — MagPen dla każdego czaru." : "Buty Lucidity — CDR by częściej używać czarów do burstu.");
     boots = isAP ? { id: 3020, name: "Buty Czarnoksiężnika" } : { id: 3158, name: "Buty Lucidity" };
   }
 
+  // CORE
   if (isAP) {
-    coreItems.push({ id: 4645, name: "Shadowflame", reason: "Core AP assassina — ogromny burst i MagPen" });
-    coreItems.push({ id: 3089, name: "Czapka Rabadona", reason: "Mnoży całkowite AP o 35% — niezbędna" });
-    coreItems.push({ id: 3157, name: "Klepsydra Zhonya", reason: "Aktywna nietykalność — kluczowa po wskoku w cel" });
-    reasoning.push("AP Assassin: Shadowflame → Rabadon → Zhonya — maksymalny burst z ochroną przy wejściu.");
+    coreItems.push({ id: 4645, name: "Shadowflame", reason: "Flat AP + MagPen — eksploduje squishies i przebija tarcze" });
+    coreItems.push({ id: 3089, name: "Czapka Rabadona", reason: "Mnoży AP o 35% — 2. item priorytet" });
+    coreItems.push({ id: 3157, name: "Klepsydra Zhonya", reason: "Nietykalność po wskoku — czas na cooldown" });
+    reasoning.push("AP Assassin: Shadowflame → Rabadon → Zhonya — maksymalny burst + bezpieczeństwo po engage.");
   } else {
-    coreItems.push({ id: 6691, name: "Ostrze Nocy", reason: "Burst + pasywna tarcza vs czarów po wbiciu w cel" });
-    coreItems.push({ id: 3814, name: "Krawędź Nocy", reason: "Blokuje jeden czar — idealne vs poke i engage" });
-    coreItems.push({ id: 3142, name: "Widmo Jowisza", reason: "Lethality + MS do startu walki — must-have AD assassin" });
-    reasoning.push("AD Assassin: Ostrze Nocy → Krawędź Nocy → Widmo Jowisza — klasyczny burst z ochroną.");
+    // AD assassin
+    if (ta.shieldPresence) {
+      coreItems.push({ id: 6693, name: "Kieł Węża", reason: "Redukuje tarcze o 60% — obowiązkowy gdy enemy ma shields" });
+      reasoning.push("Wróg ma tarcze — Kieł Węża robi je prawie bezużytecznymi.");
+    }
+    coreItems.push({ id: 6691, name: "Ostrze Nocy", reason: "Burst + pasywna tarcza vs czarów po wskoku w cel" });
+    if (ta.tankCount >= 2) {
+      coreItems.push({ id: 6694, name: "Żal Seryldy", reason: "ArPen + spowolnienie — pozwala gonić i bić tanki" });
+      reasoning.push("Tanki w składzie — Żal Seryldy daje ArPen i spowalnia cel.");
+    } else {
+      coreItems.push({ id: 3814, name: "Krawędź Nocy", reason: "Blokuje jeden czar — tarcza vs mage/poke" });
+    }
+    coreItems.push({ id: 3142, name: "Widmo Jowisza", reason: "Lethality + MS — przyspieszenie do celu" });
+    reasoning.push("AD Assassin: Ostrze Nocy → " + (ta.tankCount >= 2 ? "Żal Seryldy" : "Krawędź Nocy") + " → Widmo Jowisza.");
   }
 
-  if (ta.tankCount >= 2) {
-    situational.push({ id: 6694, name: "Żal Seryldy", reason: "Penetracja pancerza + spowolnienie — vs tanki" });
-    reasoning.push("Wiele tanków — Żal Seryldy daje ArPen i spowolnienie.");
+  // SITUACYJNE
+  if (ta.tankCount >= 2 && isAP) {
+    situational.push({ id: 3135, name: "Laska Próżni", reason: "40% MagPen — niezbędna gdy tanki zbierają MR" });
+    reasoning.push("Tanki z MR — Laska Próżni obowiązkowa.");
   }
   if (ta.healingPresence) {
-    situational.push({ id: 6693, name: "Kieł Węża", reason: "Antyheal — redukuje tarcze i leczenie" });
-    reasoning.push("Leczenie u wrogów — Kieł Węża zmniejsza efektywność leczenia.");
+    const ahId = isAP ? 3165 : 6693;
+    const ahName = isAP ? "Morellonomikon" : "Kieł Węża";
+    situational.push({ id: ahId, name: ahName, reason: "Antyheal — ogranicza leczenie celu" });
+    reasoning.push("Leczenie u wrogów — antyheal jako priorytet sytuacyjny.");
   }
-  situational.push({ id: 3026, name: "Anioł Strażnik", reason: "Drugie życie — pick gdy ahead lub vs teamfight" });
+  situational.push({ id: 3026, name: "Anioł Strażnik", reason: "Drugie życie — gdy jedziesz ahead i wpadasz w teamfight" });
+  if (!isAP && !ta.shieldPresence) {
+    situational.push({ id: 6693, name: "Kieł Węża", reason: "Antyheal + redukuje tarcze — elastyczny pick" });
+  }
 
   const runes = buildRunesAssassin(ta, profile);
   return { coreItems, boots, situationalItems: situational, runes, reasoning };
 }
 
 function buildRunesAssassin(ta: TeamAnalysis, profile: ChampProfile): RuneData {
-  const isScaling = ["Veigar", "Kassadin", "Karthus"].includes(profile as unknown as string);
-  const keystone = isScaling ? RUNE_KEYSTONES.darkHarvest : RUNE_KEYSTONES.electrocute;
+  const isAP = profile.damageType === "AP";
+  const preferDH = ta.squishyCount >= 3;
+  const keystone = preferDH ? RUNE_KEYSTONES.darkHarvest : RUNE_KEYSTONES.electrocute;
 
   return {
     keystone,
     primaryPath: RUNE_PATHS.domination,
-    secondaryPath: ta.heavyCC ? RUNE_PATHS.resolve : RUNE_PATHS.precision,
+    secondaryPath: ta.heavyCC ? RUNE_PATHS.resolve : (isAP ? RUNE_PATHS.sorcery : RUNE_PATHS.precision),
     primaryRunes: SUBRUNES.dominationSub,
-    secondaryRunes: ta.heavyCC ? SUBRUNES.resolveSub.slice(0, 2) : SUBRUNES.precision.slice(0, 2),
-    shards: ["AD/AP Adaptacyjne", "AD/AP Adaptacyjne", "HP"],
+    secondaryRunes: ta.heavyCC ? SUBRUNES.resolveSub.slice(0, 2) : (isAP ? SUBRUNES.sorcerySub.slice(0, 2) : SUBRUNES.precision.slice(0, 2)),
+    shards: [isAP ? "AP Adaptacyjne" : "AD Adaptacyjne", isAP ? "AP Adaptacyjne" : "AD Adaptacyjne", ta.heavyCC ? "Armor" : "HP"],
   };
 }
 
+// ─── FIGHTER ─────────────────────────────────────────────────────────────────
 function buildFighter(ta: TeamAnalysis, profile: ChampProfile): Omit<BuildResult, "teamAnalysis"> {
   const reasoning: string[] = [];
   const coreItems: ItemRec[] = [];
   const situational: ItemRec[] = [];
   const isAP = profile.damageType === "AP";
   const hasMobility = profile.tags?.includes("mobility");
+  const hasBurst = profile.tags?.includes("burst");
   let boots: ItemRec = { id: 3047, name: "Płytowane Nagolenniki" };
 
-  if (ta.apThreat >= 3 || ta.heavyCC) {
+  // BOOTS
+  if (ta.heavyCC || (ta.apThreat >= 2 && ta.assassinCount >= 1)) {
     boots = { id: 3111, name: "Trzewiki Merkurego" };
-    reasoning.push(ta.heavyCC ? "Wiele CC — tenacity z Trzewików Merkurego jest priorytetem." : "Dużo AP — Trzewiki Merkurego dla MR i tenacity.");
+    reasoning.push(ta.heavyCC ? "Dużo CC — Trzewiki Merkurego dla tenacity." : "AP + assassini — Trzewiki Merkurego dla MR i tenacity.");
   } else if (isAP) {
     boots = { id: 3020, name: "Buty Czarnoksiężnika" };
     reasoning.push("AP fighter — Buty Czarnoksiężnika dla penetracji magicznej.");
+  } else if (ta.apThreat >= 3) {
+    boots = { id: 3111, name: "Trzewiki Merkurego" };
+    reasoning.push("Dużo AP — Trzewiki Merkurego dla MR i tenacity.");
   } else {
     reasoning.push("Płytowane Nagolenniki vs AD — zmniejszają obrażenia AA o 12%.");
   }
 
+  // CORE
   if (isAP) {
-    coreItems.push({ id: 3152, name: "Berło Archangela", reason: "AP + Tarcza z many — core dla AP fighterów z dużym kosztem many" });
-    coreItems.push({ id: 6653, name: "Towarzysz Liandry", reason: "Obrażenia % HP — świetny gdy wróg zbiera HP" });
-    coreItems.push({ id: 3157, name: "Klepsydra Zhonya", reason: "Aktywna nietykalność — kluczowa dla AP melee fightera" });
-    reasoning.push("AP Fighter: Berło Archangela / Towarzysz Liandry → Zhonya — burst z przeżywalnością.");
-  } else {
-    if (hasMobility || profile.tags?.includes("burst")) {
-      coreItems.push({ id: 6333, name: "Taniec Śmierci", reason: "Opóźnia odebrane obrażenia i leczy — niezbędne dla przeżycia" });
-      coreItems.push({ id: 3071, name: "Topór Czerni", reason: "ArPen redukujący pancerz — świetny vs ciężkich wrogów" });
+    if (hasBurst || hasMobility) {
+      coreItems.push({ id: 3100, name: "Kamień Lichów", reason: "Proc AA po czarze — ogromne obrażenia dla AP melee fightera" });
+      coreItems.push({ id: 3115, name: "Zęby Naszora", reason: "AS + AP + on-hit — skaluje się z AA i czarami" });
     } else {
-      coreItems.push({ id: 3078, name: "Trójca Sił", reason: "Proc po każdym czarze — świetny dla fighterów z krótkim CD" });
-      coreItems.push({ id: 6333, name: "Taniec Śmierci", reason: "Opóźnia obrażenia i leczy — niezbędne dla przeżycia" });
+      coreItems.push({ id: 6653, name: "Udręka Liandry", reason: "Obrażenia % HP — świetna gdy wróg tankuje lub zbiera HP" });
+      coreItems.push({ id: 4637, name: "Demoniczne Objęcie", reason: "Twardość + AP — idealne dla AP tanka/fightera" });
     }
-    coreItems.push({ id: 3053, name: "Wzmocnienie Steraka", reason: "Tarcza przy niskim HP — ratuje w walce 1v1 i teamfight" });
-    reasoning.push("Core fighter: " + (hasMobility ? "Taniec Śmierci + Topór Czerni" : "Trójca Sił + Taniec Śmierci") + " + Tarcza Steraka.");
+    coreItems.push({ id: 3157, name: "Klepsydra Zhonya", reason: "Aktywna nietykalność — kluczowa po wejściu w melee" });
+    reasoning.push("AP Fighter: " + (hasBurst ? "Kamień Lichów + Zęby Naszora" : "Udręka Liandry + Demoniczne Objęcie") + " + Zhonya.");
+  } else {
+    if (ta.tankCount >= 2) {
+      coreItems.push({ id: 3071, name: "Topór Czerni", reason: "Redukuje pancerz 6x — konieczny vs 2+ tanki" });
+      coreItems.push({ id: 3153, name: "Ostrze Króla Ruin", reason: "% aktualnego HP — najlepszy vs grube cele" });
+      reasoning.push("Dużo tanków — Topór Czerni (stackowany ArPen) + BORK (% HP) to core.");
+    } else if (hasMobility && hasBurst) {
+      coreItems.push({ id: 6333, name: "Taniec Śmierci", reason: "Opóźnia obrażenia + leczy — core przeżywalność" });
+      coreItems.push({ id: 3053, name: "Wzmocnienie Steraka", reason: "Tarcza przy niskim HP — 2. linia obrony" });
+      reasoning.push("Skirmisher/mobilny: Taniec Śmierci + Tarcza Steraka — wchodzisz i wychodzisz z walki.");
+    } else {
+      coreItems.push({ id: 3078, name: "Trójca Sił", reason: "Proc po każdym czarze — świetna dla fighterów z niskim CD" });
+      coreItems.push({ id: 6333, name: "Taniec Śmierci", reason: "Opóźnia obrażenia + leczy — niezbędne" });
+      reasoning.push("Standard bruiser: Trójca Sił + Taniec Śmierci — duże obrażenia i przeżywalność.");
+    }
+    if (!coreItems.find(i => i.id === 3053)) {
+      coreItems.push({ id: 3053, name: "Wzmocnienie Steraka", reason: "Tarcza przy niskim HP — chroni przed oneshot" });
+    }
   }
 
+  // SITUACYJNE
   if (ta.apThreat >= 2) {
-    situational.push({ id: 4401, name: "Siła Natury", reason: "Bardzo wysokie MR — konieczne vs AP" });
+    situational.push({ id: 4401, name: "Siła Natury", reason: "Ogromny MR wzrost w walce — priorytet vs AP" });
     situational.push({ id: 3065, name: "Wisiorek Ducha", reason: "MR + wzmacnia leczenie/tarcze" });
-    reasoning.push("Mocny AP — weź Siłę Natury lub Wisiorek Ducha dla MR.");
+    reasoning.push("AP zagrożenie — Siła Natury lub Wisiorek Ducha dla MR.");
   }
-  if (ta.tankCount >= 2) {
-    situational.push({ id: 3153, name: "Ostrze Króla Ruin", reason: "Zadaje % aktualnego HP — najlepszy vs tanki" });
-    reasoning.push("Dużo tanków — Ostrze Króla Ruin przebija ich pancerz przez % HP.");
+  if (ta.healingPresence && !isAP) {
+    situational.push({ id: 3076, name: "Kolec Brambletu", reason: "Antyheal przez AA — kup wcześnie vs heal comp" });
+    reasoning.push("Leczenie u wrogów — Kolec Brambletu redukuje je przez ataki AA.");
   }
-  if (ta.healingPresence) {
-    situational.push({ id: 3076, name: "Kolec Brambletu", reason: "Antyheal w zasięgu AA — kup wcześnie vs heal comp" });
-    reasoning.push("Leczenie u wrogów — Kolec Brambletu redukuje je przez AA.");
+  if (ta.percentHPThreat) {
+    situational.push({ id: 3143, name: "Omen Randuina", reason: "Spowalnia AS + active — vs % HP damage (Vayne, Fiora)" });
+    reasoning.push("Wróg ma % HP damage — Randuin spowalnia ich AS.");
   }
-  situational.push({ id: 3026, name: "Anioł Strażnik", reason: "Drugie życie — pick gdy ahead lub vs assassinów" });
+  if (ta.assassinCount >= 1) {
+    situational.push({ id: 3026, name: "Anioł Strażnik", reason: "Drugie życie — vs assassinów targeting ciebie" });
+  }
+  if (ta.splitPushThreat && !hasMobility) {
+    situational.push({ id: 3071, name: "Topór Czerni", reason: "Szybsza rotacja i siła 1v1 — vs split-pusher" });
+    reasoning.push("Wróg może splitować — Topór Czerni poprawia siłę 1v1.");
+  }
 
   const runes = buildRunesFighter(ta, profile);
   return { coreItems, boots, situationalItems: situational, runes, reasoning };
@@ -569,10 +673,9 @@ function buildFighter(ta: TeamAnalysis, profile: ChampProfile): Omit<BuildResult
 
 function buildRunesFighter(ta: TeamAnalysis, profile: ChampProfile): RuneData {
   const isAP = profile.damageType === "AP";
-  const hasBurst = profile.tags?.includes("burst");
+  const hasCC = profile.tags?.includes("cc");
   let keystone = RUNE_KEYSTONES.conqueror;
-  if (hasBurst && !isAP) keystone = RUNE_KEYSTONES.pressTheAttack;
-  else if (isAP) keystone = RUNE_KEYSTONES.conqueror;
+  if (ta.tankCount === 0 && ta.squishyCount >= 3 && !hasCC) keystone = RUNE_KEYSTONES.pressTheAttack;
 
   return {
     keystone,
@@ -584,102 +687,135 @@ function buildRunesFighter(ta: TeamAnalysis, profile: ChampProfile): RuneData {
   };
 }
 
-function buildTank(ta: TeamAnalysis, _profile: ChampProfile): Omit<BuildResult, "teamAnalysis"> {
+// ─── TANK ─────────────────────────────────────────────────────────────────────
+function buildTank(ta: TeamAnalysis, profile: ChampProfile): Omit<BuildResult, "teamAnalysis"> {
   const reasoning: string[] = [];
   const coreItems: ItemRec[] = [];
   const situational: ItemRec[] = [];
   let boots: ItemRec = { id: 3047, name: "Płytowane Nagolenniki" };
 
-  if (ta.apThreat >= 3) {
+  // BOOTS
+  if (ta.apThreat >= 3 || ta.heavyCC) {
     boots = { id: 3111, name: "Trzewiki Merkurego" };
-    reasoning.push("Mocny AP — Trzewiki Merkurego dla MR i tenacity.");
+    reasoning.push(ta.apThreat >= 3 ? "Dużo AP — Trzewiki Merkurego dla MR i tenacity." : "Wiele CC — Trzewiki Merkurego dla tenacity (ważne dla engage tanka).");
   } else {
-    reasoning.push("Płytowane Nagolenniki — vs AD zmniejszają obrażenia AA.");
+    reasoning.push("Płytowane Nagolenniki vs AD — zmniejszają obrażenia AA o 12%.");
   }
 
-  coreItems.push({ id: 3181, name: "Serce ze Stali", reason: "Skaluje HP z atakami — ogromny HP w mid/late" });
-  reasoning.push("Serce ze Stali jako tank mythic — całkowity HP rośnie z czasem.");
-
-  if (ta.adThreat >= 3) {
-    coreItems.push({ id: 3068, name: "Egida Słoneczna", reason: "Pasywne obrażenia obszarowe i pancerz" });
-    coreItems.push({ id: 3075, name: "Cierniowa Zbroja", reason: "Antyheal + obrażenia zwrotne od AA" });
-    reasoning.push("Dużo AD — Egida Słoneczna + Cierniowa Zbroja jako rdzeń pancerza.");
-  } else if (ta.apThreat >= 3) {
-    coreItems.push({ id: 4401, name: "Siła Natury", reason: "Ogromne MR i HP dla tanka" });
-    coreItems.push({ id: 3001, name: "Maska Otchłani", reason: "MR + amplifikuje obrażenia magiczne sojuszników" });
-    reasoning.push("Dużo AP — Siła Natury + Maska Otchłani dają ogromny MR.");
+  // CORE (reaguje na skład wroga)
+  if (ta.adThreat >= 3 && ta.apThreat <= 1) {
+    coreItems.push({ id: 3068, name: "Egida Słoneczna", reason: "Pancerz + obrażenia obszarowe — core vs full AD" });
+    coreItems.push({ id: 3075, name: "Cierniowa Zbroja", reason: "Antyheal + odbicia od AA — must vs ADC/healer" });
+    coreItems.push({ id: 3181, name: "Serce ze Stali", reason: "HP skalujące z atakami — wysoki HP w late" });
+    reasoning.push("Full AD skład — Egida + Cierniowa Zbroja blokują ADC i leczenie.");
+  } else if (ta.apThreat >= 3 && ta.adThreat <= 1) {
+    coreItems.push({ id: 4401, name: "Siła Natury", reason: "Ogromny MR rosnący w czasie — vs full AP" });
+    coreItems.push({ id: 3001, name: "Maska Otchłani", reason: "MR + wzmacnia obrażenia AP sojuszników" });
+    coreItems.push({ id: 3068, name: "Egida Słoneczna", reason: "Pancerz jako podstawa — tank potrzebuje obu statsów" });
+    reasoning.push("Full AP skład — Siła Natury + Maska Otchłani dają gigantyczne MR.");
   } else {
-    coreItems.push({ id: 3068, name: "Egida Słoneczna", reason: "Wszechstronny item tanki — pancerz i obrażenia" });
-    coreItems.push({ id: 3193, name: "Kamień Gargulca", reason: "Aktywna redukcja obrażeń o 60%" });
-    reasoning.push("Egida Słoneczna + Kamień Gargulca — klasyczny core tanka.");
+    coreItems.push({ id: 3181, name: "Serce ze Stali", reason: "HP skalujące z atakami — fundament każdego tanka" });
+    coreItems.push({ id: 3068, name: "Egida Słoneczna", reason: "Pancerz + obrażenia obszarowe — wszechstronny" });
+    coreItems.push({ id: 3193, name: "Kamień Gargulca", reason: "Aktywna redukcja obrażeń 60% — kluczowe przy engage" });
+    reasoning.push("Mieszany skład — Serce ze Stali + Egida + Gargulec to solidny core.");
   }
 
-  if (ta.healingPresence) {
-    situational.push({ id: 3075, name: "Cierniowa Zbroja", reason: "Antyheal + odbicie AA" });
-    reasoning.push("Leczenie u wrogów — Cierniowa Zbroja redukuje heal i boli przy AA.");
+  // SITUACYJNE
+  if (ta.healingPresence && !coreItems.find(i => i.id === 3075)) {
+    situational.push({ id: 3075, name: "Cierniowa Zbroja", reason: "Antyheal przez AA + obrażenia zwrotne" });
+    reasoning.push("Leczenie u wrogów — Cierniowa Zbroja redukuje je przez AA.");
   }
-  situational.push({ id: 3083, name: "Zbroja Warmoga", reason: "Ogromny HP + regeneracja po walce" });
-  situational.push({ id: 3143, name: "Omen Randuina", reason: "Spowalnia AS wrogów przy walce — vs kryty" });
-  situational.push({ id: 3110, name: "Zmrożone Serce", reason: "Tańszy pancerz + CDR + spowalnia AS" });
+  if (ta.percentHPThreat) {
+    situational.push({ id: 3143, name: "Omen Randuina", reason: "Spowolnienie AS + redukcja crit — vs Vayne/Fiora/Kog" });
+    situational.push({ id: 3110, name: "Zmrożone Serce", reason: "Pancerz + CDR + spowalnia AS atakujących cię wrogów" });
+    reasoning.push("Wróg ma % HP damage (Vayne/Fiora/Kog) — Randuin lub Frozen Heart zamiast czystego HP.");
+  }
+  if (ta.apThreat >= 2 && !coreItems.find(i => i.id === 4401)) {
+    situational.push({ id: 4401, name: "Siła Natury", reason: "MR rosnący w czasie walki — vs AP" });
+  }
+  situational.push({ id: 3083, name: "Zbroja Warmoga", reason: "Ogromny HP + regeneracja — finisher na max HP" });
+  if (!ta.percentHPThreat) {
+    situational.push({ id: 3143, name: "Omen Randuina", reason: "Active spowalnia AS wrogów — vs kryty i ADC" });
+  }
 
-  const runes = buildRunesTank(ta, _profile);
+  const runes = buildRunesTank(ta, profile);
   return { coreItems, boots, situationalItems: situational, runes, reasoning };
 }
 
 function buildRunesTank(ta: TeamAnalysis, profile: ChampProfile): RuneData {
   const isEngage = profile.tags?.includes("engage");
-  const keystone = isEngage ? RUNE_KEYSTONES.aftershock : RUNE_KEYSTONES.graspOfTheUndying;
+  const hasCC = profile.tags?.includes("cc");
+  let keystone = RUNE_KEYSTONES.graspOfTheUndying;
+  if (isEngage || hasCC) keystone = RUNE_KEYSTONES.aftershock;
+
   return {
     keystone,
     primaryPath: RUNE_PATHS.resolve,
-    secondaryPath: ta.adThreat >= 3 ? RUNE_PATHS.precision : RUNE_PATHS.inspiration,
+    secondaryPath: ta.adThreat >= 3 ? RUNE_PATHS.precision : (ta.apThreat >= 3 ? RUNE_PATHS.sorcery : RUNE_PATHS.inspiration),
     primaryRunes: SUBRUNES.resolveSub,
     secondaryRunes: ta.adThreat >= 3 ? SUBRUNES.precision.slice(0, 2) : SUBRUNES.inspirationSub.slice(0, 2),
-    shards: ["HP Adaptacyjne", "Armor/MR", "HP"],
+    shards: ["HP", ta.adThreat >= ta.apThreat ? "Armor" : "MR Magiczne", "HP"],
   };
 }
 
+// ─── SUPPORT ──────────────────────────────────────────────────────────────────
 function buildSupport(ta: TeamAnalysis, profile: ChampProfile): Omit<BuildResult, "teamAnalysis"> {
   const reasoning: string[] = [];
   const coreItems: ItemRec[] = [];
   const situational: ItemRec[] = [];
-  const isEngage = profile.tags?.includes("engage") || ["Leona", "Thresh", "Nautilus", "Blitzcrank", "Alistar", "Rell", "Rakan"].includes(profile as unknown as string);
-  const isEnchanter = profile.hasHealing || ["Janna", "Lulu", "Nami", "Soraka", "Sona", "Yuumi", "Milio"].includes(profile as unknown as string);
-
+  const isEngage = profile.tags?.includes("engage");
+  const isEnchanter = profile.hasHealing || ["Janna", "Lulu", "Nami", "Soraka", "Sona", "Yuumi", "Milio", "Karma"].includes(profile as unknown as string);
+  const isPoke = profile.tags?.includes("poke");
   let boots: ItemRec = { id: 3158, name: "Buty Lucidity" };
-  if (ta.apThreat >= 2 && isEngage) {
+
+  // BOOTS
+  if (ta.heavyCC && isEngage) {
     boots = { id: 3111, name: "Trzewiki Merkurego" };
-    reasoning.push("Dużo AP + engage support — Trzewiki Merkurego dla tenacity.");
+    reasoning.push("Dużo CC i engage support — Trzewiki Merkurego dla tenacity.");
   } else if (ta.adThreat >= 3 && isEngage) {
     boots = { id: 3047, name: "Płytowane Nagolenniki" };
-    reasoning.push("Dużo AD — Płytowane Nagolenniki vs fizyczne obrażenia.");
+    reasoning.push("Full AD — Nagolenniki dla engage tanka/supporta.");
   } else {
     reasoning.push("Buty Lucidity — CDR skraca cooldowny czarów supporta.");
   }
 
+  // CORE
   if (isEngage) {
-    coreItems.push({ id: 3190, name: "Amulet Żelaznego Słońca", reason: "Tarcza obszarowa dla całej drużyny" });
-    coreItems.push({ id: 3109, name: "Przysięga Rycerza", reason: "Przekierowanie obrażeń — ratuje ADC" });
-    reasoning.push("Engage support: Amulet Słońca + Przysięga Rycerza dla drużyny.");
+    coreItems.push({ id: 3190, name: "Amulet Żelaznego Słońca", reason: "Tarcza obszarowa dla całej drużyny przy engage" });
+    coreItems.push({ id: 3109, name: "Przysięga Rycerza", reason: "Przekierowanie obrażeń do ciebie — chroni carry" });
+    coreItems.push({ id: 2065, name: "Pieśń Shurelyi", reason: "Sprint dla drużyny — przyspiesza engage lub ucieczkę" });
+    reasoning.push("Engage support: Amulet + Przysięga + Shurelya — chroni drużynę i inicjuje walki.");
   } else if (isEnchanter) {
-    coreItems.push({ id: 3504, name: "Kadzielnica Ardenta", reason: "Wzmacnia carries — must pick dla enchanter vs AD" });
-    coreItems.push({ id: 3107, name: "Odkupienie", reason: "Leczenie obszarowe przez ścianę w teamfighcie" });
-    reasoning.push("Enchanter: Kadzielnica Ardenta + Odkupienie — maksimum leczenia i buffów.");
+    if (ta.adThreat >= 2) {
+      coreItems.push({ id: 3504, name: "Kadzielnica Ardenta", reason: "Wzmacnia AS ADC gdy go leczysz/tarczujesz" });
+      coreItems.push({ id: 3850, name: "Kij Wody Spływającej", reason: "AP dla sojuszników — wzmacnia maga" });
+      reasoning.push("AD carries w drużynie — Ardent Censer + Staff of Flowing Water wzmacniają carries.");
+    } else {
+      coreItems.push({ id: 3107, name: "Odkupienie", reason: "Leczenie obszarowe przez ścianę — ratuje teamfight" });
+      coreItems.push({ id: 3190, name: "Amulet Żelaznego Słońca", reason: "Tarcza obszarowa — wzmacnia każdego sojusznika" });
+      reasoning.push("Enchanter: Odkupienie + Amulet — leczenie i tarcze przez walki.");
+    }
+    coreItems.push({ id: 3504, name: "Kadzielnica Ardenta", reason: "Kluczowa enchanter item — wzmacnia atakujących sojuszników" });
   } else {
-    coreItems.push({ id: 3190, name: "Amulet Żelaznego Słońca", reason: "Wszechstronny support item" });
-    coreItems.push({ id: 2065, name: "Pieśń Shurelyi", reason: "Sprint dla całej drużyny — engage lub ucieczka" });
-    reasoning.push("Pieśń Shurelyi jako trigger do engage lub ucieczki z drużyną.");
+    coreItems.push({ id: 3190, name: "Amulet Żelaznego Słońca", reason: "Tarcza obszarowa — wszechstronny support item" });
+    coreItems.push({ id: 2065, name: "Pieśń Shurelyi", reason: "Sprint dla drużyny — engage lub dezengagement" });
+    coreItems.push({ id: 3107, name: "Odkupienie", reason: "Leczenie obszarowe — ratuje teamfight zza ściany" });
+    reasoning.push("Mage/poke support: Amulet + Shurelya + Odkupienie — kontrola i leczenie.");
   }
 
+  // SITUACYJNE
   if (ta.healingPresence) {
-    situational.push({ id: 4010, name: "Miotacz Chemtech", reason: "Antyheal w czarach — vs heal comp" });
-    reasoning.push("Leczenie u wrogów — Miotacz Chemtech przekazuje antyheal przez czary.");
+    situational.push({ id: 4010, name: "Miotacz Chemtech", reason: "Antyheal w czarach — vs heal comp priorytet" });
+    reasoning.push("Leczenie u wrogów — Miotacz Chemtech jest najlepszym supportowym antyheałem.");
   }
-  if (ta.apThreat >= 2 || ta.heavyCC) {
-    situational.push({ id: 3222, name: "Błogosławieństwo Mikaela", reason: "Aktywne usuwanie CC z sojusznika" });
-    reasoning.push("Dużo CC — Błogosławieństwo Mikaela czyści CC sojuszniku.");
+  if (ta.heavyCC || ta.assassinCount >= 1) {
+    situational.push({ id: 3222, name: "Błogosławieństwo Mikaela", reason: "Aktywne usuwanie CC z sojusznika — ratuje carry" });
+    reasoning.push("Dużo CC/assassini — Mikael czyści CC z carry w kluczowym momencie.");
   }
-  situational.push({ id: 3050, name: "Zbieżność Zeke", reason: "Wzmacnia sojusznika przy utrzymaniu kontaktu" });
+  situational.push({ id: 3050, name: "Zbieżność Zeke", reason: "Wzmacnia sojusznika przy kontakcie — vs burst comp" });
+  if (!ta.healingPresence) {
+    situational.push({ id: 3107, name: "Odkupienie", reason: "Leczenie przez ścianę — wszechstronny enchanter item" });
+  }
 
   const runes = buildRunesSupport(ta, profile);
   return { coreItems, boots, situationalItems: situational, runes, reasoning };
@@ -688,19 +824,20 @@ function buildSupport(ta: TeamAnalysis, profile: ChampProfile): Omit<BuildResult
 function buildRunesSupport(ta: TeamAnalysis, profile: ChampProfile): RuneData {
   const isEngage = profile.tags?.includes("engage");
   const isPoke = profile.tags?.includes("poke");
+  const hasHealing = profile.hasHealing;
   let keystone = RUNE_KEYSTONES.summonAery;
   if (isEngage) keystone = RUNE_KEYSTONES.aftershock;
   else if (ta.tankCount >= 3) keystone = RUNE_KEYSTONES.guardian;
-  else if (isPoke) keystone = RUNE_KEYSTONES.arcaneComet;
+  else if (isPoke && !hasHealing) keystone = RUNE_KEYSTONES.arcaneComet;
 
-  const primary = isEngage ? RUNE_PATHS.resolve : (isPoke ? RUNE_PATHS.sorcery : RUNE_PATHS.sorcery);
+  const primary = isEngage ? RUNE_PATHS.resolve : RUNE_PATHS.sorcery;
   return {
     keystone,
     primaryPath: primary,
-    secondaryPath: RUNE_PATHS.inspiration,
+    secondaryPath: ta.assassinCount >= 1 ? RUNE_PATHS.resolve : RUNE_PATHS.inspiration,
     primaryRunes: isEngage ? SUBRUNES.resolveSub : SUBRUNES.sorcerySub,
-    secondaryRunes: SUBRUNES.inspirationSub.slice(0, 2),
-    shards: ["AP Adaptacyjne", "CDR", "HP/Armor"],
+    secondaryRunes: ta.assassinCount >= 1 ? SUBRUNES.resolveSub.slice(0, 2) : SUBRUNES.inspirationSub.slice(0, 2),
+    shards: ["AP Adaptacyjne", "CDR", ta.adThreat >= 2 ? "Armor" : "HP"],
   };
 }
 

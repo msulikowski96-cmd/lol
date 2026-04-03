@@ -290,8 +290,14 @@ function BuildResultPanel({ result, myChampId }: { result: BuildResult; myChampI
         <div className="space-y-1.5">
           <TeamThreatBar label="Zagrożenie AP" value={ta.apThreat} color="hsl(270,70%,55%)" />
           <TeamThreatBar label="Zagrożenie AD" value={ta.adThreat} color="hsl(30,85%,50%)" />
-          <TeamThreatBar label="Tanki" value={ta.tankCount} color="hsl(200,70%,45%)" />
-          <TeamThreatBar label="Squishie" value={ta.squishyCount} color="hsl(350,70%,55%)" />
+          <TeamThreatBar label="Tanki / Diwersowie" value={ta.tankCount} color="hsl(200,70%,45%)" />
+          <TeamThreatBar label="Squishie / Cele" value={ta.squishyCount} color="hsl(350,70%,55%)" />
+          {ta.assassinCount > 0 && (
+            <TeamThreatBar label="Assassini (burst)" value={ta.assassinCount} max={5} color="hsl(340,80%,50%)" />
+          )}
+          {ta.pokeCount > 0 && (
+            <TeamThreatBar label="Poke (zasięg)" value={ta.pokeCount} max={5} color="hsl(50,80%,45%)" />
+          )}
         </div>
         <div className="flex flex-wrap gap-2 mt-1">
           {ta.healingPresence && (
@@ -307,6 +313,21 @@ function BuildResultPanel({ result, myChampId }: { result: BuildResult; myChampI
           {ta.engageHeavy && (
             <span className="text-[9px] px-2 py-0.5 rounded-full font-bold" style={{ background: "hsl(0,60%,94%)", color: "hsl(0,65%,42%)", border: "1px solid hsl(0,50%,80%)" }}>
               ⚡ Engage Heavy
+            </span>
+          )}
+          {ta.shieldPresence && (
+            <span className="text-[9px] px-2 py-0.5 rounded-full font-bold" style={{ background: "hsl(55,70%,92%)", color: "hsl(55,70%,30%)", border: "1px solid hsl(55,60%,75%)" }}>
+              🛡 Tarcze u wroga
+            </span>
+          )}
+          {ta.percentHPThreat && (
+            <span className="text-[9px] px-2 py-0.5 rounded-full font-bold" style={{ background: "hsl(20,80%,92%)", color: "hsl(20,75%,35%)", border: "1px solid hsl(20,65%,75%)" }}>
+              🩸 % HP Damage (np. Vayne)
+            </span>
+          )}
+          {ta.splitPushThreat && (
+            <span className="text-[9px] px-2 py-0.5 rounded-full font-bold" style={{ background: "hsl(120,40%,92%)", color: "hsl(120,50%,30%)", border: "1px solid hsl(120,40%,75%)" }}>
+              🌲 Split Push Threat
             </span>
           )}
         </div>

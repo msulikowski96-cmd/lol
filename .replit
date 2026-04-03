@@ -15,7 +15,7 @@ args = ["pnpm", "store", "prune"]
 env = { "CI" = "true" }
 
 [workflows]
-runButton = "artifacts/api-server: API Server"
+runButton = "artifacts/mockup-sandbox: Component Preview Server"
 
 [[workflows.workflow]]
 name = "artifacts/web: web"
@@ -106,6 +106,9 @@ externalPort = 3000
 [[ports]]
 localPort = 8082
 externalPort = 3002
+
+[[ports]]
+localPort = 10000
 
 [[ports]]
 localPort = 22333
