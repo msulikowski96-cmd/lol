@@ -51,7 +51,7 @@ async function fetchInternalData(puuid: string, region: string) {
     lastPlayTime: m.lastPlayTime,
   }));
 
-  const BATCH = 8;
+  const BATCH = 15;
   const matchDetails: any[] = [];
   for (let i = 0; i < matchIds.length; i += BATCH) {
     const batch = matchIds.slice(i, i + BATCH);
@@ -370,12 +370,11 @@ router.get("/:puuid/ai-report", async (req, res) => {
       const nvidiaParams: any = {
         model: "z-ai/glm4.7",
         messages: [{ role: "user", content: prompt }],
-        temperature: 1,
-        top_p: 1,
-        max_tokens: 16384,
-        seed: 42,
+        temperature: 0.7,
+        top_p: 0.9,
+        max_tokens: 8192,
         stream: true,
-        chat_template_kwargs: { enable_thinking: true, clear_thinking: false },
+        chat_template_kwargs: { enable_thinking: false },
       };
       const stream = nvidiaClient.chat.completions.create(nvidiaParams) as any;
 
