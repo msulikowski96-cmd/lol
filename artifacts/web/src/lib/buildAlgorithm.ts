@@ -686,12 +686,35 @@ function buildRunesSupport(ta: TeamAnalysis, profile: ChampProfile): RuneData {
   };
 }
 
-export function calculateBuild(myChampionId: string, enemies: string[]): BuildResult {
+export type Lane = "AUTO" | "TOP" | "JUNGLE" | "MID" | "ADC" | "SUPPORT";
+
+function getLaneOverrideClass(lane: Lane, profile: ChampProfile): ChampClass {
+  switch (lane) {
+    case "TOP":
+      if (profile.class === "SUPPORT") return "TANK";
+      if (profile.class === "MARKSMAN") return "FIGHTER";
+      return profile.class;
+    case "JUNGLE":
+      if (profile.class === "SUPPORT") return "FIGHTER";
+      return profile.class;
+    case "MID":
+      return profile.class;
+    case "ADC":
+      return "MARKSMAN";
+    case "SUPPORT":
+      return "SUPPORT";
+    default:
+      return profile.class;
+  }
+}
+
+export function calculateBuild(myChampionId: string, enemies: string[], lane: Lane = "AUTO"): BuildResult {
   const profile = getChampProfile(myChampionId);
   const ta = analyzeEnemyTeam(enemies);
+  const effectiveClass = lane === "AUTO" ? profile.class : getLaneOverrideClass(lane, profile);
 
   let partial: Omit<BuildResult, "teamAnalysis">;
-  switch (profile.class) {
+  switch (effectiveClass) {
     case "MARKSMAN": partial = buildMarksman(ta, profile); break;
     case "MAGE": partial = buildMage(ta, profile); break;
     case "ASSASSIN": partial = buildAssassin(ta, profile); break;

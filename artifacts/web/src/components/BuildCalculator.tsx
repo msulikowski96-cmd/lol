@@ -8,6 +8,7 @@ import {
   getChampProfile,
   type BuildResult,
   type ItemRec,
+  type Lane,
 } from "@/lib/buildAlgorithm";
 
 interface ChampEntry {
@@ -444,9 +445,19 @@ function BuildResultPanel({ result, myChampId }: { result: BuildResult; myChampI
   );
 }
 
+const LANES: { id: Lane; label: string; icon: string }[] = [
+  { id: "AUTO", label: "Auto", icon: "⚡" },
+  { id: "TOP", label: "Top", icon: "🗡" },
+  { id: "JUNGLE", label: "Jungle", icon: "🌲" },
+  { id: "MID", label: "Mid", icon: "⚔" },
+  { id: "ADC", label: "ADC", icon: "🏹" },
+  { id: "SUPPORT", label: "Support", icon: "🛡" },
+];
+
 export default function BuildCalculator() {
   const [allChampions, setAllChampions] = useState<ChampEntry[]>([]);
   const [myChamp, setMyChamp] = useState<string | null>(null);
+  const [lane, setLane] = useState<Lane>("AUTO");
   const [enemies, setEnemies] = useState<(string | null)[]>([null, null, null, null, null]);
   const [result, setResult] = useState<BuildResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -480,7 +491,7 @@ export default function BuildCalculator() {
     setLoading(true);
     setTimeout(() => {
       const validEnemies = enemies.filter(Boolean) as string[];
-      const res = calculateBuild(myChamp, validEnemies);
+      const res = calculateBuild(myChamp, validEnemies, lane);
       setResult(res);
       setLoading(false);
     }, 300);
@@ -488,6 +499,7 @@ export default function BuildCalculator() {
 
   const handleReset = () => {
     setMyChamp(null);
+    setLane("AUTO");
     setEnemies([null, null, null, null, null]);
     setResult(null);
   };
@@ -531,6 +543,45 @@ export default function BuildCalculator() {
               </motion.div>
             )}
           </div>
+        </div>
+
+        <div>
+          <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-2.5 flex items-center gap-1" style={{ color: "hsl(140,50%,35%)", fontFamily: "'Rajdhani',sans-serif" }}>
+            🗺 Twoja Linia
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {LANES.map((l) => {
+              const active = lane === l.id;
+              return (
+                <button
+                  key={l.id}
+                  onClick={() => { setLane(l.id); setResult(null); }}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all"
+                  style={{
+                    background: active ? "linear-gradient(135deg, hsl(140,60%,30%), hsl(160,60%,38%))" : "hsl(220,15%,94%)",
+                    color: active ? "white" : "hsl(220,15%,45%)",
+                    border: active ? "1px solid hsl(140,50%,38%)" : "1px solid hsl(220,15%,85%)",
+                    fontFamily: "'Rajdhani',sans-serif",
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  <span>{l.icon}</span>
+                  {l.label}
+                </button>
+              );
+            })}
+          </div>
+          {lane !== "AUTO" && myProfile && (
+            <p className="text-[9px] text-muted-foreground mt-1.5">
+              Build będzie dobrany pod <span className="font-bold text-foreground/70">{CLASS_LABEL[(() => {
+                if (lane === "TOP") return myProfile.class === "SUPPORT" ? "TANK" : myProfile.class === "MARKSMAN" ? "FIGHTER" : myProfile.class;
+                if (lane === "JUNGLE") return myProfile.class === "SUPPORT" ? "FIGHTER" : myProfile.class;
+                if (lane === "ADC") return "MARKSMAN";
+                if (lane === "SUPPORT") return "SUPPORT";
+                return myProfile.class;
+              })()]}</span> (linia: {LANES.find(l => l.id === lane)?.label})
+            </p>
+          )}
         </div>
 
         <div>
