@@ -18,9 +18,14 @@ export class RiotApiError extends Error {
   }
 }
 
-export async function riotFetch(url: string, retries = MAX_RETRIES): Promise<Response> {
+export async function riotFetch(
+  url: string,
+  retries = MAX_RETRIES,
+  signal?: AbortSignal
+): Promise<Response> {
   const res = await fetch(url, {
     headers: { "X-Riot-Token": RIOT_API_KEY },
+    signal,
   });
 
   if (res.ok) return res;
@@ -32,8 +37,21 @@ export async function riotFetch(url: string, retries = MAX_RETRIES): Promise<Res
       Math.max(retryAfterSecs * 1000, MIN_RETRY_DELAY_MS),
       MAX_RETRY_DELAY_MS
     );
-    await new Promise((resolve) => setTimeout(resolve, delay));
-    return riotFetch(url, retries - 1);
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        signal?.removeEventListener("abort", onAbort);
+        resolve();
+      }, delay);
+
+      const onAbort = () => {
+        clearTimeout(timeout);
+        reject(new DOMException("The operation was aborted.", "AbortError"));
+      };
+
+      signal?.addEventListener("abort", onAbort, { once: true });
+    });
+
+    return riotFetch(url, retries - 1, signal);
   }
 
   const text = await res.text().catch(() => "");
