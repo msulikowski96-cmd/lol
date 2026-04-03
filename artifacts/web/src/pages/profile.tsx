@@ -1,5 +1,5 @@
 import { useParams, Link, useLocation } from "wouter";
-import { DD, SPELL_IMG, RUNE_STYLE_ICON, TIER_COLOR } from "../lib/constants";
+import { getDDBase, SPELL_IMG, RUNE_STYLE_ICON, TIER_COLOR } from "../lib/constants";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
@@ -205,7 +205,7 @@ function LiveGameBanner({ data, selfPuuid }: { data: any; selfPuuid?: string }) 
   function SpellIcon({ id }: { id: number }) {
     const name = SPELL_IMG[id];
     if (!name) return <div className="w-4 h-4 rounded bg-muted/30" />;
-    return <img src={`${DD}/spell/${name}.png`} alt={name} className="w-4 h-4 rounded border border-border" onError={(e) => { e.currentTarget.style.display = "none"; }} />;
+    return <img src={`${getDDBase()}/spell/${name}.png`} alt={name} className="w-4 h-4 rounded border border-border" onError={(e) => { e.currentTarget.style.display = "none"; }} />;
   }
 
   function RuneStyleIcon({ styleId, size = 14 }: { styleId: number; size?: number }) {
@@ -246,7 +246,7 @@ function LiveGameBanner({ data, selfPuuid }: { data: any; selfPuuid?: string }) 
             className={`relative rounded overflow-hidden ${b.championName === "Brak" ? "opacity-30" : ""}`}>
             {b.championName !== "Brak" ? (
               <>
-                <img src={`${DD}/champion/${b.championName}.png`} alt={b.championName}
+                <img src={`${getDDBase()}/champion/${b.championName}.png`} alt={b.championName}
                   className="w-6 h-6 object-cover grayscale opacity-60" onError={(e) => { e.currentTarget.style.display = "none"; }} />
                 <div className={`absolute inset-0 ${color === "blue" ? "bg-blue-100/60" : "bg-red-100/60"}`} />
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -293,7 +293,7 @@ function LiveGameBanner({ data, selfPuuid }: { data: any; selfPuuid?: string }) 
                 return (
                   <div key={i} className={`flex items-center gap-1.5 px-1.5 py-1 rounded-lg transition-colors ${isSelf ? (color === "blue" ? "bg-blue-50 ring-1 ring-blue-200" : "bg-red-50 ring-1 ring-red-200") : "hover:bg-muted"}`}>
                     {/* Champion icon */}
-                    <img src={`${DD}/champion/${pl.championName}.png`} alt={pl.championName}
+                    <img src={`${getDDBase()}/champion/${pl.championName}.png`} alt={pl.championName}
                       className="w-7 h-7 rounded-md border flex-shrink-0"
                       style={{ borderColor: color === "blue" ? "rgba(59,130,246,0.2)" : "rgba(239,68,68,0.2)" }}
                       onError={(e) => { e.currentTarget.src = FALLBACK_ICON; }} />
@@ -519,7 +519,7 @@ function ChampionBreakdownTable({ championBreakdown, region, gameName, tagLine }
                 <tr key={i} className="hover:bg-muted/15 transition-colors">
                   <td className="py-2 px-2">
                     <Link href={champUrl} className="flex items-center gap-2 group">
-                      <img src={`${DD}/champion/${ch.championName}.png`} alt="" className="w-6 h-6 rounded-full border border-border"
+                      <img src={`${getDDBase()}/champion/${ch.championName}.png`} alt="" className="w-6 h-6 rounded-full border border-border"
                         onError={(e) => { e.currentTarget.src = FALLBACK_ICON; }} />
                       <span className="text-xs font-semibold text-foreground group-hover:text-cyan-400 transition-colors">{ch.championName}</span>
                     </Link>
@@ -581,7 +581,7 @@ function MatchParticipantRow({ p, isSelf }: { p: any; isSelf: boolean }) {
   return (
     <div className={`flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors ${isSelf ? (p.win ? "bg-win/10 ring-1 ring-win/30" : "bg-loss/10 ring-1 ring-loss/30") : "hover:bg-muted"}`}>
       <img
-        src={`${DD}/champion/${p.championName}.png`}
+        src={`${getDDBase()}/champion/${p.championName}.png`}
         alt={p.championName}
         className="w-7 h-7 rounded-md border border-border flex-shrink-0"
         onError={(e) => { e.currentTarget.src = FALLBACK_ICON; }}
@@ -627,10 +627,10 @@ function MatchRow({ match, index, selfPuuid, region, gameName, tagLine }: { matc
           ${expanded ? (w ? "rounded-b-none" : "rounded-b-none") : ""}`}
       >
         <div className="relative flex-shrink-0">
-          <img src={`${DD}/champion/${match.championName}.png`} alt={match.championName} className="w-8 h-8 rounded-lg border border-border"
+          <img src={`${getDDBase()}/champion/${match.championName}.png`} alt={match.championName} className="w-8 h-8 rounded-lg border border-border"
             onError={(e) => { e.currentTarget.src = FALLBACK_ICON; }} />
           {match.opponent && (
-            <img src={`${DD}/champion/${match.opponent.championName}.png`} alt={match.opponent.championName}
+            <img src={`${getDDBase()}/champion/${match.opponent.championName}.png`} alt={match.opponent.championName}
               className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border border-border bg-card"
               onError={(e) => { e.currentTarget.style.display = "none"; }} />
           )}
@@ -1011,7 +1011,7 @@ function AnalysisSection({ data, isLoading, recentMatches, region, gameName, tag
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {championRecommendations.map((rec: any, i: number) => (
               <div key={i} className="stat-card flex items-start gap-3">
-                <img src={`${DD}/champion/${rec.championName}.png`} alt={rec.championName}
+                <img src={`${getDDBase()}/champion/${rec.championName}.png`} alt={rec.championName}
                   className="w-11 h-11 rounded-lg border border-border flex-shrink-0"
                   onError={(e) => { e.currentTarget.style.display = "none"; }} />
                 <div className="min-w-0">
@@ -1290,7 +1290,7 @@ function AnalysisSection({ data, isLoading, recentMatches, region, gameName, tag
             <div className="stat-card border-green-200 bg-green-50">
               <p className="text-[10px] uppercase tracking-widest text-green-400 font-bold flex items-center gap-1 mb-2"><Award className="w-3 h-3" /> Najlepszy mecz</p>
               <div className="flex items-center gap-2.5">
-                <img src={`${DD}/champion/${bestGame.championName}.png`} alt="" className="w-10 h-10 rounded-lg border border-border"
+                <img src={`${getDDBase()}/champion/${bestGame.championName}.png`} alt="" className="w-10 h-10 rounded-lg border border-border"
                   onError={(e) => { e.currentTarget.style.display = "none"; }} />
                 <div>
                   <p className="text-sm font-semibold text-foreground">{bestGame.championName}</p>
@@ -1304,7 +1304,7 @@ function AnalysisSection({ data, isLoading, recentMatches, region, gameName, tag
             <div className="stat-card border-red-200 bg-red-50">
               <p className="text-[10px] uppercase tracking-widest text-red-400 font-bold flex items-center gap-1 mb-2"><AlertTriangle className="w-3 h-3" /> Najgorszy mecz</p>
               <div className="flex items-center gap-2.5">
-                <img src={`${DD}/champion/${worstGame.championName}.png`} alt="" className="w-10 h-10 rounded-lg border border-border"
+                <img src={`${getDDBase()}/champion/${worstGame.championName}.png`} alt="" className="w-10 h-10 rounded-lg border border-border"
                   onError={(e) => { e.currentTarget.style.display = "none"; }} />
                 <div>
                   <p className="text-sm font-semibold text-foreground">{worstGame.championName}</p>
@@ -1694,7 +1694,7 @@ export default function Profile() {
           <div className="relative flex-shrink-0">
             <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-[8px] overflow-hidden"
               style={{ border: "1.5px solid hsl(200,50%,75%)", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
-              <img src={`${DD}/profileicon/${profile?.profileIconId}.png`} alt="" className="w-full h-full object-cover" />
+              <img src={`${getDDBase()}/profileicon/${profile?.profileIconId}.png`} alt="" className="w-full h-full object-cover" />
             </div>
             <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 text-[9px] font-bold px-2 py-0.5 rounded-[3px] whitespace-nowrap"
               style={{
@@ -1887,7 +1887,7 @@ export default function Profile() {
                       <Link key={i} href={`/champion/${region}/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}/${ch.championName}`}
                         className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-muted transition-colors group">
                         <span className="text-[10px] text-muted-foreground/50 font-mono w-3 text-right">{i + 1}</span>
-                        <img src={`${DD}/champion/${ch.championName}.png`} alt="" className="w-8 h-8 rounded-lg"
+                        <img src={`${getDDBase()}/champion/${ch.championName}.png`} alt="" className="w-8 h-8 rounded-lg"
                           style={{ border: "1px solid hsl(220,15%,88%)" }}
                           onError={(e) => { e.currentTarget.src = FALLBACK_ICON; }} />
                         <div className="flex-1 min-w-0">
@@ -1940,7 +1940,7 @@ export default function Profile() {
                         const pct = Math.round(stat.games / total * 100);
                         return (
                           <div key={name} className="flex items-center gap-2">
-                            <img src={`${DD}/champion/${name}.png`} alt={name}
+                            <img src={`${getDDBase()}/champion/${name}.png`} alt={name}
                               className="w-6 h-6 rounded-md border border-border flex-shrink-0"
                               onError={(e) => { e.currentTarget.src = FALLBACK_ICON; }} />
                             <div className="flex-1 min-w-0">

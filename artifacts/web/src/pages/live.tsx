@@ -7,7 +7,7 @@ import {
   useGetLiveGame,
 } from "@workspace/api-client-react";
 
-import { DD, FALLBACK_ICON, SPELL_IMG, RUNE_STYLE_ICON, TIER_COLOR, TIER_LABEL } from "../lib/constants";
+import { getDDBase, SPELL_IMG, RUNE_STYLE_ICON, TIER_COLOR, TIER_LABEL } from "../lib/constants";
 import { usePageTitle } from "@/lib/usePageTitle";
 
 
@@ -27,7 +27,7 @@ function SpellIcon({ id, size = 24 }: { id: number; size?: number }) {
   const name = SPELL_IMG[id];
   if (!name) return <div style={{ width: size, height: size }} className="bg-muted border border-border" />;
   return (
-    <img src={`${DD}/spell/${name}.png`} alt={name}
+    <img src={`${getDDBase()}/spell/${name}.png`} alt={name}
       style={{ width: size, height: size }}
       className="border border-border"
       onError={(e) => { e.currentTarget.style.display = "none"; }} />
@@ -112,11 +112,11 @@ function PlayerRow({ player, side, isSelf, position, region }: { player: any; si
     >
       <div className="relative flex-shrink-0">
         <img
-          src={`${DD}/champion/${player.championName}.png`}
+          src={`${getDDBase()}/champion/${player.championName}.png`}
           alt={player.championName}
           className="w-10 h-10 rounded border"
           style={{ borderColor }}
-          onError={(e) => { e.currentTarget.src = FALLBACK_ICON; }}
+          onError={(e) => { e.currentTarget.src = `${getDDBase()}/profileicon/29.png`; }}
         />
         <div className="absolute -bottom-1 -right-1 flex gap-px">
           <SpellIcon id={player.spell1Id} size={14} />
@@ -170,7 +170,7 @@ function BansList({ bans, side }: { bans: any[]; side: "blue" | "red" }) {
           className="relative overflow-hidden rounded" style={{ width: 28, height: 28 }}>
           {b.championName !== "Brak" ? (
             <>
-              <img src={`${DD}/champion/${b.championName}.png`} alt={b.championName}
+              <img src={`${getDDBase()}/champion/${b.championName}.png`} alt={b.championName}
                 className="w-full h-full object-cover grayscale opacity-40" onError={(e) => { e.currentTarget.style.display = "none"; }} />
               <div className="absolute inset-0" style={{ background: color }} />
               <div className="absolute inset-0 flex items-center justify-center">

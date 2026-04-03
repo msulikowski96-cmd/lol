@@ -39,6 +39,8 @@ type Awaited<O> = O extends AwaitedInput<infer T> ? T : never;
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
+type OptQuery<T, E, D> = Omit<UseQueryOptions<T, E, D>, "queryKey"> & { queryKey?: QueryKey };
+
 /**
  * @summary Health check
  */
@@ -153,7 +155,7 @@ export const getSearchSummonerQueryOptions = <
 >(
   params: SearchSummonerParams,
   options?: {
-    query?: UseQueryOptions<
+    query?: OptQuery<
       Awaited<ReturnType<typeof searchSummoner>>,
       TError,
       TData
@@ -191,7 +193,7 @@ export function useSearchSummoner<
 >(
   params: SearchSummonerParams,
   options?: {
-    query?: UseQueryOptions<
+    query?: OptQuery<
       Awaited<ReturnType<typeof searchSummoner>>,
       TError,
       TData
@@ -258,7 +260,7 @@ export const getGetSummonerRankedQueryOptions = <
   puuid: string,
   params: GetSummonerRankedParams,
   options?: {
-    query?: UseQueryOptions<
+    query?: OptQuery<
       Awaited<ReturnType<typeof getSummonerRanked>>,
       TError,
       TData
@@ -304,7 +306,7 @@ export function useGetSummonerRanked<
   puuid: string,
   params: GetSummonerRankedParams,
   options?: {
-    query?: UseQueryOptions<
+    query?: OptQuery<
       Awaited<ReturnType<typeof getSummonerRanked>>,
       TError,
       TData
@@ -371,7 +373,7 @@ export const getGetSummonerMatchesQueryOptions = <
   puuid: string,
   params: GetSummonerMatchesParams,
   options?: {
-    query?: UseQueryOptions<
+    query?: OptQuery<
       Awaited<ReturnType<typeof getSummonerMatches>>,
       TError,
       TData
@@ -417,7 +419,7 @@ export function useGetSummonerMatches<
   puuid: string,
   params: GetSummonerMatchesParams,
   options?: {
-    query?: UseQueryOptions<
+    query?: OptQuery<
       Awaited<ReturnType<typeof getSummonerMatches>>,
       TError,
       TData
@@ -491,7 +493,7 @@ export const getGetSummonerMasteryQueryOptions = <
   puuid: string,
   params: GetSummonerMasteryParams,
   options?: {
-    query?: UseQueryOptions<
+    query?: OptQuery<
       Awaited<ReturnType<typeof getSummonerMastery>>,
       TError,
       TData
@@ -537,7 +539,7 @@ export function useGetSummonerMastery<
   puuid: string,
   params: GetSummonerMasteryParams,
   options?: {
-    query?: UseQueryOptions<
+    query?: OptQuery<
       Awaited<ReturnType<typeof getSummonerMastery>>,
       TError,
       TData
@@ -608,7 +610,7 @@ export const getGetSummonerAnalysisQueryOptions = <
   puuid: string,
   params: GetSummonerAnalysisParams,
   options?: {
-    query?: UseQueryOptions<
+    query?: OptQuery<
       Awaited<ReturnType<typeof getSummonerAnalysis>>,
       TError,
       TData
@@ -654,7 +656,7 @@ export function useGetSummonerAnalysis<
   puuid: string,
   params: GetSummonerAnalysisParams,
   options?: {
-    query?: UseQueryOptions<
+    query?: OptQuery<
       Awaited<ReturnType<typeof getSummonerAnalysis>>,
       TError,
       TData
@@ -719,7 +721,7 @@ export const getGetLiveGameQueryOptions = <
   puuid: string,
   params: GetLiveGameParams,
   options?: {
-    query?: UseQueryOptions<
+    query?: OptQuery<
       Awaited<ReturnType<typeof getLiveGame>>,
       TError,
       TData
@@ -764,7 +766,7 @@ export function useGetLiveGame<
   puuid: string,
   params: GetLiveGameParams,
   options?: {
-    query?: UseQueryOptions<
+    query?: OptQuery<
       Awaited<ReturnType<typeof getLiveGame>>,
       TError,
       TData

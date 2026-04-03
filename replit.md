@@ -64,10 +64,13 @@ TypeScript pnpm monorepo, fully in Polish. Users search players by Riot ID acros
 - sitemap.xml and robots.txt in `artifacts/web/public/`
 
 ## Important Notes
-- Never edit generated files in `lib/api-client-react/src/generated/` or `lib/api-zod/src/generated/`
+- Never edit generated files in `lib/api-zod/src/generated/` — but `lib/api-client-react/src/generated/api.ts` was intentionally patched to add `OptQuery<T,E,D>` type alias for TanStack Query v5 compatibility (queryKey optional in hook options)
+- `lib/api-zod/src/index.ts` exports ONLY from `./generated/api` (not from `./generated/types`) — types and Zod schemas share the same names causing ambiguity if both are exported
+- After editing any `lib/*/src/*.ts`, rebuild declarations: `cd lib/<pkg> && pnpm exec tsc -p tsconfig.json`
 - `refetchInterval` in react-query v5 does NOT work on errored queries — use `useEffect + setInterval + refetch()` workaround
-- DD version is fetched dynamically at runtime via `/api/ddragon-version`; use `getDDBase()` in new frontend code, never hardcode version
+- DD version is fetched dynamically at runtime via `/api/ddragon-version`; use `getDDBase()` in new frontend code, NEVER use the `DD` constant or hardcode version (it's stale at `14.24.1`)
 - Cache: all Riot API endpoints are cached server-side (search=60s, ranked=120s, matches=90s, mastery=300s, analysis=120s, live=30s, champion=180s)
 - `pushHistory` defined in BOTH home.tsx and profile.tsx (intentional duplicates)
 - `Link` from wouter renders its own `<a>` — never wrap in plain `<a>`
 - Workflows: "Start application" runs both API server (port 8080) and web (PORT env var); individual artifact workflows also exist
+- Champion names in `buildAlgorithm.ts` CHAMP_DB must match DataDragon IDs exactly (e.g. "MasterYi" not "Masteryi")
