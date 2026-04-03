@@ -238,107 +238,46 @@ Ostatnie ${a.totalGames} meczów rankingowych:
     lastResultsStr = `Ostatnie wyniki (W=wygrana, L=przegrana): ${a.lastResults}`;
   }
 
-  return `Jesteś ekspertem analitykiem League of Legends. Stwórz BARDZO SZCZEGÓŁOWY i WNIKLIWY raport analityczny gracza "${gameName}" po polsku.
+  return `Analityk LoL. Raport gracza "${gameName}" po polsku. Odpowiedz TYLKO JSON (bez markdown).
 
-DANE GRACZA:
-=== RANGI ===
-SoloQ: ${rankStr}
-Flex: ${flexStr}
-
-=== MASTERY CHAMPIONÓW ===
-${masteryStr || "Brak danych"}
-
-=== STATYSTYKI Z OSTATNICH MECZY ===
+DANE:
+Rangi: SoloQ: ${rankStr} | Flex: ${flexStr}
+Mastery: ${masteryStr || "brak"}
 ${statsStr}
-
-=== POOL CHAMPIONÓW (ostatnie mecze) ===
-${champPoolStr || "Brak danych"}
-
+Pool: ${champPoolStr || "brak"}
 ${lastResultsStr}
 
-INSTRUKCJA:
-Napisz kompleksowy raport analityczny w języku polskim. Raport musi być BARDZO ROZBUDOWANY i zawierać konkretne liczby z danych powyżej. NIE używaj ogólników — każda sekcja powinna odwoływać się do konkretnych statystyk.
-
-Odpowiedz WYŁĄCZNIE w formacie JSON (bez markdown, bez znaczników kodu) o dokładnie tej strukturze:
-
+JSON (zwięzłe odpowiedzi, 1-2 zdań na pole, konkretne liczby):
 {
-  "executive_summary": "3-4 zdania podsumowujące gracza, jego rangę, styl gry i aktualną formę. Wspomnij konkretne liczby.",
-  "overall_rating": "Ocena literowa: S+/S/A+/A/B+/B/C+/C/D na podstawie wszystkich danych",
-  "overall_score": liczba_0_do_100,
-  "form_assessment": "Ocena aktualnej formy: 'Świetna forma', 'Dobra forma', 'Stabilna', 'Zmienna', 'Słaba forma', 'Kryzys'",
-  "playstyle_archetype": "Nazwa archetypу playstyle (np. 'Agresywny Carry', 'Metodyczny Farmer', 'Drużynowy Playmaker', 'Obrońca', 'Snowballer', 'Splitpusher', 'Skirmisher')",
-  "playstyle_description": "3-5 zdań opisujących unikalny styl gry gracza z konkretnymi odniesieniami do danych.",
-  "champion_pool_analysis": "4-6 zdań analizujących pool championów, synergię między nimi, co to mówi o preferowanym stylu gry. Oceń głębokość poola (one-trick vs versatile).",
-  "macro_analysis": "4-6 zdań o makro — vision control (control wards: X), cele, map pressure, roaming, decyzje o celach. Konkretne liczby.",
-  "micro_analysis": "4-6 zdań o mikro — mechanika, CS (X cs/min), damage output (X% dmg drużyny), killparticipation (X%), skill expression.",
-  "lane_phase_analysis": "3-5 zdań o fazie laning — czy dominuje w lanie, jak radzi sobie w early game, first blood, presja.",
-  "teamfight_analysis": "3-5 zdań o teamfightach — kill participation, multi-kills, pozycjonowanie, impact w drużynowych starciach.",
-  "death_analysis": "3-5 zdań analizujących zgony — czy ginie dużo, kiedy ginie, czy tiltuje się (X meczy z >8 zgonami), % czasu martwym.",
-  "vision_analysis": "2-4 zdania o vision game — wards placed, control wards, świadomość mapy.",
-  "mental_game": "3-4 zdania o aspekcie mentalnym — seria (X), forma ostatnich meczy, reakcja na porażki, tilting patterns.",
-  "strengths": [
-    "Konkretna mocna strona 1 z liczbami",
-    "Konkretna mocna strona 2 z liczbami",
-    "Konkretna mocna strona 3 z liczbami",
-    "Opcjonalnie 4. mocna strona",
-    "Opcjonalnie 5. mocna strona"
-  ],
-  "weaknesses": [
-    "Konkretna słaba strona 1 z liczbami",
-    "Konkretna słaba strona 2 z liczbami",
-    "Konkretna słaba strona 3 z liczbami",
-    "Opcjonalnie 4. słaba strona"
-  ],
-  "coaching_tips": [
-    {
-      "title": "Krótki tytuł wskazówki",
-      "description": "2-3 zdania konkretnej, praktycznej wskazówki jak poprawić daną umiejętność z odniesieniem do statystyk gracza",
-      "priority": "high/medium/low",
-      "category": "macro/micro/mental/vision/champion_pool"
-    }
-  ],
-  "champion_recommendations": [
-    {
-      "champion": "Nazwa championa",
-      "reason": "Dlaczego ten champion pasuje do stylu gry gracza",
-      "synergy": "Z którymi obecnymi championami gracza ma synergię lub podobny playstyle"
-    }
-  ],
-  "rank_prediction": "2-3 zdania co gracz może osiągnąć jeśli będzie pracował nad słabymi stronami. Konkretna ranga docelowa.",
-  "consistency_score": liczba_0_do_100,
-  "consistency_comment": "1-2 zdania o konsekwencji wyników gracza",
-  "motivation_quote": "Krótkie, personalizowane motto/wyzwanie dla gracza nawiązujące do jego stylu gry i potencjału",
-  "performance_radar": {
-    "makro": liczba_0_do_100,
-    "mikro": liczba_0_do_100,
-    "wizja": liczba_0_do_100,
-    "konsekwencja": liczba_0_do_100,
-    "teamfight": liczba_0_do_100,
-    "laning": liczba_0_do_100
-  },
-  "improvement_priorities": [
-    {
-      "rank": 1,
-      "area": "Krótka nazwa obszaru",
-      "current": "Obecna wartość lub opis problemu (np. '7.0 zgonów/mecz')",
-      "target": "Cel do osiągnięcia (np. '<5 zgonów/mecz')",
-      "description": "1-2 zdania konkretnego działania jak to poprawić",
-      "lp_gain_estimate": liczba_lp_do_zdobycia_szacunkowo
-    }
-  ],
-  "key_weaknesses_detailed": [
-    {
-      "title": "Krótki tytuł słabości",
-      "stat": "Statystyka lub wartość (np. '7.0 śmierci/mecz')",
-      "impact": "Dlaczego to szkodzi (1 zdanie)",
-      "fix": "Jak naprawić (1 zdanie)"
-    }
-  ],
-  "biggest_mistake_pattern": "1-2 zdania opisujące JEDEN główny, powtarzający się błąd gracza widoczny w danych — konkretny pattern (np. 'Gracz stale ginie w lategame gdy wróg ma engage, nie pozycjonując się za frontline')",
-  "best_habit": "1-2 zdania opisujące JEDNĄ najlepszą nawykową cechę gracza widoczną w danych"
+  "executive_summary": "2 zdania: ranga, WR, forma",
+  "overall_rating": "S+/S/A+/A/B+/B/C+/C/D",
+  "overall_score": 0-100,
+  "form_assessment": "Świetna forma/Dobra forma/Stabilna/Zmienna/Słaba forma/Kryzys",
+  "playstyle_archetype": "np. Agresywny Carry",
+  "playstyle_description": "1-2 zdania",
+  "champion_pool_analysis": "1-2 zdania",
+  "macro_analysis": "1-2 zdania z liczbami (vision, cele)",
+  "micro_analysis": "1-2 zdania z liczbami (CS, dmg%)",
+  "lane_phase_analysis": "1 zdanie",
+  "teamfight_analysis": "1 zdanie",
+  "death_analysis": "1 zdanie z liczbami",
+  "vision_analysis": "1 zdanie",
+  "mental_game": "1 zdanie",
+  "strengths": ["mocna1","mocna2","mocna3"],
+  "weaknesses": ["słaba1","słaba2","słaba3"],
+  "coaching_tips": [{"title":"","description":"1 zdanie","priority":"high/medium/low","category":"macro/micro/mental/vision/champion_pool"}],
+  "champion_recommendations": [{"champion":"","reason":"krótko","synergy":"krótko"}],
+  "rank_prediction": "1 zdanie",
+  "consistency_score": 0-100,
+  "consistency_comment": "1 zdanie",
+  "motivation_quote": "krótkie motto",
+  "performance_radar": {"makro":0-100,"mikro":0-100,"wizja":0-100,"konsekwencja":0-100,"teamfight":0-100,"laning":0-100},
+  "improvement_priorities": [{"rank":1,"area":"","current":"wartość","target":"cel","description":"1 zdanie","lp_gain_estimate":0}],
+  "key_weaknesses_detailed": [{"title":"","stat":"","impact":"krótko","fix":"krótko"}],
+  "biggest_mistake_pattern": "1 zdanie",
+  "best_habit": "1 zdanie"
 }
-
-WAŻNE: Coaching tips musi zawierać minimum 6 wskazówek, champion_recommendations minimum 3, improvement_priorities minimum 5, key_weaknesses_detailed minimum 3. Każda sekcja musi być szczegółowa i odwoływać się do konkretnych danych statystycznych gracza. performance_radar to liczby 0-100 oceniające każdy wymiar na podstawie danych — bądź precyzyjny i zróżnicowany (nie dawaj wszystkim 60).`;
+coaching_tips: 3, champion_recommendations: 2, improvement_priorities: 3, key_weaknesses_detailed: 2. Radar 0-100, zróżnicowany.`;
 }
 
 router.get("/:puuid/ai-report", async (req, res) => {
