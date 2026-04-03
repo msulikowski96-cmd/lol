@@ -368,13 +368,12 @@ router.get("/:puuid/ai-report", async (req, res) => {
       const prompt = buildPrompt(data, gameName ?? "Gracz");
 
       const nvidiaParams: any = {
-        model: "z-ai/glm4.7",
+        model: "meta/llama-3.3-70b-instruct",
         messages: [{ role: "user", content: prompt }],
-        temperature: 0.7,
-        top_p: 0.9,
-        max_tokens: 8192,
+        temperature: 0.2,
+        top_p: 0.7,
+        max_tokens: 4096,
         stream: true,
-        chat_template_kwargs: { enable_thinking: false },
       };
       const stream = nvidiaClient.chat.completions.create(nvidiaParams) as any;
 
