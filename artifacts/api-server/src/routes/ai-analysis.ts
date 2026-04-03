@@ -34,7 +34,7 @@ async function fetchInternalData(puuid: string, region: string) {
   const [rankedRes, masteryRes, matchIdsRes] = await Promise.all([
     riotFetch(`https://${region.toLowerCase()}.api.riotgames.com/lol/league/v4/entries/by-puuid/${puuid}`),
     riotFetch(`https://${region.toLowerCase()}.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid/${puuid}/top?count=7`),
-    riotFetch(`https://${cluster}.api.riotgames.com/lol/match/v5/matches/by-puuid/${puuid}/ids?count=30&type=ranked`),
+    riotFetch(`https://${cluster}.api.riotgames.com/lol/match/v5/matches/by-puuid/${puuid}/ids?count=20&type=ranked`),
   ]);
 
   const ranked = (await rankedRes.json()) as any[];
@@ -51,7 +51,7 @@ async function fetchInternalData(puuid: string, region: string) {
     lastPlayTime: m.lastPlayTime,
   }));
 
-  const BATCH = 15;
+  const BATCH = 20;
   const matchDetails: any[] = [];
   for (let i = 0; i < matchIds.length; i += BATCH) {
     const batch = matchIds.slice(i, i + BATCH);
@@ -364,11 +364,15 @@ router.get("/:puuid/ai-report", async (req, res) => {
     );
 
     const mainPromise = (async () => {
+      const t0 = Date.now();
       const data = await fetchInternalData(puuid, region.toUpperCase());
+      console.log(`[ai-report] data fetch: ${Date.now() - t0}ms`);
+
       const prompt = buildPrompt(data, gameName ?? "Gracz");
 
+      const t1 = Date.now();
       const nvidiaParams: any = {
-        model: "meta/llama-3.3-70b-instruct",
+        model: "meta/llama-3.1-8b-instruct",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.2,
         top_p: 0.7,
@@ -382,6 +386,7 @@ router.get("/:puuid/ai-report", async (req, res) => {
         const content = chunk?.choices?.[0]?.delta?.content;
         if (content) fullText += content;
       }
+      console.log(`[ai-report] AI generation: ${Date.now() - t1}ms, tokens out: ~${Math.round(fullText.length / 4)}`);
 
       const rawText = fullText
         .replace(/^```(?:json)?\s*/m, "")
