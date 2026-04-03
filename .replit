@@ -1,125 +1,13 @@
-modules = ["nodejs-20", "web"]
-
-[[artifacts]]
-id = "artifacts/api-server"
-
-[[artifacts]]
-id = "artifacts/mockup-sandbox"
-
-[deployment]
-router = "application"
-deploymentTarget = "autoscale"
-
-[deployment.postBuild]
-args = ["pnpm", "store", "prune"]
-env = { "CI" = "true" }
-
-[workflows]
-runButton = "artifacts/mockup-sandbox: Component Preview Server"
-
-[[workflows.workflow]]
-name = "artifacts/web: web"
-author = "agent"
-mode = "sequential"
-
-[workflows.workflow.metadata]
-outputType = "webview"
-artifactId = "artifacts/web"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "pnpm --filter @workspace/web run dev"
-cwd = "./artifacts/web"
-waitForPort = 22333
-router = "path"
-
-[workflows.workflow.tasks.env]
-PORT = "22333"
-BASE_PATH = "/"
-
-[[workflows.workflow]]
-name = "artifacts/mockup-sandbox: Component Preview Server"
-author = "agent"
-mode = "sequential"
-
-[workflows.workflow.metadata]
-outputType = "webview"
-artifactId = "XegfDyZt7HqfW2Bb8Ghoy"
-isCanvasWorkflow = true
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "pnpm --filter @workspace/mockup-sandbox run dev"
-cwd = "./artifacts/mockup-sandbox"
-waitForPort = 8081
-
-[workflows.workflow.tasks.env]
-PORT = "8081"
-BASE_PATH = "/__mockup"
-
-[[workflows.workflow]]
-name = "artifacts/api-server: API Server"
-author = "agent"
-mode = "sequential"
-
-[workflows.workflow.metadata]
-outputType = "webview"
-artifactId = "3B4_FFSkEVBkAeYMFRJ2e"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "pnpm --filter @workspace/api-server run dev"
-cwd = "./artifacts/api-server"
-waitForPort = 8080
-
-[workflows.workflow.tasks.env]
-PORT = "8080"
-
-[[workflows.workflow]]
-name = "Start application"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "PORT=8080 pnpm --filter @workspace/api-server run dev & PORT=22333 BASE_PATH=/ pnpm --filter @workspace/web run dev & wait"
-waitForPort = 22333
-
-[workflows.workflow.metadata]
-outputType = "webview"
-
-[agent]
-stack = "PNPM_WORKSPACE"
-expertMode = true
-
-[postMerge]
-path = "scripts/post-merge.sh"
-timeoutMs = 20000
+modules = ["nodejs-20"]
 
 [[ports]]
 localPort = 8080
-externalPort = 80
+externalPort = 8080
 
 [[ports]]
 localPort = 8081
-externalPort = 3000
-
-[[ports]]
-localPort = 8082
-externalPort = 3002
-
-[[ports]]
-localPort = 10000
+externalPort = 80
 
 [[ports]]
 localPort = 22333
-externalPort = 3003
-
-[[ports]]
-localPort = 22334
-externalPort = 3001
-
-[nix]
-channel = "stable-25_05"
-
-[objectStorage]
-defaultBucketID = "replit-objstore-6156edb2-ffd1-4691-aefc-dd50f02480b2"
+externalPort = 3000
