@@ -367,18 +367,21 @@ router.get("/:puuid/ai-report", async (req, res) => {
       const data = await fetchInternalData(puuid, region.toUpperCase());
       const prompt = buildPrompt(data, gameName ?? "Gracz");
 
-      const stream = await nvidiaClient.chat.completions.create({
-        model: "nvidia/nemotron-3-super-120b-a12b",
+      const nvidiaParams: any = {
+        model: "z-ai/glm4.7",
         messages: [{ role: "user", content: prompt }],
-        temperature: 0.6,
-        top_p: 0.95,
+        temperature: 1,
+        top_p: 1,
         max_tokens: 16384,
+        seed: 42,
         stream: true,
-      });
+        chat_template_kwargs: { enable_thinking: true, clear_thinking: false },
+      };
+      const stream = nvidiaClient.chat.completions.create(nvidiaParams) as any;
 
       let fullText = "";
-      for await (const chunk of stream) {
-        const content = chunk.choices[0]?.delta?.content;
+      for await (const chunk of await stream) {
+        const content = chunk?.choices?.[0]?.delta?.content;
         if (content) fullText += content;
       }
 
