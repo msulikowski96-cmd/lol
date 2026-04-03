@@ -358,7 +358,7 @@ router.get("/:puuid/ai-report", async (req, res) => {
   }
 
   try {
-    const timeoutMs = 60_000;
+    const timeoutMs = 120_000;
     const timeoutPromise = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error("AI generation timed out")), timeoutMs)
     );
@@ -368,7 +368,7 @@ router.get("/:puuid/ai-report", async (req, res) => {
       const prompt = buildPrompt(data, gameName ?? "Gracz");
 
       const stream = await nvidiaClient.chat.completions.create({
-        model: "nvidia/nemotron-super-49b-v1",
+        model: "nvidia/nemotron-3-super-120b-a12b",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.6,
         top_p: 0.95,
