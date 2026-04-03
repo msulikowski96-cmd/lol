@@ -28,13 +28,21 @@ const TIER_PL: Record<string, string> = {
 function r2(n: number) { return Math.round(n * 100) / 100; }
 function pct(n: number) { return `${Math.round(n * 10) / 10}%`; }
 
-async function fetchInternalData(puuid: string, region: string) {
+async function fetchInternalData(
+  puuid: string,
+  region: string,
+  signal?: AbortSignal,
+  shouldStop?: () => boolean
+) {
+  const isStopped = () => signal?.aborted || shouldStop?.() === true;
+  if (isStopped()) throw new Error("Request aborted");
+
   const cluster = REGION_TO_CLUSTER[region.toUpperCase()] ?? "europe";
 
   const [rankedRes, masteryRes, matchIdsRes] = await Promise.all([
-    riotFetch(`https://${region.toLowerCase()}.api.riotgames.com/lol/league/v4/entries/by-puuid/${puuid}`),
-    riotFetch(`https://${region.toLowerCase()}.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid/${puuid}/top?count=7`),
-    riotFetch(`https://${cluster}.api.riotgames.com/lol/match/v5/matches/by-puuid/${puuid}/ids?count=20&type=ranked`),
+    riotFetch(`https://${region.toLowerCase()}.api.riotgames.com/lol/league/v4/entries/by-puuid/${puuid}`, undefined, signal),
+    riotFetch(`https://${region.toLowerCase()}.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid/${puuid}/top?count=7`, undefined, signal),
+    riotFetch(`https://${cluster}.api.riotgames.com/lol/match/v5/matches/by-puuid/${puuid}/ids?count=20&type=ranked`, undefined, signal),
   ]);
 
   const ranked = (await rankedRes.json()) as any[];
@@ -54,11 +62,13 @@ async function fetchInternalData(puuid: string, region: string) {
   const BATCH = 20;
   const matchDetails: any[] = [];
   for (let i = 0; i < matchIds.length; i += BATCH) {
+    if (isStopped()) throw new Error("Request aborted");
     const batch = matchIds.slice(i, i + BATCH);
     const results = await Promise.all(
       batch.map(async (id) => {
         try {
-          const r = await riotFetch(`https://${cluster}.api.riotgames.com/lol/match/v5/matches/${id}`);
+          if (isStopped()) return null;
+          const r = await riotFetch(`https://${cluster}.api.riotgames.com/lol/match/v5/matches/${id}`, undefined, signal);
           return await r.json();
         } catch { return null; }
       })
@@ -227,7 +237,6 @@ Ostatnie ${a.totalGames} meczów rankingowych:
 - Śr. skradzionych celów: ${a.avgObjectivesStolen}
 - Obrażenia fizyczne/magiczne: ${pct(a.physicalDmgPct)} fiz. / ${pct(a.magicDmgPct)} mag.
 - Główna rola: ${a.primaryRole} | Rozkład ról: ${JSON.stringify(a.roleDistribution)}
-- Aktualna seria: ${a.streakStr}
 - Mecze z tiltingiem (>8 zgonów): ${a.tiltedGames}/${a.totalGames}
 - Multi-kills (penta: ${a.pentasTotal}, łącznie: ${a.multiKills})`;
 
@@ -296,15 +305,27 @@ router.get("/:puuid/ai-report", async (req, res) => {
     return;
   }
 
-  try {
-    const timeoutMs = 120_000;
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("AI generation timed out")), timeoutMs)
-    );
+  const timeoutMs = 120_000;
+  const controller = new AbortController();
+  let timedOut = false;
+  const isClosed = () => res.headersSent || req.socket?.destroyed;
+  const abortWithReason = (reason: string) => {
+    if (!controller.signal.aborted) controller.abort(reason);
+  };
+  const onClientClosed = () => abortWithReason("Client disconnected");
+  let timeoutHandle: NodeJS.Timeout | null = null;
+  req.on("close", onClientClosed);
 
-    const mainPromise = (async () => {
+  try {
+    timeoutHandle = setTimeout(() => {
+      timedOut = true;
+      abortWithReason("AI generation timed out");
+    }, timeoutMs);
+
+    const mainPromise = (async (): Promise<{ data: Awaited<ReturnType<typeof fetchInternalData>>; parsed: any }> => {
       const t0 = Date.now();
-      const data = await fetchInternalData(puuid, region.toUpperCase());
+      const data = await fetchInternalData(puuid, region.toUpperCase(), controller.signal, isClosed);
+      if (isClosed()) return { data, parsed: { error: "request_closed" } };
       console.log(`[ai-report] data fetch: ${Date.now() - t0}ms`);
 
       const prompt = buildPrompt(data, gameName ?? "Gracz");
@@ -318,10 +339,28 @@ router.get("/:puuid/ai-report", async (req, res) => {
         max_tokens: 4096,
         stream: true,
       };
-      const stream = nvidiaClient.chat.completions.create(nvidiaParams) as any;
+      const stream = await nvidiaClient.chat.completions.create(nvidiaParams, {
+        signal: controller.signal,
+      }) as any;
 
       let fullText = "";
-      for await (const chunk of await stream) {
+      const abortStream = async () => {
+        try {
+          if (typeof stream?.controller?.abort === "function") stream.controller.abort();
+          if (typeof stream?.return === "function") await stream.return();
+        } catch {
+          // no-op
+        }
+      };
+      controller.signal.addEventListener("abort", () => {
+        void abortStream();
+      }, { once: true });
+
+      for await (const chunk of stream) {
+        if (controller.signal.aborted || isClosed()) {
+          await abortStream();
+          throw new Error(timedOut ? "AI generation timed out" : "Request aborted");
+        }
         const content = chunk?.choices?.[0]?.delta?.content;
         if (content) fullText += content;
       }
@@ -343,9 +382,9 @@ router.get("/:puuid/ai-report", async (req, res) => {
       return { data, parsed };
     })();
 
-    const { data, parsed } = await Promise.race([mainPromise, timeoutPromise]);
+    const { data, parsed } = await mainPromise;
 
-    if (res.headersSent || req.socket?.destroyed) return;
+    if (isClosed()) return;
 
     const result = {
       report: parsed,
@@ -381,12 +420,16 @@ router.get("/:puuid/ai-report", async (req, res) => {
     cache.set(cacheKey, result, 300);
     res.json(result);
   } catch (err: any) {
-    if (res.headersSent || req.socket?.destroyed) return;
-    const isTimeout = err?.message?.includes("timed out");
+    const isClosed = res.headersSent || req.socket?.destroyed;
+    if (isClosed) return;
+    const isTimeout = timedOut || err?.name === "AbortError" || err?.message?.includes("timed out");
     res.status(isTimeout ? 408 : 500).json({
       error: isTimeout ? "timeout" : "ai_error",
       message: err?.message ?? "Unknown error",
     });
+  } finally {
+    if (timeoutHandle) clearTimeout(timeoutHandle);
+    req.off("close", onClientClosed);
   }
 });
 
