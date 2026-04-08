@@ -167,6 +167,9 @@ async function fetchInternalData(
   const pentasTotal = parsedMatches.reduce((s, m) => s + m.pentaKills, 0);
   const multiKills = parsedMatches.reduce((s, m) => s + m.doubleKills + m.tripleKills * 2 + m.pentaKills * 5, 0);
 
+  const avgDamagePerMin = r2(parsedMatches.reduce((s, m) => s + (m.gameDuration > 0 ? (m.damage / m.gameDuration) * 60 : 0), 0) / N);
+  const avgVisionPerMin = r2(parsedMatches.reduce((s, m) => s + (m.gameDuration > 0 ? (m.visionScore / m.gameDuration) * 60 : 0), 0) / N);
+
   const aggregated = {
     totalGames: N,
     winRate: r2((wins / N) * 100),
@@ -185,6 +188,8 @@ async function fetchInternalData(
     avgControlWards: avg("controlWards"),
     avgWardsPlaced: avg("wardsPlaced"),
     avgObjectivesStolen: avg("objectivesStolen"),
+    avgDamagePerMin,
+    avgVisionPerMin,
     primaryRole,
     roleDistribution: roleMap,
     champStats,
@@ -247,6 +252,41 @@ Ostatnie ${a.totalGames} meczów rankingowych:
     lastResultsStr = `Ostatnie wyniki (W=wygrana, L=przegrana): ${a.lastResults}`;
   }
 
+  const tierBenchmarks: Record<string, { kda: number; csPerMin: number; visionPerMin: number; kp: number; dmgPerMin: number; deaths: number }> = {
+    IRON:        { kda: 1.6, csPerMin: 3.8, visionPerMin: 0.25, kp: 42, dmgPerMin: 550, deaths: 7.2 },
+    BRONZE:      { kda: 2.0, csPerMin: 4.5, visionPerMin: 0.35, kp: 46, dmgPerMin: 620, deaths: 6.5 },
+    SILVER:      { kda: 2.4, csPerMin: 5.2, visionPerMin: 0.42, kp: 50, dmgPerMin: 700, deaths: 5.8 },
+    GOLD:        { kda: 2.8, csPerMin: 5.8, visionPerMin: 0.50, kp: 54, dmgPerMin: 780, deaths: 5.2 },
+    PLATINUM:    { kda: 3.2, csPerMin: 6.3, visionPerMin: 0.58, kp: 57, dmgPerMin: 850, deaths: 4.7 },
+    EMERALD:     { kda: 3.6, csPerMin: 6.8, visionPerMin: 0.65, kp: 60, dmgPerMin: 920, deaths: 4.2 },
+    DIAMOND:     { kda: 4.0, csPerMin: 7.2, visionPerMin: 0.72, kp: 63, dmgPerMin: 980, deaths: 3.8 },
+    MASTER:      { kda: 4.5, csPerMin: 7.6, visionPerMin: 0.80, kp: 65, dmgPerMin: 1050, deaths: 3.4 },
+    GRANDMASTER: { kda: 5.0, csPerMin: 8.0, visionPerMin: 0.85, kp: 67, dmgPerMin: 1100, deaths: 3.1 },
+    CHALLENGER:  { kda: 5.5, csPerMin: 8.5, visionPerMin: 0.90, kp: 70, dmgPerMin: 1200, deaths: 2.8 },
+  };
+
+  const playerTier = soloQ?.tier && soloQ.tier !== "UNRANKED" ? soloQ.tier : "SILVER";
+  const bench = tierBenchmarks[playerTier] ?? tierBenchmarks.SILVER;
+  const tierPl = TIER_PL[playerTier] ?? playerTier;
+
+  let benchmarkStr = "";
+  if (aggregated) {
+    const a = aggregated;
+    const cmp = (stat: string, val: number, avg: number, unit: string = "", inverse = false) => {
+      const diff = inverse ? ((avg - val) / avg) * 100 : ((val - avg) / avg) * 100;
+      const sign = diff >= 0 ? "+" : "";
+      return `${stat}: Twoje ${val}${unit} vs średnia ${tierPl}: ${avg}${unit} (${sign}${Math.round(diff)}%)`;
+    };
+    benchmarkStr = `
+PORÓWNANIE ZE ŚREDNIĄ DLA RANGI ${tierPl.toUpperCase()}:
+- ${cmp("KDA", a.avgKda, bench.kda)}
+- ${cmp("CS/min", a.avgCsPerMin, bench.csPerMin)}
+- ${cmp("Kill Participation", a.avgKillParticipation, bench.kp, "%")}
+- ${cmp("Obrażenia/min", a.avgDamagePerMin, bench.dmgPerMin)}
+- ${cmp("Śmierci/mecz", a.avgDeaths, bench.deaths, "", true)}
+- ${cmp("Wizja/min", a.avgVisionPerMin, bench.visionPerMin)}`;
+  }
+
   return `Analityk LoL. Raport gracza "${gameName}" po polsku. Odpowiedz TYLKO JSON (bez markdown).
 
 DANE:
@@ -255,36 +295,44 @@ Mastery: ${masteryStr || "brak"}
 ${statsStr}
 Pool: ${champPoolStr || "brak"}
 ${lastResultsStr}
+${benchmarkStr}
 
-JSON (zwięzłe odpowiedzi, 1-2 zdań na pole, konkretne liczby):
+WAŻNE ZASADY:
+1. W KAŻDEJ rekomendacji i analizie PODAWAJ KONKRETNE LICZBY gracza, porównania procentowe ze średnią rangi i benchmarki.
+2. Zamiast "popraw farmę" pisz "Twoje CS/min: ${aggregated?.avgCsPerMin ?? "X"} vs średnia ${tierPl}: ${bench.csPerMin} (${aggregated ? Math.round(((aggregated.avgCsPerMin - bench.csPerMin) / bench.csPerMin) * 100) : "X"}%) — skup się na..."
+3. Zamiast "za dużo giniesz" pisz "Śr. ${aggregated?.avgDeaths ?? "X"} śmierci/mecz vs ${bench.deaths} dla ${tierPl} — to ${aggregated ? Math.round(((aggregated.avgDeaths - bench.deaths) / bench.deaths) * 100) : "X"}% więcej..."
+4. coaching_tips muszą zawierać: aktualną wartość gracza, średnią rangi, % różnicy, i konkretny cel do osiągnięcia.
+5. improvement_priorities: current i target muszą mieć wartości liczbowe z jednostkami (np. "5.2 CS/min", "KDA 2.1").
+
+JSON (KAŻDE pole z konkretnymi liczbami i porównaniami z rangą ${tierPl}):
 {
-  "executive_summary": "2 zdania: ranga, WR, forma",
+  "executive_summary": "2 zdania: ranga, WR, kluczowe statystyki vs średnia rangi z liczbami",
   "overall_rating": "S+/S/A+/A/B+/B/C+/C/D",
   "overall_score": 0-100,
   "form_assessment": "Świetna forma/Dobra forma/Stabilna/Zmienna/Słaba forma/Kryzys",
   "playstyle_archetype": "np. Agresywny Carry",
-  "playstyle_description": "1-2 zdania",
-  "champion_pool_analysis": "1-2 zdania",
-  "macro_analysis": "1-2 zdania z liczbami (vision, cele)",
-  "micro_analysis": "1-2 zdania z liczbami (CS, dmg%)",
-  "lane_phase_analysis": "1 zdanie",
-  "teamfight_analysis": "1 zdanie",
-  "death_analysis": "1 zdanie z liczbami",
-  "vision_analysis": "1 zdanie",
-  "mental_game": "1 zdanie",
-  "strengths": ["mocna1","mocna2","mocna3"],
-  "weaknesses": ["słaba1","słaba2","słaba3"],
-  "coaching_tips": [{"title":"","description":"1 zdanie","priority":"high/medium/low","category":"macro/micro/mental/vision/champion_pool"}],
-  "champion_recommendations": [{"champion":"","reason":"krótko","synergy":"krótko"}],
-  "rank_prediction": "1 zdanie",
+  "playstyle_description": "1-2 zdania z liczbami KDA, KP%, DMG%",
+  "champion_pool_analysis": "1-2 zdania z WR% per champion i liczbami gier",
+  "macro_analysis": "1-2 zdania: vision X vs średnia rangi Y (±Z%), kontrola celów",
+  "micro_analysis": "1-2 zdania: CS/min X vs Y dla ${tierPl} (±Z%), DMG/min",
+  "lane_phase_analysis": "1 zdanie z first blood %, solo kills, CS advantage",
+  "teamfight_analysis": "1 zdanie z KP%, DMG share%, multikills",
+  "death_analysis": "1 zdanie: śr. X śmierci vs Y dla rangi (±Z%), czas martwy",
+  "vision_analysis": "1 zdanie: vision/min X vs Y (±Z%), pink wardy/mecz",
+  "mental_game": "1 zdanie z tilt %, konsekwencja, comeback WR",
+  "strengths": ["mocna1 z liczbami i porównaniem","mocna2","mocna3"],
+  "weaknesses": ["słaba1 z liczbami i porównaniem","słaba2","słaba3"],
+  "coaching_tips": [{"title":"","description":"Twoje X vs średnia rangi Y (±Z%). Konkretna wskazówka z celem liczbowym.","priority":"high/medium/low","category":"macro/micro/mental/vision/champion_pool"}],
+  "champion_recommendations": [{"champion":"","reason":"krótko z liczbami","synergy":"krótko"}],
+  "rank_prediction": "1 zdanie z konkretnymi statystykami do osiągnięcia",
   "consistency_score": 0-100,
-  "consistency_comment": "1 zdanie",
+  "consistency_comment": "1 zdanie z wariancją KDA i porównaniem",
   "motivation_quote": "krótkie motto",
   "performance_radar": {"makro":0-100,"mikro":0-100,"wizja":0-100,"konsekwencja":0-100,"teamfight":0-100,"laning":0-100},
-  "improvement_priorities": [{"rank":1,"area":"","current":"wartość","target":"cel","description":"1 zdanie","lp_gain_estimate":0}],
-  "key_weaknesses_detailed": [{"title":"","stat":"","impact":"krótko","fix":"krótko"}],
-  "biggest_mistake_pattern": "1 zdanie",
-  "best_habit": "1 zdanie"
+  "improvement_priorities": [{"rank":1,"area":"","current":"wartość liczbowa z jednostką","target":"cel liczbowy z jednostką i nazwa rangi","description":"Twoje X vs Y dla ${tierPl}. Konkretna porada.","lp_gain_estimate":0}],
+  "key_weaknesses_detailed": [{"title":"","stat":"wartość vs benchmark","impact":"skutek z liczbami","fix":"konkretna porada z celem liczbowym"}],
+  "biggest_mistake_pattern": "1 zdanie z liczbami i % meczy",
+  "best_habit": "1 zdanie z liczbami i porównaniem"
 }
 coaching_tips: 3, champion_recommendations: 2, improvement_priorities: 3, key_weaknesses_detailed: 2. Radar 0-100, zróżnicowany.`;
 }

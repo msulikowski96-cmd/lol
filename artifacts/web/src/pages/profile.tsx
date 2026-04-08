@@ -13,7 +13,7 @@ import {
   Wifi, Clock, Star, GraduationCap, Timer,
   Layers, ArrowUpRight, ArrowDownRight, Info, Users,
   Share2, Copy, CheckCheck, ChevronRight, RefreshCw, Crosshair, Activity,
-  Heart, ExternalLink, Gauge, Map, Sparkles, RotateCcw
+  Heart, ExternalLink, Gauge, Map, Sparkles, RotateCcw, ThumbsUp, ThumbsDown
 } from "lucide-react";
 import { toggleFavorite, isFavorite } from "@/lib/favorites";
 import { addRankSnapshot, getRankHistory } from "@/lib/rankHistory";
@@ -862,6 +862,387 @@ function RankedCard({ entry }: { entry: any }) {
   );
 }
 
+function ProfileTextSummary({ data, gameName }: { data: any; gameName: string }) {
+  if (!data || data.totalGamesAnalyzed === 0) return null;
+  const {
+    overallScore, overallRating, totalGamesAnalyzed, winRate, playstyleArchetype, playstyleDescription,
+    primaryRole, formTrend, championBreakdown, strengths, weaknesses, rankBenchmarks, predictedTier,
+    lanePhaseStats, deathAnalysis, coachingTips, criticalMistakes, improvementRoadmap, metrics,
+    currentStreak, performanceByGameLength, playstyleRadar, objectiveStats, gameplayPatterns,
+    comebackAnalysis, damageTypeBreakdown,
+  } = data;
+
+  const ROLE_PL: Record<string, string> = { Top: "topie", Jungler: "junglingu", Mid: "midzie", ADC: "roli ADC", Support: "roli supporta", Nieznana: "wielu pozycjach" };
+  const rolePl = ROLE_PL[primaryRole] ?? "wielu pozycjach";
+
+  const topChamps = (championBreakdown ?? []).slice(0, 3);
+  const champsStr = topChamps.length > 0
+    ? topChamps.map((c: any) => `${c.championName} (${c.gamesPlayed} gier, ${c.winRate}% WR, ${c.kda} KDA)`).join(", ")
+    : "";
+
+  const aboveAvg = (rankBenchmarks ?? []).filter((b: any) => b.pctDiff >= 5);
+  const belowAvg = (rankBenchmarks ?? []).filter((b: any) => b.pctDiff <= -5);
+
+  const kdaMetric = metrics?.find((m: any) => m.name === "KDA");
+  const csMetric = metrics?.find((m: any) => m.name === "Efektywność CS");
+  const visionMetric = metrics?.find((m: any) => m.name === "Kontrola wizji");
+  const dmgMetric = metrics?.find((m: any) => m.name === "Obrażenia");
+  const survMetric = metrics?.find((m: any) => m.name === "Przeżywalność");
+  const kpMetric = metrics?.find((m: any) => m.name === "Uczestnictwo w zabójstwach");
+
+  const paragraphs: string[] = [];
+
+  paragraphs.push(
+    `${gameName} to gracz o archetypie "${playstyleArchetype}", specjalizujący się na ${rolePl} z oceną ogólną ${overallRating} (${overallScore}/100 punktów). ` +
+    `Na podstawie ostatnich ${totalGamesAnalyzed} meczy rankingowych, gracz osiąga ${winRate}% win rate` +
+    (currentStreak ? ` i jest aktualnie na serii ${currentStreak.count} ${currentStreak.type === "win" ? "wygranych" : "przegranych"}` : "") +
+    `. ${playstyleDescription}`
+  );
+
+  if (champsStr) {
+    let champParagraph = `Najczęściej grane postacie to: ${champsStr}. `;
+    if (topChamps[0]?.winRate >= 55) {
+      champParagraph += `Szczególnie wyróżnia się na ${topChamps[0].championName} z ${topChamps[0].winRate}% win rate i ${topChamps[0].kda} KDA. `;
+    }
+    champParagraph += `Pula bohaterów jest ${topChamps.length <= 3 ? "skoncentrowana" : "zróżnicowana"}, co ${topChamps.length <= 3 ? "pozwala na głębokie opanowanie wybranych postaci i przewidywalność w drafcie" : "daje elastyczność w drafcie, ale utrudnia pełne opanowanie każdej postaci"}. `;
+    if (topChamps.length >= 2) {
+      const bestChamp = [...topChamps].sort((a: any, b: any) => b.kda - a.kda)[0];
+      const worstChamp = [...topChamps].sort((a: any, b: any) => a.kda - b.kda)[0];
+      if (bestChamp && worstChamp && bestChamp.championName !== worstChamp.championName) {
+        champParagraph += `Najlepszą wydajność osiąga na ${bestChamp.championName} (${bestChamp.kda} KDA), natomiast na ${worstChamp.championName} wyniki są słabsze (${worstChamp.kda} KDA).`;
+      }
+    }
+    paragraphs.push(champParagraph);
+  }
+
+  let metricsParagraph = "";
+  if (kdaMetric) metricsParagraph += `${kdaMetric.description}. `;
+  if (csMetric) metricsParagraph += `${csMetric.description}. `;
+  if (dmgMetric) metricsParagraph += `${dmgMetric.description}. `;
+  if (kpMetric) metricsParagraph += `${kpMetric.description}. `;
+  if (visionMetric) metricsParagraph += `${visionMetric.description}. `;
+  if (survMetric) metricsParagraph += `${survMetric.description}. `;
+  if (metricsParagraph) paragraphs.push(metricsParagraph.trim());
+
+  if (aboveAvg.length > 0 || belowAvg.length > 0) {
+    const tierLabel = predictedTier?.tier ? predictedTier.tier : "";
+    let benchParagraph = "";
+    if (aboveAvg.length > 0) {
+      benchParagraph += `W porównaniu ze średnią dla rangi${tierLabel ? ` ${tierLabel}` : ""}, gracz wyróżnia się w: ${aboveAvg.map((b: any) => `${b.stat} (${b.playerValue}${b.unit} vs ${b.tierAvg}${b.unit}, +${b.pctDiff}%)`).join(", ")}. `;
+    }
+    if (belowAvg.length > 0) {
+      benchParagraph += `Obszary poniżej średniej rangi: ${belowAvg.map((b: any) => `${b.stat} (${b.playerValue}${b.unit} vs ${b.tierAvg}${b.unit}, ${b.pctDiff}%)`).join(", ")}. `;
+    }
+    if (predictedTier?.description) {
+      benchParagraph += predictedTier.description;
+    }
+    paragraphs.push(benchParagraph);
+  }
+
+  if (formTrend?.trendDescription) {
+    let formParagraph = `Aktualna forma: ${formTrend.trendDescription}. `;
+    if (formTrend.recentWinRate !== undefined && formTrend.overallWinRate !== undefined) {
+      formParagraph += `Win rate w ostatnich ${formTrend.recentGames ?? 7} meczach: ${formTrend.recentWinRate}% (ogólnie: ${formTrend.overallWinRate}%). `;
+    }
+    if (formTrend.recentKda !== undefined && formTrend.overallKda !== undefined) {
+      formParagraph += `KDA w ostatnich meczach: ${formTrend.recentKda} (ogólnie: ${formTrend.overallKda}).`;
+    }
+    paragraphs.push(formParagraph);
+  }
+
+  if (lanePhaseStats && lanePhaseStats.earlyPressureScore > 0) {
+    paragraphs.push(
+      `Faza liniowa: ocena ${lanePhaseStats.grade} (${lanePhaseStats.earlyPressureScore}/100 presji). ` +
+      `First blood w ${lanePhaseStats.firstBloodRate?.toFixed(0) ?? 0}% meczy, średnio ${lanePhaseStats.avgEarlyKills?.toFixed(1) ?? 0} zabójstw i ${lanePhaseStats.avgCsAdvantage?.toFixed(0) ?? 0} CS przewagi nad oponentem na linii. ` +
+      `${lanePhaseStats.description}`
+    );
+  }
+
+  if (objectiveStats && objectiveStats.objectiveControlScore > 0) {
+    paragraphs.push(
+      `Kontrola obiektywów: ocena ${objectiveStats.grade} (${objectiveStats.objectiveControlScore}/100). ` +
+      `Średnio ${objectiveStats.avgDragonKills?.toFixed(1) ?? 0} smoków, ${objectiveStats.avgTurretKills?.toFixed(1) ?? 0} wież i ${objectiveStats.avgInhibitorKills?.toFixed(1) ?? 0} inhibitorów na mecz. ` +
+      `${objectiveStats.description}`
+    );
+  }
+
+  const topPriority = (improvementRoadmap ?? [])[0];
+  const secondPriority = (improvementRoadmap ?? [])[1];
+  if (topPriority) {
+    let priorityParagraph = `Najważniejszy obszar rozwoju to ${topPriority.area}: aktualnie ${topPriority.currentValue}, cel to ${topPriority.targetValue} (szacowany zysk ~${topPriority.estimatedLpGain} LP). ${topPriority.tip}`;
+    if (secondPriority) {
+      priorityParagraph += ` Drugi priorytet: ${secondPriority.area} — z ${secondPriority.currentValue} do ${secondPriority.targetValue} (+~${secondPriority.estimatedLpGain} LP).`;
+    }
+    paragraphs.push(priorityParagraph);
+  }
+
+  return (
+    <article className="glass-panel p-5 mb-4">
+      <h2 className="section-title mb-3">
+        <BookOpen className="w-3.5 h-3.5 text-primary" /> Profil gracza — podsumowanie
+      </h2>
+      <div className="space-y-3">
+        {paragraphs.map((p, i) => (
+          <p key={i} className="text-xs text-foreground/80 leading-relaxed">{p}</p>
+        ))}
+      </div>
+    </article>
+  );
+}
+
+function PlaystyleSection({ data }: { data: any }) {
+  if (!data) return null;
+  const { playstyleArchetype, playstyleDescription, gameplayPatterns, playstyleRadar, primaryRole, roleDistribution } = data;
+  if (!playstyleArchetype) return null;
+
+  const roleEntries = Object.entries(roleDistribution ?? {}).sort((a: any, b: any) => b[1] - a[1]);
+
+  return (
+    <div className="glass-panel p-4">
+      <h2 className="section-title"><Sparkles className="w-3.5 h-3.5 text-primary" /> Styl gry</h2>
+      <div className="mb-3">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-sm font-bold text-foreground" style={{ fontFamily: "'Barlow Condensed',sans-serif" }}>{playstyleArchetype}</span>
+          <span className="text-[10px] px-2 py-0.5 rounded bg-primary/10 text-primary font-semibold">{primaryRole}</span>
+        </div>
+        <p className="text-xs text-foreground/80 leading-relaxed mb-3">{playstyleDescription}</p>
+        {roleEntries.length > 1 && (
+          <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+            <span className="text-[9px] text-muted-foreground uppercase tracking-wider font-bold">Role:</span>
+            {roleEntries.map(([role, pct]: any) => (
+              <span key={role} className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-foreground/70 font-medium">
+                {ROLE_EMOJI[role] ?? "❓"} {role} {pct}%
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+      {gameplayPatterns?.length > 0 && (
+        <div className="space-y-1.5">
+          <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Wzorce gry</h3>
+          {gameplayPatterns.map((p: string, i: number) => (
+            <div key={i} className="flex items-start gap-2 text-xs text-foreground/80">
+              <span className="text-primary mt-0.5 flex-shrink-0">•</span>
+              <span className="leading-relaxed">{p}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BiggestMistakesSection({ data }: { data: any }) {
+  if (!data) return null;
+  const { criticalMistakes, deathAnalysis, tiltIndicator } = data;
+  const hasMistakes = criticalMistakes?.length > 0;
+  const hasDeath = deathAnalysis && deathAnalysis.avgDeaths > 0;
+  const hasTilt = tiltIndicator && tiltIndicator.score > 0;
+  if (!hasMistakes && !hasDeath && !hasTilt) return null;
+
+  return (
+    <div className="glass-panel p-4 border-red-200/50">
+      <h2 className="section-title"><XCircle className="w-3.5 h-3.5 text-red-400" /> Największe błędy</h2>
+
+      {hasDeath && (
+        <div className="mb-3">
+          <h3 className="text-[10px] uppercase tracking-wider text-red-400/80 font-bold mb-1.5">Analiza śmierci</h3>
+          <p className="text-xs text-foreground/80 leading-relaxed mb-2">{deathAnalysis.description}</p>
+          <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+            <span>Śr. śmierci: <span className="font-bold text-red-400">{deathAnalysis.avgDeaths?.toFixed(1)}</span>/mecz</span>
+            <span>Czas martwy: <span className="font-bold text-red-400">{deathAnalysis.avgTimeDeadPct?.toFixed(1)}%</span></span>
+            {deathAnalysis.deathSpikeRate > 0 && (
+              <span>Mecze 7+ śmierci: <span className="font-bold text-red-400">{deathAnalysis.deathSpikeRate?.toFixed(0)}%</span></span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {hasTilt && (
+        <div className="mb-3">
+          <h3 className="text-[10px] uppercase tracking-wider text-orange-400/80 font-bold mb-1.5">Wskaźnik tiltu</h3>
+          <p className="text-xs text-foreground/80 leading-relaxed">{tiltIndicator.description}</p>
+        </div>
+      )}
+
+      {hasMistakes && (
+        <div>
+          <h3 className="text-[10px] uppercase tracking-wider text-red-400/80 font-bold mb-1.5">Krytyczne nawyki</h3>
+          <div className="space-y-1.5">
+            {criticalMistakes.slice(0, 4).map((m: string, i: number) => (
+              <div key={i} className="flex items-start gap-2 text-xs text-foreground/80 stat-card bg-red-50/50 border-red-200/50 py-2 px-3">
+                <AlertTriangle className="w-3 h-3 text-red-400 mt-0.5 flex-shrink-0" />
+                <span className="leading-relaxed">{m}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StrengthsSection({ data }: { data: any }) {
+  if (!data) return null;
+  const { strengths, rankBenchmarks } = data;
+  const aboveAvg = (rankBenchmarks ?? []).filter((b: any) => b.pctDiff >= 5);
+  if (!strengths?.length && !aboveAvg.length) return null;
+
+  return (
+    <div className="glass-panel p-4">
+      <h2 className="section-title"><ThumbsUp className="w-3.5 h-3.5 text-green-500" /> Mocne strony</h2>
+      {strengths?.length > 0 && (
+        <div className="mb-3 space-y-1.5">
+          {strengths.map((s: string, i: number) => (
+            <div key={i} className="flex items-start gap-2 text-xs text-foreground/80 stat-card py-2 px-3">
+              <Check className="w-3.5 h-3.5 text-green-500 mt-0.5 flex-shrink-0" />
+              <span className="leading-relaxed">{s}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {aboveAvg.length > 0 && (
+        <div>
+          <h3 className="text-[10px] uppercase tracking-wider text-green-600/80 font-bold mb-2">Powyżej średniej rangi</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
+            {aboveAvg.map((b: any, i: number) => (
+              <div key={i} className="stat-card py-2 px-3 flex items-center justify-between">
+                <span className="text-xs text-foreground/80">{b.stat}</span>
+                <div className="text-right">
+                  <span className="text-xs font-semibold text-foreground">{b.playerValue}{b.unit}</span>
+                  <span className="text-[10px] text-muted-foreground ml-1.5">vs {b.tierAvg}{b.unit}</span>
+                  <span className="text-[10px] font-bold text-green-600 ml-1.5">+{b.pctDiff}%</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function WeaknessesSection({ data }: { data: any }) {
+  if (!data) return null;
+  const { weaknesses, rankBenchmarks } = data;
+  const belowAvg = (rankBenchmarks ?? []).filter((b: any) => b.pctDiff <= -5);
+  if (!weaknesses?.length && !belowAvg.length) return null;
+
+  return (
+    <div className="glass-panel p-4">
+      <h2 className="section-title"><ThumbsDown className="w-3.5 h-3.5 text-red-500" /> Obszary do poprawy</h2>
+      {weaknesses?.length > 0 && (
+        <div className="mb-3 space-y-1.5">
+          {weaknesses.map((w: string, i: number) => (
+            <div key={i} className="flex items-start gap-2 text-xs text-foreground/80 stat-card py-2 px-3">
+              <AlertTriangle className="w-3.5 h-3.5 text-red-500 mt-0.5 flex-shrink-0" />
+              <span className="leading-relaxed">{w}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {belowAvg.length > 0 && (
+        <div>
+          <h3 className="text-[10px] uppercase tracking-wider text-red-600/80 font-bold mb-2">Poniżej średniej rangi</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
+            {belowAvg.map((b: any, i: number) => (
+              <div key={i} className="stat-card py-2 px-3 flex items-center justify-between">
+                <span className="text-xs text-foreground/80">{b.stat}</span>
+                <div className="text-right">
+                  <span className="text-xs font-semibold text-foreground">{b.playerValue}{b.unit}</span>
+                  <span className="text-[10px] text-muted-foreground ml-1.5">vs {b.tierAvg}{b.unit}</span>
+                  <span className="text-[10px] font-bold text-red-600 ml-1.5">{b.pctDiff}%</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RecommendationsSection({ data }: { data: any }) {
+  if (!data) return null;
+  const { coachingTips, improvementRoadmap, championRecommendations } = data;
+  const hasTips = coachingTips?.length > 0;
+  const hasRoadmap = improvementRoadmap?.length > 0;
+  const hasChamps = championRecommendations?.length > 0;
+  if (!hasTips && !hasRoadmap && !hasChamps) return null;
+
+  return (
+    <div className="glass-panel p-4">
+      <h2 className="section-title"><GraduationCap className="w-3.5 h-3.5 text-primary" /> Rekomendacje</h2>
+
+      {hasTips && (
+        <div className="mb-4">
+          <h3 className="text-[10px] uppercase tracking-wider text-primary/80 font-bold mb-2">Wskazówki coachingowe</h3>
+          <div className="space-y-2">
+            {coachingTips.slice(0, 4).map((tip: string, i: number) => (
+              <div key={i} className="flex items-start gap-2.5 text-xs text-foreground/80 stat-card py-2.5 px-3">
+                <Zap className="w-3.5 h-3.5 text-primary mt-0.5 flex-shrink-0" />
+                <span className="leading-relaxed">{tip}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {hasRoadmap && (
+        <div className="mb-4">
+          <h3 className="text-[10px] uppercase tracking-wider text-primary/80 font-bold mb-2">Priorytety rozwoju</h3>
+          <div className="space-y-2">
+            {improvementRoadmap.slice(0, 3).map((item: any) => (
+              <div key={item.priority} className="stat-card flex items-start gap-3 py-2.5 px-3">
+                <div className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center font-black text-[10px]"
+                  style={{
+                    background: item.priority === 1 ? "hsl(0,65%,95%)" : item.priority === 2 ? "hsl(30,70%,95%)" : "hsl(200,50%,95%)",
+                    color: item.priority === 1 ? "hsl(0,65%,45%)" : item.priority === 2 ? "hsl(30,70%,40%)" : "hsl(200,50%,40%)",
+                    border: `1px solid ${item.priority === 1 ? "hsl(0,50%,85%)" : item.priority === 2 ? "hsl(30,50%,85%)" : "hsl(200,40%,85%)"}`,
+                  }}>
+                  #{item.priority}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-xs font-bold text-foreground">{item.area}</span>
+                    <span className="text-[10px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded">+~{item.estimatedLpGain} LP</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground mb-1">
+                    <span>Teraz: <span className="font-semibold text-red-500">{item.currentValue}</span></span>
+                    <ArrowUpRight className="w-2.5 h-2.5 text-primary" />
+                    <span>Cel: <span className="font-semibold text-green-600">{item.targetValue}</span></span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground leading-relaxed">{item.tip}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {hasChamps && (
+        <div>
+          <h3 className="text-[10px] uppercase tracking-wider text-primary/80 font-bold mb-2">Rekomendowane postacie</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            {championRecommendations.map((rec: any, i: number) => (
+              <div key={i} className="stat-card flex items-start gap-2.5 py-2.5 px-3">
+                <img src={`${getDDBase()}/champion/${rec.championName}.png`} alt={rec.championName}
+                  className="w-9 h-9 rounded-lg border border-border flex-shrink-0"
+                  onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-foreground">{rec.championName}</p>
+                  <p className="text-[10px] text-primary leading-snug">{rec.playstyleMatch}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">{rec.reason}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AnalysisSection({ data, isLoading, recentMatches, region, gameName, tagLine }: { data: any; isLoading: boolean; recentMatches?: any[]; region: string; gameName: string; tagLine: string }) {
   if (isLoading) return <div className="glass-panel p-8 flex items-center justify-center min-h-[200px]"><LoadingSpinner text="Analizowanie wyników..." /></div>;
   if (!data || data.totalGamesAnalyzed === 0) return (
@@ -889,6 +1270,16 @@ function AnalysisSection({ data, isLoading, recentMatches, region, gameName, tag
 
   return (
     <div className="space-y-4">
+
+      {/* Profile Text Summary */}
+      <ProfileTextSummary data={data} gameName={gameName} />
+
+      {/* Structured Sections */}
+      <PlaystyleSection data={data} />
+      <StrengthsSection data={data} />
+      <WeaknessesSection data={data} />
+      <BiggestMistakesSection data={data} />
+      <RecommendationsSection data={data} />
 
       {/* Overview Strip */}
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
