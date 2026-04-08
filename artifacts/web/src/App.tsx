@@ -11,6 +11,7 @@ import LiveGame from "@/pages/live";
 import Privacy from "@/pages/privacy";
 import Terms from "@/pages/terms";
 import About from "@/pages/about";
+import Guide from "@/pages/guide";
 import Champion from "@/pages/champion";
 import MatchPage from "@/pages/match";
 import AiAnalysis from "@/pages/ai-analysis";
@@ -55,6 +56,7 @@ function Router() {
       <Route path="/privacy" component={Privacy} />
       <Route path="/terms" component={Terms} />
       <Route path="/about" component={About} />
+      <Route path="/poradnik" component={Guide} />
       <Route component={NotFound} />
     </Switch>
   );

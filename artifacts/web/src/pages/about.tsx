@@ -104,7 +104,7 @@ export default function About() {
               Masz pytania, sugestie lub chcesz zgłosić problem? Skontaktuj się z nami:
             </p>
             <ul>
-              <li>E-mail: <strong>kontakt@nexus-sight.com</strong></li>
+              <li>E-mail: <strong>nexussight.kontakt@gmail.com</strong></li>
             </ul>
             <p>
               Zapoznaj się również z naszą{" "}

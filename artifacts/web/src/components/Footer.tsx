@@ -18,6 +18,9 @@ export default function Footer() {
             <Link href="/about">
               <span className="text-muted-foreground hover:text-primary transition-colors cursor-pointer">O nas</span>
             </Link>
+            <Link href="/poradnik">
+              <span className="text-muted-foreground hover:text-primary transition-colors cursor-pointer">Poradnik</span>
+            </Link>
             <Link href="/privacy">
               <span className="text-muted-foreground hover:text-primary transition-colors cursor-pointer">Polityka Prywatności</span>
             </Link>

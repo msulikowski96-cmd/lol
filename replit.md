@@ -12,13 +12,14 @@ TypeScript pnpm monorepo, fully in Polish. Users search players by Riot ID acros
 ## Routes
 - `/` — Home page with search + FAQ + about section
 - `/profile/:region/:gameName/:tagLine` — Player profile (stats, matches, analysis)
-- `/ai-analysis/:region/:gameName/:tagLine` — AI Analiza Gracza (Gemini-powered full report)
+- `/ai-analysis/:region/:gameName/:tagLine` — AI Analiza Gracza (NVIDIA Llama 3.1 8B full report)
 - `/live/:region/:gameName/:tagLine` — Live game page (OP.GG-style team view)
 - `/champion/:region/:gameName/:tagLine/:championName` — Champion detail page (KDA, WR, builds, matchups)
 - `/promo` — TikTok promo page
 - `/privacy` — Polityka Prywatności (Google AdSense compliance)
 - `/terms` — Regulamin
 - `/about` — O nas / kontakt
+- `/poradnik` — Poradnik analizy statystyk (original Polish LoL guide content for SEO)
 
 ## Design System
 - Theme: Clean light mode
@@ -47,7 +48,8 @@ TypeScript pnpm monorepo, fully in Polish. Users search players by Riot ID acros
 - `artifacts/api-server/src/routes/champion.ts` — Champion detail endpoint `/api/summoner/:puuid/champion/:name`
 - `artifacts/api-server/src/routes/analysis.ts` — Analysis engine (~1000 lines, 27+ algorithms including rank benchmarks, improvement roadmap, comeback/snowball analysis, skillshot stats, match performance timeline)
 - `lib/api-spec/openapi.yaml` — API spec (source of truth)
-- `artifacts/api-server/src/routes/ai-analysis.ts` — Gemini AI report engine: fetches 30 matches, computes aggregated stats, builds prompt with performance_radar/improvement_priorities/key_weaknesses_detailed/biggest_mistake_pattern/best_habit fields. Returns `{ report, stats, generatedAt }` — stats used for real-data visualizations.
+- `artifacts/web/src/pages/guide.tsx` — Poradnik page (LoL stats guide with KDA/CS/Vision/rank benchmarks)
+- `artifacts/api-server/src/routes/ai-analysis.ts` — NVIDIA AI report engine: fetches 20 matches, computes aggregated stats, builds prompt with performance_radar/improvement_priorities/key_weaknesses_detailed/biggest_mistake_pattern/best_habit fields. Returns `{ report, stats, generatedAt }` — stats used for real-data visualizations.
 - `artifacts/web/src/pages/ai-analysis.tsx` — AI Analysis page: rich visualizations (StatsDashboard, RecentResultsBar, PerformanceRadar, ChampPoolVisual, ImprovementPriorities, KeyWeaknessCards, AnalysisProseCard). All prose sections now have colored icon headers.
 - `artifacts/web/src/lib/buildAlgorithm.ts` — Pure algorithm for build recommendations: champion DB (~140 champions with class/damageType/tags), analyzeEnemyTeam(), calculateBuild(). Returns items + runes based on enemy composition. No AI, all algorithmic logic.
 - `artifacts/web/src/components/BuildCalculator.tsx` — Build Calculator UI: champion picker modal with DDragon icons, enemy team slots (5x), result panel with items/boots/situational/runes with full icon support. Integrated as sub-tab in profile "Mecze" section.
