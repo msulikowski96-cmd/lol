@@ -127,6 +127,28 @@
     <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-TNV3R5MH"
     height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <!-- End Google Tag Manager (noscript) -->
+
+    <!-- Facebook SDK -->
+    <script>
+      window.fbAsyncInit = function() {
+        FB.init({
+          appId      : '1431707311574915',
+          cookie     : true,
+          xfbml      : true,
+          version    : 'v20.0'
+        });
+        FB.AppEvents.logPageView();
+      };
+      (function(d, s, id){
+        var js, fjs = d.getElementsByTagName(s)[0];
+        if (d.getElementById(id)) {return;}
+        js = d.createElement(s); js.id = id;
+        js.src = "https://connect.facebook.net/en_US/sdk.js";
+        fjs.parentNode.insertBefore(js, fjs);
+      }(document, 'script', 'facebook-jssdk'));
+    </script>
+    <!-- End Facebook SDK -->
+
     <div id="root">
       <div style="max-width:640px;margin:0 auto;padding:40px 20px;font-family:'Inter',sans-serif;color:#1e293b">
         <header style="text-align:center;margin-bottom:40px">
