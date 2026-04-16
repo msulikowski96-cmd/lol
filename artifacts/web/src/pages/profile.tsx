@@ -2068,12 +2068,13 @@ function AnalysisSection({ data, isLoading, recentMatches, region, gameName, tag
   );
 }
 
-type MobileTab = "analiza" | "rang" | "mecze" | "live";
+type MobileTab = "analiza" | "rang" | "mecze" | "live" | "kalkulator";
 
 const MOBILE_TABS: { id: MobileTab; label: string; icon: React.ElementType }[] = [
   { id: "analiza", label: "Analiza", icon: BarChart3 },
   { id: "rang", label: "Rang", icon: Trophy },
   { id: "mecze", label: "Mecze", icon: Shield },
+  { id: "kalkulator", label: "Build", icon: Swords },
   { id: "live", label: "Live", icon: Wifi },
 ];
 
@@ -2099,7 +2100,6 @@ export default function Profile() {
   const [, navigate] = useLocation();
   const [mobileTab, setMobileTab] = useState<MobileTab>("analiza");
   const [matchCount, setMatchCount] = useState(10);
-  const [matchSubTab, setMatchSubTab] = useState<"historia" | "kalkulator">("historia");
   const [shareState, setShareState] = useState<"idle" | "copied">("idle");
   const [fav, setFav] = useState(false);
 
@@ -2331,7 +2331,7 @@ export default function Profile() {
             </Link>
 
             {/* Rang + Predicted */}
-            <div className={mobileTab === "mecze" ? "hidden lg:block" : ""}>
+            <div className={(mobileTab === "mecze" || mobileTab === "kalkulator") ? "hidden lg:block" : ""}>
               <p className="section-title">
                 <Trophy className="w-3.5 h-3.5 text-primary" /> Rang
                 <InfoTooltip align="right" text="Twoja liga rankingowa Solo/Duo i Flex. LP (League Points) to punkty do awansu — po 100 LP promujesz do wyższego podziału. WR% = procent wygranych gier w tej kolejce." />
@@ -2376,7 +2376,7 @@ export default function Profile() {
             </div>
 
             {/* Mastery */}
-            <div className={mobileTab === "mecze" ? "hidden lg:block" : ""}>
+            <div className={(mobileTab === "mecze" || mobileTab === "kalkulator") ? "hidden lg:block" : ""}>
               <p className="section-title">
                 <Target className="w-3.5 h-3.5 text-primary" /> Mistrzostwo
                 <InfoTooltip align="right" text="Oficjalny system Riot Games pokazujący ile gier zagrałeś danym bohaterem. Lv. 7 = najwyższy poziom mistrzostwa. Liczba po prawej (K) = tysiące punktów mistrzostwa zdobytych łącznie." />
@@ -2421,7 +2421,7 @@ export default function Profile() {
               const poolLabel = champs.length === 1 ? "Mono-main" : champs.length <= 2 ? "Duo-main" : champs.length <= 4 ? "Wąska pula" : champs.length <= 7 ? "Zrównoważona" : "Szeroka pula";
               const poolColor = champs.length <= 2 ? "text-yellow-400" : champs.length <= 5 ? "text-green-400" : "text-blue-400";
               return (
-                <div className={mobileTab === "mecze" ? "hidden lg:block" : ""}>
+                <div className={(mobileTab === "mecze" || mobileTab === "kalkulator") ? "hidden lg:block" : ""}>
                   <p className="section-title">
                     <Layers className="w-3.5 h-3.5 text-primary" /> Pula postaci
                     <InfoTooltip align="right" text="Analiza puli bohaterów z ostatnich meczy. Top1% = ile % gier grasz główną postacią. Top3% = ile % pokrywa 3 najpopularniejsze. Mono-main = 1 postać, Szeroka pula = 8+ postaci." />
@@ -2465,80 +2465,51 @@ export default function Profile() {
               );
             })()}
 
-            {/* Match History + Build Calculator */}
-            <div className={mobileTab === "rang" ? "hidden lg:block" : ""}>
-              <div className="flex items-center justify-between mb-3">
-                <p className="section-title mb-0">
-                  {matchSubTab === "historia"
-                    ? <><Shield className="w-3.5 h-3.5 text-primary" /> Ostatnie mecze</>
-                    : <><Swords className="w-3.5 h-3.5 text-primary" /> Kalkulator Buildu</>
-                  }
-                </p>
-                <div className="flex rounded-lg overflow-hidden flex-shrink-0" style={{ border: "1px solid hsl(220,15%,85%)" }}>
-                  <button
-                    onClick={() => setMatchSubTab("historia")}
-                    className="px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-wider transition-all"
-                    style={{
-                      fontFamily: "'Rajdhani',sans-serif",
-                      background: matchSubTab === "historia" ? "hsl(200,90%,35%)" : "white",
-                      color: matchSubTab === "historia" ? "white" : "hsl(220,10%,55%)",
-                    }}
-                  >
-                    Historia
-                  </button>
-                  <button
-                    onClick={() => setMatchSubTab("kalkulator")}
-                    className="px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-wider transition-all"
-                    style={{
-                      fontFamily: "'Rajdhani',sans-serif",
-                      background: matchSubTab === "kalkulator" ? "hsl(200,90%,35%)" : "white",
-                      color: matchSubTab === "kalkulator" ? "white" : "hsl(220,10%,55%)",
-                      borderLeft: "1px solid hsl(220,15%,85%)",
-                    }}
-                  >
-                    Kalkulator
-                  </button>
-                </div>
+            {/* Match History */}
+            <div className={(mobileTab === "rang" || mobileTab === "kalkulator") ? "hidden lg:block" : ""}>
+              <p className="section-title">
+                <Shield className="w-3.5 h-3.5 text-primary" /> Ostatnie mecze
+              </p>
+              <div className="space-y-1.5">
+                {isLoadingMatches
+                  ? Array(5).fill(0).map((_, i) => <div key={i} className="h-14 rounded-lg animate-pulse" style={{ background: "hsl(220,15%,94%)" }} />)
+                  : matches?.length === 0
+                    ? <p className="text-xs text-muted-foreground text-center py-3">Brak historii</p>
+                    : matches?.map((m: any, i: number) => <MatchRow key={m.matchId} match={m} index={i} selfPuuid={puuid} region={region} gameName={gameName} tagLine={tagLine} />)
+                }
               </div>
-
-              {matchSubTab === "historia" ? (
-                <>
-                  <div className="space-y-1.5">
-                    {isLoadingMatches
-                      ? Array(5).fill(0).map((_, i) => <div key={i} className="h-14 rounded-lg animate-pulse" style={{ background: "hsl(220,15%,94%)" }} />)
-                      : matches?.length === 0
-                        ? <p className="text-xs text-muted-foreground text-center py-3">Brak historii</p>
-                        : matches?.map((m: any, i: number) => <MatchRow key={m.matchId} match={m} index={i} selfPuuid={puuid} region={region} gameName={gameName} tagLine={tagLine} />)
-                    }
-                  </div>
-                  {!isLoadingMatches && (matches?.length ?? 0) > 0 && (
-                    <div className="mt-2 flex gap-2">
-                      {matchCount < 30 && (
-                        <button
-                          onClick={() => setMatchCount(c => Math.min(c + 10, 30))}
-                          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs text-muted-foreground transition-all hover:text-primary hover:bg-muted"
-                          style={{ border: "1px solid hsl(220,15%,88%)" }}
-                        >
-                          <ChevronRight className="w-3.5 h-3.5" />
-                          Załaduj {Math.min(matchCount + 10, 30) - matchCount} więcej
-                        </button>
-                      )}
-                      {matchCount > 10 && (
-                        <button
-                          onClick={() => setMatchCount(10)}
-                          className="py-2 px-3 rounded-lg text-xs text-muted-foreground/50 transition-all hover:text-muted-foreground hover:bg-muted"
-                          style={{ border: "1px solid hsl(220,15%,90%)" }}
-                        >
-                          Zwiń
-                        </button>
-                      )}
-                    </div>
+              {!isLoadingMatches && (matches?.length ?? 0) > 0 && (
+                <div className="mt-2 flex gap-2">
+                  {matchCount < 30 && (
+                    <button
+                      onClick={() => setMatchCount(c => Math.min(c + 10, 30))}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs text-muted-foreground transition-all hover:text-primary hover:bg-muted"
+                      style={{ border: "1px solid hsl(220,15%,88%)" }}
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                      Załaduj {Math.min(matchCount + 10, 30) - matchCount} więcej
+                    </button>
                   )}
-                </>
-              ) : (
-                <BuildCalculator />
+                  {matchCount > 10 && (
+                    <button
+                      onClick={() => setMatchCount(10)}
+                      className="py-2 px-3 rounded-lg text-xs text-muted-foreground/50 transition-all hover:text-muted-foreground hover:bg-muted"
+                      style={{ border: "1px solid hsl(220,15%,90%)" }}
+                    >
+                      Zwiń
+                    </button>
+                  )}
+                </div>
               )}
               <AdBanner slot="2345678901" format="rectangle" className="mt-6" />
+            </div>
+
+            {/* Build Calculator — osobna zakładka */}
+            <div className={mobileTab !== "kalkulator" ? "hidden lg:block" : ""}>
+              <p className="section-title">
+                <Swords className="w-3.5 h-3.5 text-primary" /> Kalkulator Buildu
+              </p>
+              <BuildCalculator />
             </div>
           </aside>
         </div>
