@@ -590,86 +590,124 @@ function AiAnalysisInner() {
             </div>
 
             {/* Overall Rating Hero */}
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              style={{
-                background: "linear-gradient(135deg, hsl(200,90%,96%), white)",
-                border: "1px solid hsl(200,80%,82%)",
-                borderRadius: 14, padding: "18px 16px 16px",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "stretch", gap: 0, marginBottom: 14 }}>
-                <div style={{ textAlign: "center", paddingRight: 16, borderRight: "1px solid hsl(220,15%,90%)", marginRight: 16, flexShrink: 0 }}>
-                  <div style={{
-                    fontSize: 52, fontWeight: 900, lineHeight: 1, fontFamily: "'Barlow Condensed',sans-serif",
-                    color: RATING_COLOR[report.overall_rating] ?? PRIMARY,
-                  }}>
-                    {report.overall_rating ?? "?"}
-                  </div>
-                  <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", color: MUTED, textTransform: "uppercase", marginTop: 2, fontFamily: "'Rajdhani',sans-serif" }}>OCENA</div>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
-                    {report.form_assessment && (
-                      <span style={{
-                        display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px",
-                        background: "white", border: `1px solid hsl(220,15%,88%)`,
-                        borderRadius: 20, fontSize: 11, fontWeight: 700, color: FORM_COLOR[report.form_assessment] ?? MUTED,
-                        fontFamily: "'Rajdhani',sans-serif",
+            {(() => {
+              // Sanityzacja — jeśli model zwrócił całą skalę (np. "S+/S/A+/..."), bierz pierwszy token
+              const VALID_RATINGS = ["S+","S","A+","A","B+","B","C+","C","D"];
+              const rawRating: string = report.overall_rating ?? "?";
+              const safeRating = VALID_RATINGS.includes(rawRating)
+                ? rawRating
+                : (VALID_RATINGS.find(r => rawRating.startsWith(r)) ?? rawRating.split(/[/,\s]/)[0] ?? "?");
+              const ratingColor = RATING_COLOR[safeRating] ?? PRIMARY;
+
+              return (
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  style={{
+                    background: "linear-gradient(135deg, hsl(200,90%,96%), white)",
+                    border: "1px solid hsl(200,80%,82%)",
+                    borderRadius: 14, padding: "18px 16px 16px",
+                    overflow: "hidden",
+                  }}
+                >
+                  {/* Hero row: badge + chips obok siebie */}
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 14, minWidth: 0 }}>
+                    {/* Ocena badge */}
+                    <div style={{
+                      textAlign: "center", flexShrink: 0,
+                      paddingRight: 14, borderRight: "1px solid hsl(220,15%,90%)",
+                      minWidth: 56,
+                    }}>
+                      <div style={{
+                        fontSize: 48, fontWeight: 900, lineHeight: 1,
+                        fontFamily: "'Barlow Condensed',sans-serif",
+                        color: ratingColor,
+                        whiteSpace: "nowrap",
                       }}>
-                        <Activity style={{ width: 10, height: 10 }} />
-                        {report.form_assessment}
-                      </span>
-                    )}
-                    {report.playstyle_archetype && (
-                      <span style={{
-                        display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px",
-                        background: "linear-gradient(135deg,#0A1628,#1a3a6b)",
-                        borderRadius: 20, fontSize: 11, fontWeight: 700, color: "#C89B3C",
+                        {safeRating}
+                      </div>
+                      <div style={{
+                        fontSize: 9, fontWeight: 700, letterSpacing: "0.12em",
+                        color: MUTED, textTransform: "uppercase", marginTop: 2,
                         fontFamily: "'Rajdhani',sans-serif",
-                      }}>
-                        <Zap style={{ width: 10, height: 10 }} />
-                        {report.playstyle_archetype}
-                      </span>
-                    )}
+                      }}>OCENA</div>
+                    </div>
+
+                    {/* Prawa strona: chipy + paski */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {/* Chipy — WEWNĄTRZ ramki, zawijają się */}
+                      <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
+                        {report.form_assessment && (
+                          <span style={{
+                            display: "inline-flex", alignItems: "center", gap: 4,
+                            padding: "4px 10px",
+                            background: "white", border: `1px solid hsl(220,15%,88%)`,
+                            borderRadius: 20, fontSize: 11, fontWeight: 700,
+                            color: FORM_COLOR[report.form_assessment] ?? MUTED,
+                            fontFamily: "'Rajdhani',sans-serif",
+                            whiteSpace: "nowrap",
+                          }}>
+                            <Activity style={{ width: 10, height: 10, flexShrink: 0 }} />
+                            {report.form_assessment}
+                          </span>
+                        )}
+                        {report.playstyle_archetype && (
+                          <span style={{
+                            display: "inline-flex", alignItems: "center", gap: 4,
+                            padding: "4px 10px",
+                            background: "linear-gradient(135deg,#0A1628,#1a3a6b)",
+                            borderRadius: 20, fontSize: 11, fontWeight: 700, color: "#C89B3C",
+                            fontFamily: "'Rajdhani',sans-serif",
+                            whiteSpace: "nowrap",
+                          }}>
+                            <Zap style={{ width: 10, height: 10, flexShrink: 0 }} />
+                            {report.playstyle_archetype}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Pasek wyniku ogólnego */}
+                      {report.overall_score != null && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                          <div style={{ flex: 1, height: 6, borderRadius: 3, background: "hsl(220,15%,90%)", overflow: "hidden" }}>
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${report.overall_score}%` }}
+                              transition={{ duration: 0.8 }}
+                              style={{ height: "100%", background: ratingColor, borderRadius: 3 }}
+                            />
+                          </div>
+                          <span style={{ fontSize: 13, fontWeight: 800, color: FG, fontFamily: "'Barlow Condensed',sans-serif", flexShrink: 0 }}>
+                            {report.overall_score}/100
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Pasek konsekwencji */}
+                      {report.consistency_score != null && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <div style={{ flex: 1, height: 6, borderRadius: 3, background: "hsl(220,15%,90%)", overflow: "hidden" }}>
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${report.consistency_score}%` }}
+                              transition={{ duration: 0.8, delay: 0.1 }}
+                              style={{ height: "100%", background: PRIMARY, borderRadius: 3 }}
+                            />
+                          </div>
+                          <span style={{ fontSize: 13, fontWeight: 800, color: PRIMARY, fontFamily: "'Barlow Condensed',sans-serif", flexShrink: 0 }}>
+                            {report.consistency_score}<span style={{ fontSize: 9, fontWeight: 600, color: MUTED }}>/100 KON</span>
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  {report.overall_score != null && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                      <div style={{ flex: 1, height: 6, borderRadius: 3, background: "hsl(220,15%,90%)", overflow: "hidden" }}>
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${report.overall_score}%` }}
-                          transition={{ duration: 0.8 }}
-                          style={{ height: "100%", background: RATING_COLOR[report.overall_rating] ?? PRIMARY, borderRadius: 3 }}
-                        />
-                      </div>
-                      <span style={{ fontSize: 13, fontWeight: 800, color: FG, fontFamily: "'Barlow Condensed',sans-serif", flexShrink: 0 }}>
-                        {report.overall_score}/100
-                      </span>
-                    </div>
-                  )}
-                  {report.consistency_score != null && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{ flex: 1, height: 6, borderRadius: 3, background: "hsl(220,15%,90%)", overflow: "hidden" }}>
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${report.consistency_score}%` }}
-                          transition={{ duration: 0.8, delay: 0.1 }}
-                          style={{ height: "100%", background: PRIMARY, borderRadius: 3 }}
-                        />
-                      </div>
-                      <span style={{ fontSize: 13, fontWeight: 800, color: PRIMARY, fontFamily: "'Barlow Condensed',sans-serif", flexShrink: 0 }}>
-                        {report.consistency_score}<span style={{ fontSize: 9, fontWeight: 600, color: MUTED }}>/100 KON</span>
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <p style={{ fontSize: 12.5, lineHeight: 1.75, color: FG, margin: 0 }}>
-                {report.executive_summary}
-              </p>
-            </motion.div>
+
+                  <p style={{ fontSize: 12.5, lineHeight: 1.75, color: FG, margin: 0 }}>
+                    {report.executive_summary}
+                  </p>
+                </motion.div>
+              );
+            })()}
 
             {/* Stats Dashboard from real data */}
             {stats && (

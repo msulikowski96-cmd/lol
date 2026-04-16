@@ -307,10 +307,10 @@ WAŻNE ZASADY:
 JSON (KAŻDE pole z konkretnymi liczbami i porównaniami z rangą ${tierPl}):
 {
   "executive_summary": "2 zdania: ranga, WR, kluczowe statystyki vs średnia rangi z liczbami",
-  "overall_rating": "S+/S/A+/A/B+/B/C+/C/D",
-  "overall_score": 0-100,
-  "form_assessment": "Świetna forma/Dobra forma/Stabilna/Zmienna/Słaba forma/Kryzys",
-  "playstyle_archetype": "np. Agresywny Carry",
+  "overall_rating": "JEDNA ocena — dokładnie jeden z: S+, S, A+, A, B+, B, C+, C, D",
+  "overall_score": 75,
+  "form_assessment": "JEDNA wartość — dokładnie jedna z: Świetna forma, Dobra forma, Stabilna, Zmienna, Słaba forma, Kryzys",
+  "playstyle_archetype": "np. Agresywny Top",
   "playstyle_description": "1-2 zdania z liczbami KDA, KP%, DMG%",
   "champion_pool_analysis": "1-2 zdania z WR% per champion i liczbami gier",
   "macro_analysis": "1-2 zdania: vision X vs średnia rangi Y (±Z%), kontrola celów",
