@@ -312,29 +312,50 @@ router.get("/:puuid/live", async (req, res) => {
   const regionLower = region.toLowerCase();
   const champById = getChampionMap();
 
-  try {
-    // Riot Spectator-V5: endpoint nazywa się "by-summoner" ale przyjmuje PUUID
-    // Endpoint "by-puuid" w v5 NIE istnieje — używamy tylko by-summoner z PUUID
-    const liveUrl = `https://${regionLower}.api.riotgames.com/lol/spectator/v5/active-games/by-summoner/${puuid}`;
-    const liveRes = await fetch(liveUrl, { headers: { "X-Riot-Token": RIOT_API_KEY } });
+  // Shardy w tym samym regionie routingu — gracz może aktualnie grać na innym shardzie
+  // (np. profil EUW1 ale w grze na EUN1). PUUID jest globalny, ale spectator wymaga shardu.
+  const SHARD_GROUPS: Record<string, string[]> = {
+    euw1: ["euw1", "eun1", "tr1", "ru"],
+    eun1: ["eun1", "euw1", "tr1", "ru"],
+    tr1:  ["tr1", "euw1", "eun1", "ru"],
+    ru:   ["ru", "euw1", "eun1", "tr1"],
+    na1:  ["na1", "la1", "la2", "br1", "oc1"],
+    br1:  ["br1", "na1", "la1", "la2", "oc1"],
+    la1:  ["la1", "la2", "na1", "br1", "oc1"],
+    la2:  ["la2", "la1", "na1", "br1", "oc1"],
+    oc1:  ["oc1", "na1", "la1", "la2", "br1"],
+    kr:   ["kr", "jp1"],
+    jp1:  ["jp1", "kr"],
+  };
+  const shards = SHARD_GROUPS[regionLower] ?? [regionLower];
 
-    if (liveRes.status === 404) {
+  try {
+    // Riot Spectator-V5: endpoint nazywa się "by-summoner" ale przyjmuje PUUID.
+    // Próbujemy najpierw shard z profilu, potem pozostałe shardy w regionie.
+    let liveRes: Response | null = null;
+    let usedShard = regionLower;
+    let last403: Response | null = null;
+    for (const shard of shards) {
+      const url = `https://${shard}.api.riotgames.com/lol/spectator/v5/active-games/by-summoner/${puuid}`;
+      const r = await fetch(url, { headers: { "X-Riot-Token": RIOT_API_KEY } });
+      if (r.ok) { liveRes = r; usedShard = shard; break; }
+      if (r.status === 403) { last403 = r; break; }
+      // 404 = nie w grze na tym shardzie — próbuj kolejny
+    }
+
+    if (last403) {
+      const bodyText = await last403.text().catch(() => "");
+      console.error("[live] Riot API 403", bodyText.slice(0, 200));
+      res.status(403).json({ error: "riot_key_invalid", message: "Klucz Riot API wygasł lub jest nieprawidłowy" });
+      return;
+    }
+
+    if (!liveRes) {
       res.status(404).json({ error: "not_in_game", message: "Gracz nie jest teraz w meczu" });
       return;
     }
 
-    if (!liveRes.ok) {
-      const bodyText = await liveRes.text().catch(() => "");
-      console.error("[live] Riot API error", liveRes.status, bodyText.slice(0, 200));
-      res.status(liveRes.status === 403 ? 403 : 502).json({
-        error: liveRes.status === 403 ? "riot_key_invalid" : "riot_api_error",
-        message: liveRes.status === 403
-          ? "Klucz Riot API wygasł lub jest nieprawidłowy"
-          : `Riot API zwrócił błąd ${liveRes.status}`,
-      });
-      return;
-    }
-
+    console.info(`[live] found game for ${puuid.slice(0, 12)}... on shard ${usedShard} (profile region: ${regionLower})`);
     const liveData = (await liveRes.json()) as any;
 
     const rankedByPuuid: Record<string, { tier: string; division: string; lp: number; wins: number; losses: number }> = {};
