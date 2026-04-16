@@ -332,31 +332,37 @@ router.get("/:puuid/live", async (req, res) => {
   try {
     // Riot Spectator-V5: endpoint nazywa się "by-summoner" ale przyjmuje PUUID.
     // Próbujemy najpierw shard z profilu, potem pozostałe shardy w regionie.
-    let liveRes: Response | null = null;
-    let usedShard = regionLower;
-    let last403: Response | null = null;
-    for (const shard of shards) {
-      const url = `https://${shard}.api.riotgames.com/lol/spectator/v5/active-games/by-summoner/${puuid}`;
-      const r = await fetch(url, { headers: { "X-Riot-Token": RIOT_API_KEY } });
-      if (r.ok) { liveRes = r; usedShard = shard; break; }
-      if (r.status === 403) { last403 = r; break; }
-      // 404 = nie w grze na tym shardzie — próbuj kolejny
-    }
+    // Sprawdzamy wszystkie shardy RÓWNOLEGLE — pierwszy który odpowie 200 wygrywa.
+    // Dla EU: euw1, eun1, tr1, ru — wszystkie odpytane naraz zamiast kolejno.
+    type ShardResult = { shard: string; response: Response };
+    const shardResults = await Promise.all(
+      shards.map(async (shard): Promise<ShardResult | null> => {
+        try {
+          const url = `https://${shard}.api.riotgames.com/lol/spectator/v5/active-games/by-summoner/${puuid}`;
+          const r = await fetch(url, { headers: { "X-Riot-Token": RIOT_API_KEY } });
+          return { shard, response: r };
+        } catch {
+          return null;
+        }
+      })
+    );
 
-    if (last403) {
-      const bodyText = await last403.text().catch(() => "");
+    const forbidden = shardResults.find(r => r?.response.status === 403);
+    if (forbidden) {
+      const bodyText = await forbidden.response.text().catch(() => "");
       console.error("[live] Riot API 403", bodyText.slice(0, 200));
       res.status(403).json({ error: "riot_key_invalid", message: "Klucz Riot API wygasł lub jest nieprawidłowy" });
       return;
     }
 
-    if (!liveRes) {
+    const found = shardResults.find(r => r?.response.ok);
+    if (!found) {
       res.status(404).json({ error: "not_in_game", message: "Gracz nie jest teraz w meczu" });
       return;
     }
 
-    console.info(`[live] found game for ${puuid.slice(0, 12)}... on shard ${usedShard} (profile region: ${regionLower})`);
-    const liveData = (await liveRes.json()) as any;
+    console.info(`[live] found game for ${puuid.slice(0, 12)}... on shard ${found.shard} (profile region: ${regionLower})`);
+    const liveData = (await found.response.json()) as any;
 
     const rankedByPuuid: Record<string, { tier: string; division: string; lp: number; wins: number; losses: number }> = {};
     await Promise.allSettled(

@@ -241,7 +241,16 @@ function TeamPanel({ participants, bans, side, selfPuuid, region }: { participan
   );
 }
 
-function NotInGameView({ gameName, tagLine, region }: { gameName: string; tagLine: string; region: string }) {
+function NotInGameView({ gameName, tagLine, region, onRefetch }: { gameName: string; tagLine: string; region: string; onRefetch?: () => void }) {
+  const [checking, setChecking] = useState(false);
+
+  const handleRefetch = () => {
+    if (!onRefetch) return;
+    setChecking(true);
+    onRefetch();
+    setTimeout(() => setChecking(false), 2000);
+  };
+
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center justify-center py-20 px-4">
       <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-muted border border-border">
@@ -250,21 +259,37 @@ function NotInGameView({ gameName, tagLine, region }: { gameName: string; tagLin
       <h2 className="text-lg font-bold text-foreground/60 mb-1" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
         GRACZ NIE JEST W MECZU
       </h2>
-      <p className="text-sm text-muted-foreground mb-6">
+      <p className="text-sm text-muted-foreground mb-2">
         {gameName}#{tagLine} aktualnie nie gra na serwerze {region}
       </p>
-      <p className="text-[10px] text-muted-foreground/60 mb-6 flex items-center gap-1.5">
+      <p className="text-[10px] text-muted-foreground/50 mb-6">
+        Dane spectator pojawiają się ~1-3 min po starcie gry
+      </p>
+      <div className="flex items-center gap-3 mb-6">
+        {onRefetch && (
+          <button
+            onClick={handleRefetch}
+            disabled={checking}
+            className="text-xs font-bold px-4 py-2 rounded-lg cursor-pointer transition-colors flex items-center gap-1.5"
+            style={{ background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", fontFamily: "'Rajdhani', sans-serif", opacity: checking ? 0.7 : 1 }}
+          >
+            <RefreshCw className={`w-3 h-3 ${checking ? "animate-spin" : ""}`} />
+            {checking ? "SPRAWDZAM..." : "SPRAWDŹ PONOWNIE"}
+          </button>
+        )}
+        <Link to={`/profile/${region}/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`}>
+          <span className="text-xs font-bold px-4 py-2 rounded-lg cursor-pointer transition-colors" style={{
+            background: "hsl(200,50%,96%)", border: "1px solid hsl(200,50%,78%)",
+            color: "hsl(200,90%,35%)", fontFamily: "'Rajdhani', sans-serif"
+          }}>
+            PROFIL <ChevronRight className="w-3 h-3 inline" />
+          </span>
+        </Link>
+      </div>
+      <p className="text-[10px] text-muted-foreground/60 flex items-center gap-1.5">
         <RefreshCw className="w-3 h-3" />
         Automatyczne sprawdzanie co 15 sekund
       </p>
-      <Link to={`/profile/${region}/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`}>
-        <span className="text-xs font-bold px-4 py-2 rounded-lg cursor-pointer transition-colors" style={{
-          background: "hsl(200,50%,96%)", border: "1px solid hsl(200,50%,78%)",
-          color: "hsl(200,90%,35%)", fontFamily: "'Rajdhani', sans-serif"
-        }}>
-          ZOBACZ PROFIL <ChevronRight className="w-3 h-3 inline" />
-        </span>
-      </Link>
     </motion.div>
   );
 }
@@ -286,7 +311,7 @@ export default function LiveGame() {
   const { data: liveGame, error: liveError, refetch, isLoading, isFetching, status } = useGetLiveGame(
     puuid,
     { region, summonerId },
-    { query: { enabled: !!puuid, retry: false } }
+    { query: { enabled: !!puuid, retry: false, staleTime: 0, gcTime: 30_000 } }
   );
 
   useEffect(() => {
@@ -363,7 +388,7 @@ export default function LiveGame() {
               <p className="text-sm text-muted-foreground">Szukam meczu...</p>
             </motion.div>
           ) : !inGame ? (
-            <NotInGameView key="not-in-game" gameName={gameName} tagLine={tagLine} region={region} />
+            <NotInGameView key="not-in-game" gameName={gameName} tagLine={tagLine} region={region} onRefetch={refetch} />
           ) : (
             <motion.div key="game" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
               <div className="overflow-hidden rounded-xl bg-card border border-border shadow-sm">

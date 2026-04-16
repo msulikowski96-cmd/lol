@@ -2119,7 +2119,7 @@ export default function Profile() {
   const { data: matches, isLoading: isLoadingMatches } = useGetSummonerMatches(puuid, { region, count: matchCount }, { query: { enabled: !!puuid } });
   const { data: mastery, isLoading: isLoadingMastery } = useGetSummonerMastery(puuid, { region, count: 5 }, { query: { enabled: !!puuid } });
   const { data: analysis, isLoading: isLoadingAnalysis } = useGetSummonerAnalysis(puuid, { region, count: 20 }, { query: { enabled: !!puuid } });
-  const { data: liveGame, refetch: refetchLiveGame } = useGetLiveGame(puuid, { region, summonerId }, { query: { enabled: !!puuid, retry: false } });
+  const { data: liveGame, refetch: refetchLiveGame } = useGetLiveGame(puuid, { region, summonerId }, { query: { enabled: !!puuid, retry: false, staleTime: 0, gcTime: 30_000 } });
   useEffect(() => {
     if (!puuid) return;
     const id = setInterval(() => { refetchLiveGame(); }, 30000);
