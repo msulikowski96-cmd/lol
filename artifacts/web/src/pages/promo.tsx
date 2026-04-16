@@ -1046,7 +1046,7 @@ function Scene12({ currentScene }: { currentScene: number }) {
             transition={{ delay: 2.5 }}
             className="text-[10px] text-muted-foreground relative z-10 text-center"
           >
-            nexussight.gg · darmowe · bez rejestracji
+            nexus-sight.onrender.com · darmowe · bez rejestracji
           </motion.p>
         </motion.div>
       )}
