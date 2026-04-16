@@ -671,8 +671,8 @@ export default function BuildCalculator() {
             )}
           </p>
           <div className="flex gap-2 justify-start flex-wrap">
-            {enemies.map((enemy, i) => (
-              <ChampSlot key={i} label={`Wróg ${i + 1}`} championId={enemy}
+            {(["Top", "Jungle", "Mid", "ADC", "Support"] as const).map((lane, i) => (
+              <ChampSlot key={i} label={lane} championId={enemies[i]}
                 allChampions={allChampions} onSelect={(id) => setEnemy(i, id)} small />
             ))}
           </div>
