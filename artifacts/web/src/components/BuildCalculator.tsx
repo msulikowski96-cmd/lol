@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, X, Swords, ChevronRight, RotateCcw, Info } from "lucide-react";
+import { Search, X, Swords, Info, Copy, Check, Zap } from "lucide-react";
 import { getDDBase, getDDVersion } from "@/lib/constants";
 import {
   calculateBuild,
@@ -16,16 +16,113 @@ interface ChampEntry {
   name: string;
 }
 
+const ITEM_GOLD: Record<number, number> = {
+  3006: 900, 3047: 1100, 3111: 1100, 3158: 950, 3020: 900, 3009: 900,
+  3031: 3400, 3085: 2600, 3046: 2900, 3095: 3000, 3094: 2500, 3036: 3000,
+  6672: 3200, 3026: 2800, 3139: 2600, 3156: 2500, 3033: 2700,
+  6653: 3000, 3135: 3000, 3089: 3600, 4645: 3000, 3285: 3000,
+  3157: 2600, 3102: 2600, 3165: 2000,
+  3071: 3100, 3053: 2800, 6632: 2900, 3748: 3400, 6333: 3300,
+  3068: 2800, 3083: 3000, 3143: 2900, 4401: 2500, 3742: 2700,
+  6617: 2800, 2065: 2300, 3190: 2300, 3504: 2300, 6656: 2600,
+  3152: 2800, 3146: 2600,
+  3142: 2900, 3147: 3100, 6691: 3200, 3814: 2900, 4005: 2800,
+};
+
+function getGold(id: number): number {
+  return ITEM_GOLD[id] ?? 2800;
+}
+
+function formatGold(g: number): string {
+  return g >= 1000 ? `${(g / 1000).toFixed(1)}k` : `${g}`;
+}
+
+const SUMM_IMG = (name: string) =>
+  `https://ddragon.leagueoflegends.com/cdn/img/spell/Summoner${name}.png`;
+
+interface SummonerRec {
+  spell1: { name: string; img: string; key: string };
+  spell2: { name: string; img: string; key: string };
+  note: string;
+}
+
+const SUMMS = {
+  flash: { name: "Flash", img: SUMM_IMG("Flash"), key: "Flash" },
+  ignite: { name: "Zapłon", img: SUMM_IMG("Dot"), key: "Dot" },
+  tp: { name: "Teleport", img: SUMM_IMG("Teleport"), key: "Teleport" },
+  exhaust: { name: "Wyczerpanie", img: SUMM_IMG("Exhaust"), key: "Exhaust" },
+  cleanse: { name: "Oczyszczenie", img: SUMM_IMG("Boost"), key: "Boost" },
+  barrier: { name: "Bariera", img: SUMM_IMG("Barrier"), key: "Barrier" },
+  smite: { name: "Karanie", img: SUMM_IMG("Smite"), key: "Smite" },
+  ghost: { name: "Widmo", img: SUMM_IMG("Haste"), key: "Haste" },
+};
+
+function recommendSummoners(lane: Lane, myChampId: string, ta: NonNullable<BuildResult["teamAnalysis"]>): SummonerRec {
+  const profile = getChampProfile(myChampId);
+  const isJungle = lane === "JUNGLE";
+  const isSupport = lane === "SUPPORT" || profile.class === "SUPPORT";
+  const isMobile = profile.tags?.includes("mobility");
+  const hasManyCC = ta.heavyCC || ta.assassinCount >= 2;
+
+  if (isJungle) {
+    return {
+      spell1: SUMMS.smite,
+      spell2: SUMMS.flash,
+      note: "Karanie obowiązkowe dla junglera",
+    };
+  }
+  if (isSupport) {
+    if (hasManyCC) return { spell1: SUMMS.flash, spell2: SUMMS.exhaust, note: "Exhaust kluczowy vs assassini i burst" };
+    return { spell1: SUMMS.flash, spell2: SUMMS.ignite, note: "Zapłon na presję w laningu" };
+  }
+  if (hasManyCC && !isMobile) {
+    return { spell1: SUMMS.flash, spell2: SUMMS.cleanse, note: "Oczyszczenie vs dużo CC i lockdown" };
+  }
+  if (ta.assassinCount >= 2 && (profile.class === "MARKSMAN" || profile.class === "MAGE")) {
+    return { spell1: SUMMS.flash, spell2: SUMMS.barrier, note: "Bariera ratuje przed oneshot assassina" };
+  }
+  if (lane === "TOP") {
+    return { spell1: SUMMS.flash, spell2: SUMMS.tp, note: "Teleport dla globalnej obecności na mapie" };
+  }
+  if (ta.healingPresence && (lane === "MID" || profile.class === "MAGE")) {
+    return { spell1: SUMMS.flash, spell2: SUMMS.ignite, note: "Zapłon blokuje leczenie w walce" };
+  }
+  return { spell1: SUMMS.flash, spell2: SUMMS.ignite, note: "Klasyczna kombinacja Flash + Zapłon" };
+}
+
 const RUNE_PATH_IMG = (icon: string) =>
   `https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/${icon}.png`;
 
-function ItemIcon({ item, size = 36 }: { item: ItemRec; size?: number }) {
+function SummonerIcon({ spell }: { spell: { name: string; img: string } }) {
   const [err, setErr] = useState(false);
   return (
-    <div
-      className="relative group flex-shrink-0"
-      style={{ width: size, height: size }}
-    >
+    <div className="relative group flex-shrink-0">
+      {!err ? (
+        <img
+          src={spell.img}
+          alt={spell.name}
+          className="w-10 h-10 rounded-lg border border-border object-cover"
+          onError={() => setErr(true)}
+        />
+      ) : (
+        <div className="w-10 h-10 rounded-lg border border-border bg-muted flex items-center justify-center text-[10px] text-muted-foreground font-bold">
+          {spell.name.slice(0, 2)}
+        </div>
+      )}
+      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="text-[10px] whitespace-nowrap rounded-md px-2 py-1 shadow-xl"
+          style={{ background: "hsl(220,20%,10%)", color: "white", border: "1px solid hsl(220,15%,25%)" }}>
+          {spell.name}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ItemIcon({ item, order, size = 40 }: { item: ItemRec; order?: number; size?: number }) {
+  const [err, setErr] = useState(false);
+  return (
+    <div className="relative group flex-shrink-0" style={{ width: size, height: size }}>
       {!err ? (
         <img
           src={`${getDDBase()}/item/${item.id}.png`}
@@ -35,20 +132,23 @@ function ItemIcon({ item, size = 36 }: { item: ItemRec; size?: number }) {
           onError={() => setErr(true)}
         />
       ) : (
-        <div
-          className="rounded-md flex items-center justify-center text-[8px] text-muted-foreground bg-muted border border-border text-center leading-tight p-0.5"
-          style={{ width: size, height: size }}
-        >
+        <div className="rounded-md flex items-center justify-center text-[8px] text-muted-foreground bg-muted border border-border text-center leading-tight p-0.5"
+          style={{ width: size, height: size }}>
           {item.name.slice(0, 6)}
         </div>
       )}
+      {order !== undefined && (
+        <div className="absolute -top-1.5 -left-1.5 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black z-10"
+          style={{ background: "hsl(200,90%,38%)", color: "white" }}>
+          {order}
+        </div>
+      )}
       <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-        <div
-          className="text-[10px] whitespace-nowrap rounded-md px-2 py-1 shadow-xl"
-          style={{ background: "hsl(220,20%,10%)", color: "white", border: "1px solid hsl(220,15%,25%)" }}
-        >
+        <div className="text-[10px] rounded-md px-2 py-1.5 shadow-xl"
+          style={{ background: "hsl(220,20%,10%)", color: "white", border: "1px solid hsl(220,15%,25%)", minWidth: 120, maxWidth: 180 }}>
           <p className="font-bold">{item.name}</p>
-          {item.reason && <p className="text-[9px] opacity-70 max-w-[160px] whitespace-normal">{item.reason}</p>}
+          <p className="text-[9px] opacity-60">{formatGold(getGold(item.id))} złota</p>
+          {item.reason && <p className="text-[9px] opacity-75 mt-0.5 leading-snug">{item.reason}</p>}
         </div>
       </div>
     </div>
@@ -60,26 +160,14 @@ function RuneIcon({ imgPath, name, size = 32 }: { imgPath: string; name: string;
   return (
     <div className="relative group flex-shrink-0" style={{ width: size, height: size }}>
       {!err ? (
-        <img
-          src={imgPath}
-          alt={name}
-          className="object-contain"
-          style={{ width: size, height: size }}
-          onError={() => setErr(true)}
-        />
+        <img src={imgPath} alt={name} className="object-contain" style={{ width: size, height: size }} onError={() => setErr(true)} />
       ) : (
-        <div
-          className="rounded-full flex items-center justify-center text-[8px] text-muted-foreground bg-muted border border-border text-center"
-          style={{ width: size, height: size }}
-        >
-          R
-        </div>
+        <div className="rounded-full flex items-center justify-center text-[8px] text-muted-foreground bg-muted border border-border text-center"
+          style={{ width: size, height: size }}>R</div>
       )}
       <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-        <div
-          className="text-[10px] whitespace-nowrap rounded-md px-2 py-1 shadow-xl"
-          style={{ background: "hsl(220,20%,10%)", color: "white", border: "1px solid hsl(220,15%,25%)" }}
-        >
+        <div className="text-[10px] whitespace-nowrap rounded-md px-2 py-1 shadow-xl"
+          style={{ background: "hsl(220,20%,10%)", color: "white", border: "1px solid hsl(220,15%,25%)" }}>
           {name}
         </div>
       </div>
@@ -88,11 +176,7 @@ function RuneIcon({ imgPath, name, size = 32 }: { imgPath: string; name: string;
 }
 
 function ChampionPickerModal({
-  allChampions,
-  selected,
-  onSelect,
-  onClose,
-  title,
+  allChampions, selected, onSelect, onClose, title,
 }: {
   allChampions: ChampEntry[];
   selected: string | null;
@@ -103,76 +187,48 @@ function ChampionPickerModal({
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    setTimeout(() => inputRef.current?.focus(), 50);
-  }, []);
+  useEffect(() => { setTimeout(() => inputRef.current?.focus(), 50); }, []);
 
   const filtered = allChampions.filter((c) =>
-    c.name.toLowerCase().includes(query.toLowerCase()) ||
-    c.id.toLowerCase().includes(query.toLowerCase())
+    c.name.toLowerCase().includes(query.toLowerCase()) || c.id.toLowerCase().includes(query.toLowerCase())
   );
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.55)" }}
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.55)" }} onClick={onClose}>
       <motion.div
-        initial={{ opacity: 0, scale: 0.96 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.96 }}
-        transition={{ duration: 0.15 }}
+        initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.96 }} transition={{ duration: 0.15 }}
         className="w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl"
         style={{ background: "white", border: "1px solid hsl(220,15%,85%)", maxHeight: "80vh" }}
-        onClick={(e) => e.stopPropagation()}
-      >
+        onClick={(e) => e.stopPropagation()}>
         <div className="p-4 border-b border-border">
           <div className="flex items-center justify-between mb-3">
-            <p className="font-bold text-sm" style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 16, color: "hsl(220,25%,12%)" }}>
-              {title}
-            </p>
-            <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
-              <X className="w-4 h-4" />
-            </button>
+            <p className="font-bold" style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 16, color: "hsl(220,25%,12%)" }}>{title}</p>
+            <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors"><X className="w-4 h-4" /></button>
           </div>
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-            <input
-              ref={inputRef}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
+            <input ref={inputRef} value={query} onChange={(e) => setQuery(e.target.value)}
               placeholder="Szukaj bohatera..."
               className="w-full pl-8 pr-3 py-2 text-sm rounded-lg outline-none"
-              style={{ background: "hsl(220,15%,96%)", border: "1px solid hsl(220,15%,88%)" }}
-            />
+              style={{ background: "hsl(220,15%,96%)", border: "1px solid hsl(220,15%,88%)" }} />
           </div>
         </div>
-        <div
-          className="overflow-y-auto p-3"
-          style={{ maxHeight: "55vh" }}
-        >
+        <div className="overflow-y-auto p-3" style={{ maxHeight: "55vh" }}>
           <div className="grid grid-cols-5 sm:grid-cols-7 gap-1.5">
             {filtered.map((champ) => (
-              <button
-                key={champ.id}
-                onClick={() => { onSelect(champ.id); onClose(); }}
+              <button key={champ.id} onClick={() => { onSelect(champ.id); onClose(); }}
                 className="flex flex-col items-center gap-1 p-1 rounded-lg transition-all hover:bg-muted group"
-                style={selected === champ.id ? { background: "hsl(200,90%,90%)", outline: "2px solid hsl(200,90%,50%)" } : {}}
-              >
-                <img
-                  src={`${getDDBase()}/champion/${champ.id}.png`}
-                  alt={champ.name}
+                style={selected === champ.id ? { background: "hsl(200,90%,90%)", outline: "2px solid hsl(200,90%,50%)" } : {}}>
+                <img src={`${getDDBase()}/champion/${champ.id}.png`} alt={champ.name}
                   className="w-10 h-10 rounded-lg border border-border group-hover:border-primary/30 transition-colors object-cover"
-                  onError={(e) => { e.currentTarget.src = "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png"; }}
-                />
+                  onError={(e) => { e.currentTarget.src = "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png"; }} />
                 <span className="text-[8px] text-center leading-tight text-muted-foreground group-hover:text-foreground transition-colors truncate w-full">{champ.name}</span>
               </button>
             ))}
             {filtered.length === 0 && (
-              <div className="col-span-7 py-8 text-center text-sm text-muted-foreground">
-                Nie znaleziono bohatera "{query}"
-              </div>
+              <div className="col-span-7 py-8 text-center text-sm text-muted-foreground">Nie znaleziono bohatera "{query}"</div>
             )}
           </div>
         </div>
@@ -181,18 +237,9 @@ function ChampionPickerModal({
   );
 }
 
-function ChampSlot({
-  label,
-  championId,
-  allChampions,
-  onSelect,
-  small,
-}: {
-  label: string;
-  championId: string | null;
-  allChampions: ChampEntry[];
-  onSelect: (id: string) => void;
-  small?: boolean;
+function ChampSlot({ label, championId, allChampions, onSelect, small }: {
+  label: string; championId: string | null; allChampions: ChampEntry[];
+  onSelect: (id: string) => void; small?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const champ = allChampions.find((c) => c.id === championId);
@@ -201,34 +248,26 @@ function ChampSlot({
   return (
     <>
       <div className="flex flex-col items-center gap-1">
-        <button
-          onClick={() => setOpen(true)}
+        <button onClick={() => setOpen(true)}
           className="relative rounded-xl overflow-hidden border-2 transition-all hover:scale-105 flex-shrink-0"
           style={{
             width: sz, height: sz,
             borderColor: championId ? "hsl(200,70%,50%)" : "hsl(220,15%,82%)",
             background: championId ? "transparent" : "hsl(220,15%,96%)",
             boxShadow: championId ? "0 0 0 2px hsl(200,70%,85%)" : "none",
-          }}
-        >
+          }}>
           {champ ? (
-            <img
-              src={`${getDDBase()}/champion/${champ.id}.png`}
-              alt={champ.name}
-              className="w-full h-full object-cover"
-              onError={(e) => { e.currentTarget.src = "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png"; }}
-            />
+            <img src={`${getDDBase()}/champion/${champ.id}.png`} alt={champ.name} className="w-full h-full object-cover"
+              onError={(e) => { e.currentTarget.src = "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png"; }} />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <span className="text-muted-foreground/40 text-lg">+</span>
             </div>
           )}
           {champ && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onSelect(""); }}
+            <button onClick={(e) => { e.stopPropagation(); onSelect(""); }}
               className="absolute top-0 right-0 w-4 h-4 rounded-bl-md flex items-center justify-center transition-colors hover:bg-red-400"
-              style={{ background: "rgba(0,0,0,0.5)" }}
-            >
+              style={{ background: "rgba(0,0,0,0.5)" }}>
               <X className="w-2.5 h-2.5 text-white" />
             </button>
           )}
@@ -239,146 +278,144 @@ function ChampSlot({
       </div>
       <AnimatePresence>
         {open && (
-          <ChampionPickerModal
-            allChampions={allChampions}
-            selected={championId}
-            onSelect={onSelect}
-            onClose={() => setOpen(false)}
-            title={label}
-          />
+          <ChampionPickerModal allChampions={allChampions} selected={championId} onSelect={onSelect}
+            onClose={() => setOpen(false)} title={label} />
         )}
       </AnimatePresence>
     </>
   );
 }
 
-function TeamThreatBar({ label, value, max = 5, color }: { label: string; value: number; max?: number; color: string }) {
+function ThreatDot({ value, max = 5, color }: { value: number; max?: number; color: string }) {
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-[10px] text-muted-foreground w-16 flex-shrink-0">{label}</span>
-      <div className="flex gap-1 flex-shrink-0">
-        {Array.from({ length: max }).map((_, i) => (
-          <div
-            key={i}
-            className="w-3 h-3 rounded-sm"
-            style={{
-              background: i < value ? color : "hsl(220,15%,90%)",
-              transition: "background 0.2s",
-            }}
-          />
-        ))}
-      </div>
-      <span className="text-[10px] font-mono font-bold" style={{ color }}>{value}/{max}</span>
+    <div className="flex gap-0.5">
+      {Array.from({ length: max }).map((_, i) => (
+        <div key={i} className="w-2 h-2 rounded-sm transition-all duration-300"
+          style={{ background: i < value ? color : "hsl(220,15%,90%)" }} />
+      ))}
     </div>
   );
 }
 
-function BuildResultPanel({ result, myChampId }: { result: BuildResult; myChampId: string }) {
-  const profile = getChampProfile(myChampId);
-  const ta = result.teamAnalysis;
+function CopyBuildButton({ result, allChampions, myChampId }: {
+  result: BuildResult; allChampions: ChampEntry[]; myChampId: string;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    const champName = allChampions.find(c => c.id === myChampId)?.name ?? myChampId;
+    const lines = [
+      `🗡 Build Nexus Sight — ${champName}`,
+      ``,
+      `👟 Buty: ${result.boots.name}`,
+      ``,
+      `⚔ Build główny:`,
+      ...result.coreItems.map((item, i) => `  ${i + 1}. ${item.name}${item.reason ? ` — ${item.reason}` : ""}`),
+      ``,
+      `🛡 Sytuacyjne:`,
+      ...result.situationalItems.slice(0, 3).map(item => `  • ${item.name}`),
+      ``,
+      `✦ Runy: ${result.runes.keystone.name} (${result.runes.primaryPath.name})`,
+      ``,
+      `📊 nexus-sight.onrender.com`,
+    ].join("\n");
+
+    navigator.clipboard.writeText(lines).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="space-y-4 mt-4"
-    >
-      <div className="rounded-xl p-4 space-y-3" style={{ background: "hsl(220,15%,97%)", border: "1px solid hsl(220,15%,88%)" }}>
-        <p className="text-[9px] uppercase tracking-[0.18em] font-bold flex items-center gap-1" style={{ color: "hsl(200,90%,35%)", fontFamily: "'Rajdhani',sans-serif" }}>
-          <Info className="w-3 h-3" /> Analiza Drużyny Wroga
+    <button onClick={handleCopy}
+      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all"
+      style={{
+        background: copied ? "hsl(152,50%,92%)" : "hsl(220,15%,95%)",
+        color: copied ? "hsl(152,55%,30%)" : "hsl(220,10%,45%)",
+        border: `1px solid ${copied ? "hsl(152,40%,78%)" : "hsl(220,15%,85%)"}`,
+      }}>
+      {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+      {copied ? "Skopiowano!" : "Kopiuj build"}
+    </button>
+  );
+}
+
+function BuildResultPanel({ result, myChampId, allChampions, lane }: {
+  result: BuildResult; myChampId: string; allChampions: ChampEntry[]; lane: Lane;
+}) {
+  const ta = result.teamAnalysis;
+  const summs = recommendSummoners(lane, myChampId, ta);
+
+  const totalCoreGold = result.coreItems.reduce((acc, i) => acc + getGold(i.id), 0) + getGold(result.boots.id);
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3 mt-3">
+
+      {/* Header with copy button */}
+      <div className="flex items-center justify-between">
+        <p className="text-[9px] uppercase tracking-[0.18em] font-bold flex items-center gap-1"
+          style={{ color: "hsl(200,90%,35%)", fontFamily: "'Rajdhani',sans-serif" }}>
+          <Zap className="w-3 h-3" /> Optymalny build
         </p>
-        <div className="space-y-1.5">
-          <TeamThreatBar label="Zagrożenie AP" value={ta.apThreat} color="hsl(270,70%,55%)" />
-          <TeamThreatBar label="Zagrożenie AD" value={ta.adThreat} color="hsl(30,85%,50%)" />
-          <TeamThreatBar label="Tanki / Diwersowie" value={ta.tankCount} color="hsl(200,70%,45%)" />
-          <TeamThreatBar label="Squishie / Cele" value={ta.squishyCount} color="hsl(350,70%,55%)" />
-          {ta.assassinCount > 0 && (
-            <TeamThreatBar label="Assassini (burst)" value={ta.assassinCount} max={5} color="hsl(340,80%,50%)" />
-          )}
-          {ta.pokeCount > 0 && (
-            <TeamThreatBar label="Poke (zasięg)" value={ta.pokeCount} max={5} color="hsl(50,80%,45%)" />
-          )}
-        </div>
-        <div className="flex flex-wrap gap-2 mt-1">
-          {ta.healingPresence && (
-            <span className="text-[9px] px-2 py-0.5 rounded-full font-bold" style={{ background: "hsl(152,50%,90%)", color: "hsl(152,55%,30%)", border: "1px solid hsl(152,40%,75%)" }}>
-              ⚕ Leczenie u wroga
-            </span>
-          )}
-          {ta.heavyCC && (
-            <span className="text-[9px] px-2 py-0.5 rounded-full font-bold" style={{ background: "hsl(220,60%,92%)", color: "hsl(220,70%,40%)", border: "1px solid hsl(220,50%,78%)" }}>
-              ❄ Dużo CC
-            </span>
-          )}
-          {ta.engageHeavy && (
-            <span className="text-[9px] px-2 py-0.5 rounded-full font-bold" style={{ background: "hsl(0,60%,94%)", color: "hsl(0,65%,42%)", border: "1px solid hsl(0,50%,80%)" }}>
-              ⚡ Engage Heavy
-            </span>
-          )}
-          {ta.shieldPresence && (
-            <span className="text-[9px] px-2 py-0.5 rounded-full font-bold" style={{ background: "hsl(55,70%,92%)", color: "hsl(55,70%,30%)", border: "1px solid hsl(55,60%,75%)" }}>
-              🛡 Tarcze u wroga
-            </span>
-          )}
-          {ta.percentHPThreat && (
-            <span className="text-[9px] px-2 py-0.5 rounded-full font-bold" style={{ background: "hsl(20,80%,92%)", color: "hsl(20,75%,35%)", border: "1px solid hsl(20,65%,75%)" }}>
-              🩸 % HP Damage (np. Vayne)
-            </span>
-          )}
-          {ta.splitPushThreat && (
-            <span className="text-[9px] px-2 py-0.5 rounded-full font-bold" style={{ background: "hsl(120,40%,92%)", color: "hsl(120,50%,30%)", border: "1px solid hsl(120,40%,75%)" }}>
-              🌲 Split Push Threat
-            </span>
-          )}
-        </div>
+        <CopyBuildButton result={result} allChampions={allChampions} myChampId={myChampId} />
       </div>
 
+      {/* Core build + boots in one card */}
       <div className="rounded-xl p-4 space-y-4" style={{ background: "white", border: "1px solid hsl(220,15%,88%)" }}>
+
+        {/* Boots */}
         <div>
-          <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-3 flex items-center gap-1" style={{ color: "hsl(200,90%,35%)", fontFamily: "'Rajdhani',sans-serif" }}>
-            🗡 Buty
-          </p>
-          <div className="flex items-center gap-3">
-            <ItemIcon item={result.boots} size={44} />
+          <p className="text-[9px] uppercase tracking-[0.15em] font-bold mb-2 text-muted-foreground">👟 Buty</p>
+          <div className="flex items-center gap-2.5">
+            <ItemIcon item={result.boots} size={40} />
             <div>
               <p className="text-sm font-bold text-foreground/90">{result.boots.name}</p>
-              <p className="text-[10px] text-muted-foreground">Dobór pod skład przeciwników</p>
+              <p className="text-[10px] text-muted-foreground">{formatGold(getGold(result.boots.id))} złota</p>
             </div>
           </div>
         </div>
 
+        {/* Core items with order numbers */}
         <div>
-          <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-3 flex items-center gap-1" style={{ color: "hsl(200,90%,35%)", fontFamily: "'Rajdhani',sans-serif" }}>
-            ⚔ Build główny
-          </p>
-          <div className="flex flex-wrap gap-2">
+          <p className="text-[9px] uppercase tracking-[0.15em] font-bold mb-2 text-muted-foreground">⚔ Kolejność buildu</p>
+          <div className="flex gap-2 flex-wrap mb-2">
             {result.coreItems.map((item, i) => (
-              <ItemIcon key={i} item={item} size={44} />
+              <ItemIcon key={i} item={item} size={40} order={i + 1} />
             ))}
           </div>
-          <div className="mt-2 space-y-1">
+          <div className="space-y-1">
             {result.coreItems.filter(i => i.reason).map((item, i) => (
-              <p key={i} className="text-[10px] text-muted-foreground flex gap-1.5">
-                <span className="flex-shrink-0 text-primary/60">→</span>
-                <span><span className="font-medium text-foreground/80">{item.name}:</span> {item.reason}</span>
+              <p key={i} className="text-[10px] text-muted-foreground flex gap-1.5 leading-relaxed">
+                <span className="flex-shrink-0 font-black text-primary/70">{i + 1}.</span>
+                <span><span className="font-semibold text-foreground/80">{item.name}</span> — {item.reason}</span>
               </p>
             ))}
           </div>
         </div>
 
-        <div>
-          <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-3 flex items-center gap-1" style={{ color: "hsl(200,90%,35%)", fontFamily: "'Rajdhani',sans-serif" }}>
-            🛡 Itemy Sytuacyjne
-          </p>
-          <div className="flex flex-wrap gap-2">
+        {/* Total gold */}
+        <div className="flex items-center justify-between pt-2 border-t border-border/50">
+          <span className="text-[9px] text-muted-foreground uppercase tracking-wide">Łączny koszt core buildu</span>
+          <span className="text-sm font-black" style={{ color: "hsl(42,80%,40%)", fontFamily: "'Barlow Condensed',sans-serif" }}>
+            💰 {totalCoreGold.toLocaleString("pl-PL")} złota
+          </span>
+        </div>
+      </div>
+
+      {/* Situational items */}
+      {result.situationalItems.length > 0 && (
+        <div className="rounded-xl p-4" style={{ background: "hsl(220,15%,97%)", border: "1px solid hsl(220,15%,88%)" }}>
+          <p className="text-[9px] uppercase tracking-[0.15em] font-bold mb-2 text-muted-foreground">🛡 Sytuacyjne</p>
+          <div className="flex gap-2 flex-wrap mb-2">
             {result.situationalItems.map((item, i) => (
               <div key={i} className="relative">
-                <ItemIcon item={item} size={38} />
-                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full text-[7px] font-bold flex items-center justify-center" style={{ background: "hsl(220,15%,75%)", color: "white" }}>?</span>
+                <ItemIcon item={item} size={36} />
+                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full text-[7px] font-bold flex items-center justify-center"
+                  style={{ background: "hsl(220,15%,70%)", color: "white" }}>?</span>
               </div>
             ))}
           </div>
-          <div className="mt-2 space-y-1">
+          <div className="space-y-1">
             {result.situationalItems.filter(i => i.reason).slice(0, 3).map((item, i) => (
               <p key={i} className="text-[10px] text-muted-foreground flex gap-1.5">
                 <span className="flex-shrink-0 text-yellow-500/70">→</span>
@@ -387,61 +424,62 @@ function BuildResultPanel({ result, myChampId }: { result: BuildResult; myChampI
             ))}
           </div>
         </div>
+      )}
+
+      {/* Summoner spells */}
+      <div className="rounded-xl p-4 space-y-3" style={{ background: "linear-gradient(135deg, hsl(42,60%,97%), white)", border: "1px solid hsl(42,40%,88%)" }}>
+        <p className="text-[9px] uppercase tracking-[0.15em] font-bold text-muted-foreground">✦ Czarownicy</p>
+        <div className="flex items-center gap-3">
+          <SummonerIcon spell={summs.spell1} />
+          <SummonerIcon spell={summs.spell2} />
+          <div>
+            <p className="text-xs font-bold text-foreground/90">{summs.spell1.name} + {summs.spell2.name}</p>
+            <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">{summs.note}</p>
+          </div>
+        </div>
       </div>
 
+      {/* Runes */}
       <div className="rounded-xl p-4 space-y-4" style={{ background: "linear-gradient(135deg, hsl(240,30%,97%), white)", border: "1px solid hsl(240,25%,85%)" }}>
-        <p className="text-[9px] uppercase tracking-[0.18em] font-bold flex items-center gap-1" style={{ color: "hsl(240,60%,45%)", fontFamily: "'Rajdhani',sans-serif" }}>
+        <p className="text-[9px] uppercase tracking-[0.15em] font-bold" style={{ color: "hsl(240,60%,45%)", fontFamily: "'Rajdhani',sans-serif" }}>
           ✦ Runy
         </p>
-
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <img
-                src={RUNE_PATH_IMG(result.runes.primaryPath.icon)}
-                alt={result.runes.primaryPath.name}
-                className="w-5 h-5 object-contain"
-                onError={(e) => { e.currentTarget.style.display = "none"; }}
-              />
+            <div className="flex items-center gap-2 mb-2">
+              <img src={RUNE_PATH_IMG(result.runes.primaryPath.icon)} alt={result.runes.primaryPath.name}
+                className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = "none"; }} />
               <p className="text-[10px] font-bold text-foreground/80">{result.runes.primaryPath.name}</p>
             </div>
-            <div className="flex flex-col items-start gap-3">
+            <div className="flex flex-col items-start gap-2">
               <div className="flex items-center gap-2">
-                <RuneIcon imgPath={result.runes.keystone.imgPath} name={result.runes.keystone.name} size={40} />
+                <RuneIcon imgPath={result.runes.keystone.imgPath} name={result.runes.keystone.name} size={38} />
                 <div>
                   <p className="text-[11px] font-bold text-foreground/90">{result.runes.keystone.name}</p>
-                  <p className="text-[9px] text-muted-foreground leading-tight max-w-[120px]">{result.runes.keystone.description}</p>
+                  <p className="text-[9px] text-muted-foreground leading-tight max-w-[110px]">{result.runes.keystone.description}</p>
                 </div>
               </div>
-              <div className="flex gap-2 flex-wrap">
-                {result.runes.primaryRunes.map((r, i) => (
-                  <RuneIcon key={i} imgPath={r.imgPath} name={r.name} size={26} />
-                ))}
+              <div className="flex gap-1.5 flex-wrap">
+                {result.runes.primaryRunes.map((r, i) => <RuneIcon key={i} imgPath={r.imgPath} name={r.name} size={24} />)}
               </div>
             </div>
           </div>
-
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <img
-                src={RUNE_PATH_IMG(result.runes.secondaryPath.icon)}
-                alt={result.runes.secondaryPath.name}
-                className="w-5 h-5 object-contain"
-                onError={(e) => { e.currentTarget.style.display = "none"; }}
-              />
+            <div className="flex items-center gap-2 mb-2">
+              <img src={RUNE_PATH_IMG(result.runes.secondaryPath.icon)} alt={result.runes.secondaryPath.name}
+                className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = "none"; }} />
               <p className="text-[10px] font-bold text-foreground/80">{result.runes.secondaryPath.name}</p>
             </div>
-            <div className="flex gap-2 flex-wrap mt-1">
-              {result.runes.secondaryRunes.map((r, i) => (
-                <RuneIcon key={i} imgPath={r.imgPath} name={r.name} size={30} />
-              ))}
+            <div className="flex gap-1.5 flex-wrap mt-1">
+              {result.runes.secondaryRunes.map((r, i) => <RuneIcon key={i} imgPath={r.imgPath} name={r.name} size={28} />)}
             </div>
-            <div className="mt-4">
-              <p className="text-[9px] text-muted-foreground mb-1.5">Fragmenty:</p>
+            <div className="mt-3">
+              <p className="text-[9px] text-muted-foreground mb-1">Fragmenty:</p>
               <div className="space-y-1">
                 {result.runes.shards.map((s, i) => (
                   <div key={i} className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full" style={{ background: i === 0 ? "hsl(40,90%,55%)" : i === 1 ? "hsl(40,90%,55%)" : "hsl(200,60%,55%)" }} />
+                    <div className="w-2 h-2 rounded-full"
+                      style={{ background: i === 0 ? "hsl(40,90%,55%)" : i === 1 ? "hsl(40,90%,55%)" : "hsl(200,60%,55%)" }} />
                     <span className="text-[9px] text-foreground/70">{s}</span>
                   </div>
                 ))}
@@ -451,13 +489,46 @@ function BuildResultPanel({ result, myChampId }: { result: BuildResult; myChampI
         </div>
       </div>
 
-      <div className="rounded-xl p-4 space-y-2" style={{ background: "hsl(220,15%,97%)", border: "1px solid hsl(220,15%,88%)" }}>
-        <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-2 flex items-center gap-1" style={{ color: "hsl(200,90%,35%)", fontFamily: "'Rajdhani',sans-serif" }}>
-          💡 Uzasadnienie
+      {/* Team analysis */}
+      <div className="rounded-xl p-4 space-y-3" style={{ background: "hsl(220,15%,97%)", border: "1px solid hsl(220,15%,88%)" }}>
+        <p className="text-[9px] uppercase tracking-[0.15em] font-bold flex items-center gap-1 text-muted-foreground">
+          <Info className="w-3 h-3" /> Analiza składu wroga
         </p>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+          {([
+            { label: "Zagrożenie AP", value: ta.apThreat, color: "hsl(270,70%,55%)" },
+            { label: "Zagrożenie AD", value: ta.adThreat, color: "hsl(30,85%,50%)" },
+            { label: "Tanki", value: ta.tankCount, color: "hsl(200,70%,45%)" },
+            { label: "Squishie", value: ta.squishyCount, color: "hsl(350,70%,55%)" },
+          ] as const).map(({ label, value, color }) => (
+            <div key={label} className="flex flex-col gap-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-muted-foreground">{label}</span>
+                <span className="text-[9px] font-bold" style={{ color }}>{Math.round(value)}/5</span>
+              </div>
+              <ThreatDot value={Math.round(value)} color={color} />
+            </div>
+          ))}
+        </div>
+        {(ta.healingPresence || ta.heavyCC || ta.engageHeavy || ta.assassinCount >= 1 || ta.percentHPThreat || ta.splitPushThreat || ta.shieldPresence) && (
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {ta.healingPresence && <span className="text-[9px] px-2 py-0.5 rounded-full font-bold" style={{ background: "hsl(152,50%,90%)", color: "hsl(152,55%,30%)", border: "1px solid hsl(152,40%,75%)" }}>⚕ Leczenie</span>}
+            {ta.heavyCC && <span className="text-[9px] px-2 py-0.5 rounded-full font-bold" style={{ background: "hsl(220,60%,92%)", color: "hsl(220,70%,40%)", border: "1px solid hsl(220,50%,78%)" }}>❄ Dużo CC</span>}
+            {ta.engageHeavy && <span className="text-[9px] px-2 py-0.5 rounded-full font-bold" style={{ background: "hsl(0,60%,94%)", color: "hsl(0,65%,42%)", border: "1px solid hsl(0,50%,80%)" }}>⚡ Engage</span>}
+            {ta.assassinCount >= 1 && <span className="text-[9px] px-2 py-0.5 rounded-full font-bold" style={{ background: "hsl(340,60%,94%)", color: "hsl(340,65%,40%)", border: "1px solid hsl(340,50%,80%)" }}>🗡 Assassini</span>}
+            {ta.percentHPThreat && <span className="text-[9px] px-2 py-0.5 rounded-full font-bold" style={{ background: "hsl(20,80%,92%)", color: "hsl(20,75%,35%)", border: "1px solid hsl(20,65%,75%)" }}>🩸 % HP dmg</span>}
+            {ta.splitPushThreat && <span className="text-[9px] px-2 py-0.5 rounded-full font-bold" style={{ background: "hsl(120,40%,92%)", color: "hsl(120,50%,30%)", border: "1px solid hsl(120,40%,75%)" }}>🌲 Split push</span>}
+            {ta.shieldPresence && <span className="text-[9px] px-2 py-0.5 rounded-full font-bold" style={{ background: "hsl(55,70%,92%)", color: "hsl(55,70%,30%)", border: "1px solid hsl(55,60%,75%)" }}>🛡 Tarcze</span>}
+          </div>
+        )}
+      </div>
+
+      {/* Reasoning */}
+      <div className="rounded-xl p-4 space-y-1.5" style={{ background: "hsl(220,15%,97%)", border: "1px solid hsl(220,15%,88%)" }}>
+        <p className="text-[9px] uppercase tracking-[0.15em] font-bold mb-2 text-muted-foreground">💡 Uzasadnienie</p>
         {result.reasoning.map((r, i) => (
-          <p key={i} className="text-[10px] text-foreground/75 flex gap-2 leading-relaxed">
-            <ChevronRight className="w-3 h-3 flex-shrink-0 mt-0.5 text-primary/50" />
+          <p key={i} className="text-[10px] text-foreground/70 flex gap-2 leading-relaxed">
+            <span className="flex-shrink-0 mt-0.5 text-primary/40">›</span>
             {r}
           </p>
         ))}
@@ -481,7 +552,6 @@ export default function BuildCalculator() {
   const [lane, setLane] = useState<Lane>("AUTO");
   const [enemies, setEnemies] = useState<(string | null)[]>([null, null, null, null, null]);
   const [result, setResult] = useState<BuildResult | null>(null);
-  const [loading, setLoading] = useState(false);
   const [champLoading, setChampLoading] = useState(true);
 
   useEffect(() => {
@@ -498,24 +568,21 @@ export default function BuildCalculator() {
       .finally(() => setChampLoading(false));
   }, []);
 
+  // Auto-calculate whenever champion, enemies, or lane changes
+  useEffect(() => {
+    if (!myChamp) { setResult(null); return; }
+    const validEnemies = enemies.filter(Boolean) as string[];
+    if (validEnemies.length === 0) { setResult(null); return; }
+    const res = calculateBuild(myChamp, validEnemies, lane);
+    setResult(res);
+  }, [myChamp, enemies, lane]);
+
   const setEnemy = (index: number, id: string) => {
     setEnemies((prev) => {
       const next = [...prev];
       next[index] = id || null;
       return next;
     });
-    setResult(null);
-  };
-
-  const handleCalculate = () => {
-    if (!myChamp) return;
-    setLoading(true);
-    setTimeout(() => {
-      const validEnemies = enemies.filter(Boolean) as string[];
-      const res = calculateBuild(myChamp, validEnemies, lane);
-      setResult(res);
-      setLoading(false);
-    }, 300);
   };
 
   const handleReset = () => {
@@ -527,153 +594,101 @@ export default function BuildCalculator() {
 
   const myProfile = myChamp ? getChampProfile(myChamp) : null;
   const filledEnemies = enemies.filter(Boolean).length;
-  const canCalculate = !!myChamp && filledEnemies >= 1;
 
   return (
     <div className="space-y-4">
       <div className="rounded-xl p-4 space-y-5" style={{ background: "white", border: "1px solid hsl(220,15%,88%)", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
 
+        {/* My champion */}
         <div>
-          <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-3 flex items-center gap-1" style={{ color: "hsl(200,90%,35%)", fontFamily: "'Rajdhani',sans-serif" }}>
-            <Swords className="w-3 h-3" /> Twój Bohater
+          <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-3 flex items-center gap-1"
+            style={{ color: "hsl(200,90%,35%)", fontFamily: "'Rajdhani',sans-serif" }}>
+            <Swords className="w-3 h-3" /> Twój bohater
           </p>
           <div className="flex items-center gap-4">
-            <ChampSlot
-              label="Wybierz bohatera"
-              championId={myChamp}
-              allChampions={allChampions}
-              onSelect={(id) => { setMyChamp(id || null); setResult(null); }}
-            />
-            {myChamp && myProfile && (
-              <motion.div initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }} className="flex flex-col gap-1">
-                <p className="text-sm font-bold text-foreground/90">
-                  {allChampions.find(c => c.id === myChamp)?.name ?? myChamp}
-                </p>
+            <ChampSlot label="Wybierz bohatera" championId={myChamp} allChampions={allChampions}
+              onSelect={(id) => setMyChamp(id || null)} />
+            {myChamp && myProfile ? (
+              <motion.div initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }} className="flex flex-col gap-1.5">
+                <p className="text-sm font-bold text-foreground/90">{allChampions.find(c => c.id === myChamp)?.name ?? myChamp}</p>
                 <div className="flex gap-1.5 flex-wrap">
-                  <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "hsl(200,60%,92%)", color: "hsl(200,80%,35%)", border: "1px solid hsl(200,50%,80%)" }}>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold"
+                    style={{ background: "hsl(200,60%,92%)", color: "hsl(200,80%,35%)", border: "1px solid hsl(200,50%,80%)" }}>
                     {CLASS_LABEL[myProfile.class]}
                   </span>
-                  <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold" style={{
-                    background: myProfile.damageType === "AD" ? "hsl(30,80%,92%)" : myProfile.damageType === "AP" ? "hsl(270,60%,92%)" : "hsl(50,80%,90%)",
-                    color: myProfile.damageType === "AD" ? "hsl(30,80%,38%)" : myProfile.damageType === "AP" ? "hsl(270,60%,40%)" : "hsl(50,80%,35%)",
-                    border: `1px solid ${myProfile.damageType === "AD" ? "hsl(30,70%,78%)" : myProfile.damageType === "AP" ? "hsl(270,50%,78%)" : "hsl(50,70%,75%)"}`,
-                  }}>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold"
+                    style={{ background: myProfile.damageType === "AP" ? "hsl(270,60%,92%)" : myProfile.damageType === "AD" ? "hsl(30,80%,92%)" : "hsl(200,50%,92%)", color: myProfile.damageType === "AP" ? "hsl(270,70%,40%)" : myProfile.damageType === "AD" ? "hsl(30,80%,40%)" : "hsl(200,80%,35%)", border: "1px solid hsl(220,15%,82%)" }}>
                     {myProfile.damageType}
                   </span>
+                  {myProfile.isRanged && (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold"
+                      style={{ background: "hsl(120,40%,92%)", color: "hsl(120,50%,30%)", border: "1px solid hsl(120,35%,78%)" }}>
+                      Zasięgowy
+                    </span>
+                  )}
                 </div>
               </motion.div>
+            ) : !champLoading && (
+              <div className="text-[11px] text-muted-foreground">
+                Wybierz swojego bohatera, aby zobaczyć optymalny build
+              </div>
             )}
           </div>
         </div>
 
+        {/* Lane */}
         <div>
-          <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-2.5 flex items-center gap-1" style={{ color: "hsl(140,50%,35%)", fontFamily: "'Rajdhani',sans-serif" }}>
-            🗺 Twoja Linia
+          <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-2"
+            style={{ color: "hsl(200,90%,35%)", fontFamily: "'Rajdhani',sans-serif" }}>
+            Rola / Linia
           </p>
-          <div className="flex flex-wrap gap-1.5">
-            {LANES.map((l) => {
-              const active = lane === l.id;
-              return (
-                <button
-                  key={l.id}
-                  onClick={() => { setLane(l.id); setResult(null); }}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all"
-                  style={{
-                    background: active ? "linear-gradient(135deg, hsl(140,60%,30%), hsl(160,60%,38%))" : "hsl(220,15%,94%)",
-                    color: active ? "white" : "hsl(220,15%,45%)",
-                    border: active ? "1px solid hsl(140,50%,38%)" : "1px solid hsl(220,15%,85%)",
-                    fontFamily: "'Rajdhani',sans-serif",
-                    letterSpacing: "0.04em",
-                  }}
-                >
-                  <span>{l.icon}</span>
-                  {l.label}
-                </button>
-              );
-            })}
+          <div className="flex gap-1 flex-wrap">
+            {LANES.map((l) => (
+              <button key={l.id} onClick={() => setLane(l.id)}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all"
+                style={{
+                  background: lane === l.id ? "hsl(200,60%,92%)" : "hsl(220,15%,96%)",
+                  color: lane === l.id ? "hsl(200,90%,35%)" : "hsl(220,10%,50%)",
+                  border: `1px solid ${lane === l.id ? "hsl(200,50%,78%)" : "hsl(220,15%,88%)"}`,
+                }}>
+                <span>{l.icon}</span>
+                <span style={{ fontFamily: "'Rajdhani',sans-serif" }}>{l.label}</span>
+              </button>
+            ))}
           </div>
-          {lane !== "AUTO" && myProfile && (
-            <p className="text-[9px] text-muted-foreground mt-1.5">
-              Build będzie dobrany pod <span className="font-bold text-foreground/70">{CLASS_LABEL[(() => {
-                if (lane === "TOP") return myProfile.class === "SUPPORT" ? "TANK" : myProfile.class === "MARKSMAN" ? "FIGHTER" : myProfile.class;
-                if (lane === "JUNGLE") return myProfile.class === "SUPPORT" ? "FIGHTER" : myProfile.class;
-                if (lane === "ADC") return "MARKSMAN";
-                if (lane === "SUPPORT") return "SUPPORT";
-                return myProfile.class;
-              })()]}</span> (linia: {LANES.find(l => l.id === lane)?.label})
+        </div>
+
+        {/* Enemies */}
+        <div>
+          <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-3 flex items-center justify-between"
+            style={{ color: "hsl(200,90%,35%)", fontFamily: "'Rajdhani',sans-serif" }}>
+            <span>Drużyna przeciwnika ({filledEnemies}/5)</span>
+            {(myChamp || filledEnemies > 0) && (
+              <button onClick={handleReset}
+                className="text-[9px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 lowercase font-normal">
+                <X className="w-3 h-3" /> Reset
+              </button>
+            )}
+          </p>
+          <div className="flex gap-2 justify-start flex-wrap">
+            {enemies.map((enemy, i) => (
+              <ChampSlot key={i} label={`Wróg ${i + 1}`} championId={enemy}
+                allChampions={allChampions} onSelect={(id) => setEnemy(i, id)} small />
+            ))}
+          </div>
+          {myChamp && filledEnemies === 0 && (
+            <p className="text-[10px] text-muted-foreground mt-2 italic">
+              Dodaj przynajmniej jednego przeciwnika, aby zobaczyć build
             </p>
           )}
         </div>
-
-        <div>
-          <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-3 flex items-center gap-1" style={{ color: "hsl(0,70%,45%)", fontFamily: "'Rajdhani',sans-serif" }}>
-            ⚡ Drużyna Przeciwnika <span className="text-muted-foreground normal-case tracking-normal font-normal">({filledEnemies}/5)</span>
-          </p>
-          {champLoading ? (
-            <div className="flex gap-2">
-              {Array(5).fill(0).map((_, i) => (
-                <div key={i} className="w-12 h-12 rounded-xl animate-pulse" style={{ background: "hsl(220,15%,92%)" }} />
-              ))}
-            </div>
-          ) : (
-            <div className="flex gap-3 flex-wrap">
-              {enemies.map((e, i) => (
-                <ChampSlot
-                  key={i}
-                  label={`Przeciwnik ${i + 1}`}
-                  championId={e}
-                  allChampions={allChampions}
-                  onSelect={(id) => setEnemy(i, id)}
-                  small
-                />
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="flex gap-2 pt-1">
-          <button
-            onClick={handleCalculate}
-            disabled={!canCalculate || loading}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all"
-            style={{
-              background: canCalculate ? "linear-gradient(135deg, hsl(200,90%,35%), hsl(220,80%,45%))" : "hsl(220,15%,90%)",
-              color: canCalculate ? "white" : "hsl(220,10%,60%)",
-              fontFamily: "'Rajdhani',sans-serif",
-              letterSpacing: "0.05em",
-              fontSize: 13,
-              cursor: canCalculate ? "pointer" : "not-allowed",
-              opacity: loading ? 0.7 : 1,
-            }}
-          >
-            {loading ? (
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <Swords className="w-4 h-4" />
-            )}
-            {loading ? "Analizuję..." : "Oblicz Build"}
-          </button>
-          {(myChamp || filledEnemies > 0 || result) && (
-            <button
-              onClick={handleReset}
-              className="px-3 py-2.5 rounded-xl transition-all hover:bg-muted text-muted-foreground hover:text-foreground"
-              style={{ border: "1px solid hsl(220,15%,88%)" }}
-            >
-              <RotateCcw className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-
-        {!myChamp && !result && (
-          <p className="text-[10px] text-muted-foreground text-center py-1">
-            Wybierz swojego bohatera i co najmniej 1 wroga, aby zobaczyć rekomendacje buildu.
-          </p>
-        )}
       </div>
 
-      <AnimatePresence>
-        {result && myChamp && (
-          <BuildResultPanel result={result} myChampId={myChamp} />
+      {/* Auto-calculated result */}
+      <AnimatePresence mode="wait">
+        {result && (
+          <BuildResultPanel key={`${myChamp}-${enemies.join("-")}-${lane}`}
+            result={result} myChampId={myChamp!} allChampions={allChampions} lane={lane} />
         )}
       </AnimatePresence>
     </div>
