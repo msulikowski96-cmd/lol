@@ -862,130 +862,242 @@ function RankedCard({ entry }: { entry: any }) {
   );
 }
 
+function GradeChip({ grade, score, label }: { grade: string; score?: number; label: string }) {
+  const color = grade === "S" ? "#22c55e" : grade === "A" ? "#3b82f6" : grade === "B" ? "#f59e0b" : grade === "C" ? "#f97316" : "#ef4444";
+  return (
+    <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg" style={{ background: `${color}12`, border: `1px solid ${color}40` }}>
+      <span className="font-black text-base leading-none" style={{ color, fontFamily: "'Barlow Condensed',sans-serif" }}>{grade}</span>
+      <div className="flex flex-col">
+        <span className="text-[9px] font-bold text-foreground/60 uppercase tracking-wide leading-none">{label}</span>
+        {score !== undefined && <span className="text-[10px] font-bold leading-none mt-0.5" style={{ color }}>{score}/100</span>}
+      </div>
+    </div>
+  );
+}
+
+function BenchmarkRow({ stat, playerValue, tierAvg, unit, pctDiff }: { stat: string; playerValue: number; tierAvg: number; unit: string; pctDiff: number }) {
+  const isGood = pctDiff >= 0;
+  const color = isGood ? "#22c55e" : "#ef4444";
+  const barPct = Math.min(Math.abs(pctDiff) / 50, 1) * 100;
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-[10px] text-foreground/60 w-20 flex-shrink-0 leading-tight">{stat}</span>
+      <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "hsl(220,15%,92%)" }}>
+        <div className="h-full rounded-full transition-all" style={{ width: `${barPct}%`, background: color }} />
+      </div>
+      <span className="text-[10px] font-bold tabular-nums flex-shrink-0" style={{ color }}>{isGood ? "+" : ""}{pctDiff}%</span>
+      <span className="text-[9px] text-foreground/45 flex-shrink-0 w-20 text-right">{playerValue}{unit} vs {tierAvg}{unit}</span>
+    </div>
+  );
+}
+
 function ProfileTextSummary({ data, gameName }: { data: any; gameName: string }) {
   if (!data || data.totalGamesAnalyzed === 0) return null;
   const {
     overallScore, overallRating, totalGamesAnalyzed, winRate, playstyleArchetype, playstyleDescription,
-    primaryRole, formTrend, championBreakdown, strengths, weaknesses, rankBenchmarks, predictedTier,
-    lanePhaseStats, deathAnalysis, coachingTips, criticalMistakes, improvementRoadmap, metrics,
-    currentStreak, performanceByGameLength, playstyleRadar, objectiveStats, gameplayPatterns,
-    comebackAnalysis, damageTypeBreakdown,
+    primaryRole, formTrend, championBreakdown, rankBenchmarks, predictedTier,
+    lanePhaseStats, improvementRoadmap, metrics, currentStreak, objectiveStats,
   } = data;
 
-  const ROLE_PL: Record<string, string> = { Top: "topie", Jungler: "junglingu", Mid: "midzie", ADC: "roli ADC", Support: "roli supporta", Nieznana: "wielu pozycjach" };
-  const rolePl = ROLE_PL[primaryRole] ?? "wielu pozycjach";
-
-  const topChamps = (championBreakdown ?? []).slice(0, 3);
-  const champsStr = topChamps.length > 0
-    ? topChamps.map((c: any) => `${c.championName} (${c.gamesPlayed} gier, ${c.winRate}% WR, ${c.kda} KDA)`).join(", ")
-    : "";
-
-  const aboveAvg = (rankBenchmarks ?? []).filter((b: any) => b.pctDiff >= 5);
-  const belowAvg = (rankBenchmarks ?? []).filter((b: any) => b.pctDiff <= -5);
+  const topChamps = (championBreakdown ?? []).slice(0, 4);
+  const allBenchmarks = rankBenchmarks ?? [];
+  const aboveAvg = allBenchmarks.filter((b: any) => b.pctDiff >= 5);
+  const belowAvg = allBenchmarks.filter((b: any) => b.pctDiff <= -5);
 
   const kdaMetric = metrics?.find((m: any) => m.name === "KDA");
   const csMetric = metrics?.find((m: any) => m.name === "Efektywność CS");
   const visionMetric = metrics?.find((m: any) => m.name === "Kontrola wizji");
   const dmgMetric = metrics?.find((m: any) => m.name === "Obrażenia");
-  const survMetric = metrics?.find((m: any) => m.name === "Przeżywalność");
   const kpMetric = metrics?.find((m: any) => m.name === "Uczestnictwo w zabójstwach");
 
-  const paragraphs: string[] = [];
+  const RATING_COLOR: Record<string, string> = {
+    "S+": "#d97706", S: "#d97706", "A+": "#22c55e", A: "#22c55e",
+    "B+": "#3b82f6", B: "#3b82f6", "C+": "#f97316", C: "#f97316", D: "#ef4444",
+  };
+  const ratingColor = RATING_COLOR[overallRating] ?? "#3b82f6";
 
-  paragraphs.push(
-    `${gameName} to gracz o archetypie "${playstyleArchetype}", specjalizujący się na ${rolePl} z oceną ogólną ${overallRating} (${overallScore}/100 punktów). ` +
-    `Na podstawie ostatnich ${totalGamesAnalyzed} meczy rankingowych, gracz osiąga ${winRate}% win rate` +
-    (currentStreak ? ` i jest aktualnie na serii ${currentStreak.count} ${currentStreak.type === "win" ? "wygranych" : "przegranych"}` : "") +
-    `. ${playstyleDescription}`
-  );
-
-  if (champsStr) {
-    let champParagraph = `Najczęściej grane postacie to: ${champsStr}. `;
-    if (topChamps[0]?.winRate >= 55) {
-      champParagraph += `Szczególnie wyróżnia się na ${topChamps[0].championName} z ${topChamps[0].winRate}% win rate i ${topChamps[0].kda} KDA. `;
-    }
-    champParagraph += `Pula bohaterów jest ${topChamps.length <= 3 ? "skoncentrowana" : "zróżnicowana"}, co ${topChamps.length <= 3 ? "pozwala na głębokie opanowanie wybranych postaci i przewidywalność w drafcie" : "daje elastyczność w drafcie, ale utrudnia pełne opanowanie każdej postaci"}. `;
-    if (topChamps.length >= 2) {
-      const bestChamp = [...topChamps].sort((a: any, b: any) => b.kda - a.kda)[0];
-      const worstChamp = [...topChamps].sort((a: any, b: any) => a.kda - b.kda)[0];
-      if (bestChamp && worstChamp && bestChamp.championName !== worstChamp.championName) {
-        champParagraph += `Najlepszą wydajność osiąga na ${bestChamp.championName} (${bestChamp.kda} KDA), natomiast na ${worstChamp.championName} wyniki są słabsze (${worstChamp.kda} KDA).`;
-      }
-    }
-    paragraphs.push(champParagraph);
-  }
-
-  let metricsParagraph = "";
-  if (kdaMetric) metricsParagraph += `${kdaMetric.description}. `;
-  if (csMetric) metricsParagraph += `${csMetric.description}. `;
-  if (dmgMetric) metricsParagraph += `${dmgMetric.description}. `;
-  if (kpMetric) metricsParagraph += `${kpMetric.description}. `;
-  if (visionMetric) metricsParagraph += `${visionMetric.description}. `;
-  if (survMetric) metricsParagraph += `${survMetric.description}. `;
-  if (metricsParagraph) paragraphs.push(metricsParagraph.trim());
-
-  if (aboveAvg.length > 0 || belowAvg.length > 0) {
-    const tierLabel = predictedTier?.tier ? predictedTier.tier : "";
-    let benchParagraph = "";
-    if (aboveAvg.length > 0) {
-      benchParagraph += `W porównaniu ze średnią dla rangi${tierLabel ? ` ${tierLabel}` : ""}, gracz wyróżnia się w: ${aboveAvg.map((b: any) => `${b.stat} (${b.playerValue}${b.unit} vs ${b.tierAvg}${b.unit}, +${b.pctDiff}%)`).join(", ")}. `;
-    }
-    if (belowAvg.length > 0) {
-      benchParagraph += `Obszary poniżej średniej rangi: ${belowAvg.map((b: any) => `${b.stat} (${b.playerValue}${b.unit} vs ${b.tierAvg}${b.unit}, ${b.pctDiff}%)`).join(", ")}. `;
-    }
-    if (predictedTier?.description) {
-      benchParagraph += predictedTier.description;
-    }
-    paragraphs.push(benchParagraph);
-  }
-
-  if (formTrend?.trendDescription) {
-    let formParagraph = `Aktualna forma: ${formTrend.trendDescription}. `;
-    if (formTrend.recentWinRate !== undefined && formTrend.overallWinRate !== undefined) {
-      formParagraph += `Win rate w ostatnich ${formTrend.recentGames ?? 7} meczach: ${formTrend.recentWinRate}% (ogólnie: ${formTrend.overallWinRate}%). `;
-    }
-    if (formTrend.recentKda !== undefined && formTrend.overallKda !== undefined) {
-      formParagraph += `KDA w ostatnich meczach: ${formTrend.recentKda} (ogólnie: ${formTrend.overallKda}).`;
-    }
-    paragraphs.push(formParagraph);
-  }
-
-  if (lanePhaseStats && lanePhaseStats.earlyPressureScore > 0) {
-    paragraphs.push(
-      `Faza liniowa: ocena ${lanePhaseStats.grade} (${lanePhaseStats.earlyPressureScore}/100 presji). ` +
-      `First blood w ${lanePhaseStats.firstBloodRate?.toFixed(0) ?? 0}% meczy, średnio ${lanePhaseStats.avgEarlyKills?.toFixed(1) ?? 0} zabójstw i ${lanePhaseStats.avgCsAdvantage?.toFixed(0) ?? 0} CS przewagi nad oponentem na linii. ` +
-      `${lanePhaseStats.description}`
-    );
-  }
-
-  if (objectiveStats && objectiveStats.objectiveControlScore > 0) {
-    paragraphs.push(
-      `Kontrola obiektywów: ocena ${objectiveStats.grade} (${objectiveStats.objectiveControlScore}/100). ` +
-      `Średnio ${objectiveStats.avgDragonKills?.toFixed(1) ?? 0} smoków, ${objectiveStats.avgTurretKills?.toFixed(1) ?? 0} wież i ${objectiveStats.avgInhibitorKills?.toFixed(1) ?? 0} inhibitorów na mecz. ` +
-      `${objectiveStats.description}`
-    );
-  }
+  const formIsHot = formTrend?.recentWinRate != null && formTrend.recentWinRate > (formTrend.overallWinRate ?? 50);
+  const formColor = formIsHot ? "#22c55e" : "#ef4444";
 
   const topPriority = (improvementRoadmap ?? [])[0];
   const secondPriority = (improvementRoadmap ?? [])[1];
-  if (topPriority) {
-    let priorityParagraph = `Najważniejszy obszar rozwoju to ${topPriority.area}: aktualnie ${topPriority.currentValue}, cel to ${topPriority.targetValue} (szacowany zysk ~${topPriority.estimatedLpGain} LP). ${topPriority.tip}`;
-    if (secondPriority) {
-      priorityParagraph += ` Drugi priorytet: ${secondPriority.area} — z ${secondPriority.currentValue} do ${secondPriority.targetValue} (+~${secondPriority.estimatedLpGain} LP).`;
-    }
-    paragraphs.push(priorityParagraph);
-  }
+
+  const ROLE_PL: Record<string, string> = { Top: "top", Jungler: "jungle", Mid: "mid", ADC: "ADC", Support: "support", Nieznana: "?" };
 
   return (
-    <article className="glass-panel p-5 mb-4">
-      <h2 className="section-title mb-3">
+    <article className="glass-panel p-4 mb-4 space-y-4">
+      <h2 className="section-title">
         <BookOpen className="w-3.5 h-3.5 text-primary" /> Profil gracza — podsumowanie
       </h2>
-      <div className="space-y-3">
-        {paragraphs.map((p, i) => (
-          <p key={i} className="text-xs text-foreground/80 leading-relaxed">{p}</p>
-        ))}
+
+      {/* Hero row: rating + archetype + key chips */}
+      <div className="flex items-start gap-3 flex-wrap">
+        <div className="flex-shrink-0 text-center px-3 py-2 rounded-xl" style={{ background: `${ratingColor}15`, border: `1px solid ${ratingColor}40` }}>
+          <div className="font-black leading-none" style={{ fontSize: 36, color: ratingColor, fontFamily: "'Barlow Condensed',sans-serif" }}>{overallRating ?? "?"}</div>
+          <div className="text-[9px] font-bold text-foreground/50 uppercase tracking-wider mt-0.5">{overallScore}/100</div>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
+            {playstyleArchetype && (
+              <span className="text-[11px] font-black px-2 py-0.5 rounded-full"
+                style={{ background: "linear-gradient(135deg,hsl(220,60%,15%),hsl(220,50%,28%))", color: "#C89B3C", fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: "0.03em" }}>
+                {playstyleArchetype}
+              </span>
+            )}
+            {primaryRole && primaryRole !== "Nieznana" && (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "hsl(200,60%,92%)", color: "hsl(200,80%,32%)" }}>
+                {ROLE_EMOJI[primaryRole]} {ROLE_PL[primaryRole] ?? primaryRole}
+              </span>
+            )}
+            {currentStreak && currentStreak.count >= 2 && (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1"
+                style={{ background: currentStreak.type === "win" ? "#dcfce7" : "#fee2e2", color: currentStreak.type === "win" ? "#16a34a" : "#dc2626" }}>
+                {currentStreak.type === "win" ? <Flame className="w-2.5 h-2.5" /> : <Snowflake className="w-2.5 h-2.5" />}
+                {currentStreak.count} {currentStreak.type === "win" ? "wygranych" : "przegranych"} z rzędu
+              </span>
+            )}
+          </div>
+          <p className="text-[11px] text-foreground/70 leading-relaxed">{playstyleDescription}</p>
+        </div>
+        <div className="flex gap-2 flex-wrap flex-shrink-0">
+          <div className="text-center px-2.5 py-1.5 rounded-lg" style={{ background: "hsl(220,15%,97%)", border: "1px solid hsl(220,15%,88%)" }}>
+            <div className="text-sm font-black" style={{ color: winRate >= 55 ? "#22c55e" : winRate >= 50 ? "#3b82f6" : "#ef4444", fontFamily: "'Barlow Condensed',sans-serif" }}>{winRate}%</div>
+            <div className="text-[8px] text-foreground/45 uppercase tracking-wide font-bold">WR</div>
+          </div>
+          <div className="text-center px-2.5 py-1.5 rounded-lg" style={{ background: "hsl(220,15%,97%)", border: "1px solid hsl(220,15%,88%)" }}>
+            <div className="text-sm font-black text-foreground/80" style={{ fontFamily: "'Barlow Condensed',sans-serif" }}>{totalGamesAnalyzed}</div>
+            <div className="text-[8px] text-foreground/45 uppercase tracking-wide font-bold">meczy</div>
+          </div>
+        </div>
       </div>
+
+      {/* Champion pool */}
+      {topChamps.length > 0 && (
+        <div>
+          <div className="flex items-center gap-1.5 mb-2">
+            <Swords className="w-3 h-3 text-primary/70" />
+            <span className="text-[9px] font-bold text-foreground/50 uppercase tracking-wider">Pool</span>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {topChamps.map((c: any, i: number) => {
+              const wrColor = c.winRate >= 55 ? "#22c55e" : c.winRate >= 50 ? "#3b82f6" : "#f97316";
+              return (
+                <div key={i} className="flex items-center gap-2 px-2 py-1.5 rounded-lg" style={{ background: "hsl(220,15%,97%)", border: "1px solid hsl(220,15%,88%)" }}>
+                  <img src={`${getDDBase()}/champion/${c.championName}.png`} alt={c.championName}
+                    className="w-7 h-7 rounded-md object-cover flex-shrink-0"
+                    onError={(e) => { e.currentTarget.src = FALLBACK_ICON; }} />
+                  <div>
+                    <div className="text-[10px] font-bold text-foreground/85 leading-none">{c.championName}</div>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="text-[9px] font-bold" style={{ color: wrColor }}>{c.winRate}% WR</span>
+                      <span className="text-[8px] text-foreground/40">{c.gamesPlayed}g</span>
+                      <span className="text-[8px] text-foreground/40">{c.kda} KDA</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Key metrics chips */}
+      {(kdaMetric || csMetric || dmgMetric || kpMetric || visionMetric) && (
+        <div>
+          <div className="flex items-center gap-1.5 mb-2">
+            <BarChart3 className="w-3 h-3 text-primary/70" />
+            <span className="text-[9px] font-bold text-foreground/50 uppercase tracking-wider">Kluczowe wskaźniki</span>
+          </div>
+          <div className="flex gap-1.5 flex-wrap">
+            {[kdaMetric, csMetric, dmgMetric, kpMetric, visionMetric].filter(Boolean).map((m: any, i: number) => {
+              const isGood = m.grade === "S" || m.grade === "A";
+              const isBad = m.grade === "C" || m.grade === "D";
+              return (
+                <div key={i} className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px]"
+                  style={{ background: isGood ? "#dcfce7" : isBad ? "#fee2e2" : "hsl(220,15%,96%)", border: `1px solid ${isGood ? "#86efac" : isBad ? "#fca5a5" : "hsl(220,15%,88%)"}` }}>
+                  <span className="font-black text-[9px]" style={{ color: isGood ? "#16a34a" : isBad ? "#dc2626" : "#3b82f6", fontFamily: "'Barlow Condensed',sans-serif" }}>{m.grade}</span>
+                  <span className="text-foreground/70 font-medium">{m.name}</span>
+                  {m.value != null && <span className="font-bold text-foreground/90">{m.value}</span>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Benchmark vs rank avg */}
+      {allBenchmarks.length > 0 && (
+        <div>
+          <div className="flex items-center gap-1.5 mb-2">
+            <Trophy className="w-3 h-3 text-primary/70" />
+            <span className="text-[9px] font-bold text-foreground/50 uppercase tracking-wider">
+              vs. Średnia rangi{predictedTier?.tier ? ` ${predictedTier.tier}` : ""}
+            </span>
+          </div>
+          <div className="space-y-1.5">
+            {[...aboveAvg.slice(0, 3), ...belowAvg.slice(0, 3)].map((b: any, i: number) => (
+              <BenchmarkRow key={i} stat={b.stat} playerValue={b.playerValue} tierAvg={b.tierAvg} unit={b.unit ?? ""} pctDiff={b.pctDiff} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Form + Lane + Objectives row */}
+      <div className="flex gap-2 flex-wrap">
+        {formTrend?.trendDescription && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg flex-1 min-w-[140px]" style={{ background: `${formColor}10`, border: `1px solid ${formColor}35` }}>
+            <Activity className="w-3.5 h-3.5 flex-shrink-0" style={{ color: formColor }} />
+            <div className="min-w-0">
+              <div className="text-[9px] font-bold uppercase tracking-wide text-foreground/50">Forma</div>
+              <div className="text-[10px] font-bold leading-tight truncate" style={{ color: formColor }}>{formTrend.trendDescription}</div>
+              {formTrend.recentWinRate != null && (
+                <div className="text-[9px] text-foreground/50">{formTrend.recentWinRate}% WR (ost. {formTrend.recentGames ?? 7} meczy)</div>
+              )}
+            </div>
+          </div>
+        )}
+        {lanePhaseStats?.grade && (
+          <GradeChip grade={lanePhaseStats.grade} score={lanePhaseStats.earlyPressureScore} label="Laning" />
+        )}
+        {objectiveStats?.grade && (
+          <GradeChip grade={objectiveStats.grade} score={objectiveStats.objectiveControlScore} label="Oboektywu" />
+        )}
+      </div>
+
+      {/* Lane phase quick stats */}
+      {lanePhaseStats?.earlyPressureScore > 0 && (
+        <div className="flex gap-3 flex-wrap text-[10px] text-foreground/65">
+          <span className="flex items-center gap-1"><Crosshair className="w-3 h-3 text-primary/50" /> First blood: <b className="text-foreground/80">{lanePhaseStats.firstBloodRate?.toFixed(0) ?? 0}%</b></span>
+          <span className="flex items-center gap-1"><Swords className="w-3 h-3 text-primary/50" /> Solo kills/mecz: <b className="text-foreground/80">{lanePhaseStats.avgEarlyKills?.toFixed(1) ?? 0}</b></span>
+          <span className="flex items-center gap-1"><BarChart3 className="w-3 h-3 text-primary/50" /> CS przewaga: <b className="text-foreground/80">{lanePhaseStats.avgCsAdvantage?.toFixed(0) ?? 0}</b></span>
+        </div>
+      )}
+
+      {/* Improvement roadmap */}
+      {topPriority && (
+        <div>
+          <div className="flex items-center gap-1.5 mb-2">
+            <ArrowUpRight className="w-3 h-3 text-primary/70" />
+            <span className="text-[9px] font-bold text-foreground/50 uppercase tracking-wider">Priorytety rozwoju</span>
+          </div>
+          <div className="space-y-1.5">
+            {[topPriority, secondPriority].filter(Boolean).map((p: any, i: number) => (
+              <div key={i} className="flex items-start gap-2.5 px-3 py-2 rounded-lg" style={{ background: i === 0 ? "hsl(350,50%,97%)" : "hsl(220,15%,97%)", border: `1px solid ${i === 0 ? "hsl(350,55%,85%)" : "hsl(220,15%,88%)"}` }}>
+                <div className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 text-[9px] font-black mt-0.5"
+                  style={{ background: i === 0 ? "hsl(350,65%,48%)" : "hsl(220,15%,70%)", color: "white" }}>{i + 1}</div>
+                <div className="min-w-0">
+                  <div className="text-[10px] font-bold text-foreground/85">{p.area}</div>
+                  <div className="text-[9px] text-foreground/55 leading-snug mt-0.5">
+                    {p.currentValue} → {p.targetValue}
+                    {p.estimatedLpGain > 0 && <span className="ml-1.5 font-bold text-green-600">+~{p.estimatedLpGain} LP</span>}
+                  </div>
+                  {p.tip && <div className="text-[9px] text-foreground/55 leading-snug mt-0.5 italic">{p.tip}</div>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </article>
   );
 }
