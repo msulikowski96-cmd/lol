@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, ChevronRight, BarChart3, Zap, Shield, Users, Clock, X, Activity, Heart } from "lucide-react";
@@ -109,10 +109,18 @@ export default function Home() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [focused, setFocused] = useState(false);
+  const prefetchedRef = useRef(false);
 
   useEffect(() => {
     setHistory(loadHistory());
     setFavorites(getFavorites());
+  }, []);
+
+  const prefetchProfile = useCallback(() => {
+    if (!prefetchedRef.current) {
+      prefetchedRef.current = true;
+      import("@/pages/profile");
+    }
   }, []);
 
   const handleSearch = (e: React.FormEvent) => {
@@ -220,7 +228,7 @@ export default function Home() {
                 placeholder="Nazwa gracza"
                 value={gameName}
                 onChange={(e) => setGameName(e.target.value)}
-                onFocus={() => setFocused(true)}
+                onFocus={() => { setFocused(true); prefetchProfile(); }}
                 onBlur={() => setFocused(false)}
                 className="flex-1 bg-transparent border-none text-foreground placeholder:text-muted-foreground/50 focus:ring-0 outline-none py-3 px-2 text-base min-w-0"
                 required

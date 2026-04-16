@@ -32,7 +32,10 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use("/api", generalLimit, router);
+app.use("/api", generalLimit, (_req, res, next) => {
+  res.set("Cache-Control", "public, max-age=60, stale-while-revalidate=120");
+  next();
+}, router);
 
 if (process.env.NODE_ENV === "production") {
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
