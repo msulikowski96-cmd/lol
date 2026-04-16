@@ -313,27 +313,25 @@ router.get("/:puuid/live", async (req, res) => {
   const champById = getChampionMap();
 
   try {
-    const liveByPuuidUrl = `https://${regionLower}.api.riotgames.com/lol/spectator/v5/active-games/by-puuid/${puuid}`;
-    let liveRes = await fetch(liveByPuuidUrl, { headers: { "X-Riot-Token": RIOT_API_KEY } });
+    // Riot Spectator-V5: endpoint nazywa się "by-summoner" ale przyjmuje PUUID
+    // Endpoint "by-puuid" w v5 NIE istnieje — używamy tylko by-summoner z PUUID
+    const liveUrl = `https://${regionLower}.api.riotgames.com/lol/spectator/v5/active-games/by-summoner/${puuid}`;
+    const liveRes = await fetch(liveUrl, { headers: { "X-Riot-Token": RIOT_API_KEY } });
 
-    if (!liveRes.ok && liveRes.status !== 404) {
-      let sId = summonerId;
-      if (!sId) {
-        const summonerUrl = `https://${regionLower}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${puuid}`;
-        const summonerRes = await fetch(summonerUrl, { headers: { "X-Riot-Token": RIOT_API_KEY } });
-        if (summonerRes.ok) {
-          const summoner = (await summonerRes.json()) as { id: string };
-          sId = summoner.id;
-        }
-      }
-      if (sId) {
-        const liveByIdUrl = `https://${regionLower}.api.riotgames.com/lol/spectator/v5/active-games/by-summoner/${sId}`;
-        liveRes = await fetch(liveByIdUrl, { headers: { "X-Riot-Token": RIOT_API_KEY } });
-      }
+    if (liveRes.status === 404) {
+      res.status(404).json({ error: "not_in_game", message: "Gracz nie jest teraz w meczu" });
+      return;
     }
 
     if (!liveRes.ok) {
-      res.status(404).json({ error: "not_in_game", message: "Gracz nie jest teraz w meczu" });
+      const bodyText = await liveRes.text().catch(() => "");
+      console.error("[live] Riot API error", liveRes.status, bodyText.slice(0, 200));
+      res.status(liveRes.status === 403 ? 403 : 502).json({
+        error: liveRes.status === 403 ? "riot_key_invalid" : "riot_api_error",
+        message: liveRes.status === 403
+          ? "Klucz Riot API wygasł lub jest nieprawidłowy"
+          : `Riot API zwrócił błąd ${liveRes.status}`,
+      });
       return;
     }
 
