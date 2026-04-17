@@ -16,21 +16,45 @@ interface ChampEntry {
   name: string;
 }
 
-const ITEM_GOLD: Record<number, number> = {
+// Fallback hardcoded gold costs — overwritten once DDragon data loads
+const ITEM_GOLD_FALLBACK: Record<number, number> = {
   3006: 900, 3047: 1100, 3111: 1100, 3158: 950, 3020: 900, 3009: 900,
   3031: 3400, 3085: 2600, 3046: 2900, 3095: 3000, 3094: 2500, 3036: 3000,
   6672: 3200, 3026: 2800, 3139: 2600, 3156: 2500, 3033: 2700,
   6653: 3000, 3135: 3000, 3089: 3600, 4645: 3000, 3285: 3000,
-  3157: 2600, 3102: 2600, 3165: 2000,
+  3157: 2600, 3102: 2600, 3165: 2000, 3123: 2500, 3076: 1000,
   3071: 3100, 3053: 2800, 6632: 2900, 3748: 3400, 6333: 3300,
   3068: 2800, 3083: 3000, 3143: 2900, 4401: 2500, 3742: 2700,
   6617: 2800, 2065: 2300, 3190: 2300, 3504: 2300, 6656: 2600,
-  3152: 2800, 3146: 2600,
+  3152: 2800, 3146: 2600, 3065: 2900, 3075: 2700, 3181: 2700,
+  3193: 3200, 3001: 2500, 3110: 2700, 6693: 2800, 6694: 3100,
+  3100: 3000, 3115: 3000, 4637: 3000, 3153: 3300, 3078: 3300,
+  3222: 2300, 3107: 2100, 3109: 2400, 3050: 2200, 4010: 2300,
   3142: 2900, 3147: 3100, 6691: 3200, 3814: 2900, 4005: 2800,
 };
 
+// Module-level cache filled from DDragon on first load
+let _ddGoldCache: Record<number, number> = {};
+let _ddGoldFetched = false;
+
+async function fetchDDragonGold(version: string): Promise<void> {
+  if (_ddGoldFetched) return;
+  _ddGoldFetched = true;
+  try {
+    const r = await fetch(`https://ddragon.leagueoflegends.com/cdn/${version}/data/en_US/item.json`);
+    const data = await r.json() as { data: Record<string, { gold: { total: number } }> };
+    const map: Record<number, number> = {};
+    for (const [id, item] of Object.entries(data.data)) {
+      if (item.gold?.total) map[Number(id)] = item.gold.total;
+    }
+    _ddGoldCache = map;
+  } catch {
+    // silently fall back to hardcoded values
+  }
+}
+
 function getGold(id: number): number {
-  return ITEM_GOLD[id] ?? 2800;
+  return _ddGoldCache[id] ?? ITEM_GOLD_FALLBACK[id] ?? 2800;
 }
 
 function formatGold(g: number): string {
@@ -556,6 +580,8 @@ export default function BuildCalculator() {
 
   useEffect(() => {
     const version = getDDVersion();
+    // Fetch champion list and item gold data in parallel
+    fetchDDragonGold(version);
     fetch(`https://ddragon.leagueoflegends.com/cdn/${version}/data/en_US/champion.json`)
       .then((r) => r.json())
       .then((data) => {

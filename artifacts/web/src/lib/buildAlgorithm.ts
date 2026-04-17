@@ -267,6 +267,11 @@ export function getChampProfile(championId: string): ChampProfile {
   return { class: "FIGHTER", damageType: "HYBRID" };
 }
 
+// Champions with suppression abilities (QSS is the only counter)
+export const SUPPRESSION_CHAMPS = new Set([
+  "Malzahar", "Warwick", "Skarner", "Urgot", "Mordekaiser",
+]);
+
 // Champions dealing % of current/max HP as damage
 const PERCENT_HP_CHAMPS = new Set([
   "Vayne", "Fiora", "KogMaw", "Chogath", "Garen", "Darius", "Viego",
@@ -299,6 +304,7 @@ interface TeamAnalysis {
   engageHeavy: boolean;     // 2+ champions with engage tag
   percentHPThreat: boolean; // Vayne, Fiora, Kog'Maw, etc.
   splitPushThreat: boolean; // split-push heavy enemy
+  suppressionPresence: boolean; // Malzahar, Warwick, Skarner, Urgot — only QSS removes
 }
 
 function analyzeEnemyTeam(enemies: string[]): TeamAnalysis {
@@ -306,7 +312,7 @@ function analyzeEnemyTeam(enemies: string[]): TeamAnalysis {
   let assassinCount = 0, pokeCount = 0, diverCount = 0;
   let healingPresence = false, shieldPresence = false;
   let ccCount = 0, engageCount = 0;
-  let percentHPThreat = false, splitPushThreat = false;
+  let percentHPThreat = false, splitPushThreat = false, suppressionPresence = false;
 
   for (const e of enemies) {
     if (!e) continue;
@@ -330,6 +336,7 @@ function analyzeEnemyTeam(enemies: string[]): TeamAnalysis {
     if (SHIELD_CHAMPS.has(e)) shieldPresence = true;
     if (PERCENT_HP_CHAMPS.has(e)) percentHPThreat = true;
     if (SPLIT_PUSH_CHAMPS.has(e)) splitPushThreat = true;
+    if (SUPPRESSION_CHAMPS.has(e)) suppressionPresence = true;
     if (p.tags?.includes("cc")) ccCount++;
     if (p.tags?.includes("engage")) engageCount++;
 
@@ -351,6 +358,7 @@ function analyzeEnemyTeam(enemies: string[]): TeamAnalysis {
     engageHeavy: engageCount >= 2,
     percentHPThreat,
     splitPushThreat,
+    suppressionPresence,
   };
 }
 
@@ -401,7 +409,10 @@ function buildMarksman(ta: TeamAnalysis, profile: ChampProfile): Omit<BuildResul
     situational.push({ id: 3156, name: "Paszcza Malmortusa", reason: "Tarcza vs AP burst — ratuje przed oneshot assassina AP" });
     reasoning.push("AP/assassin zagrożenie — Paszcza Malmortusa blokuje burst.");
   }
-  if (ta.heavyCC || ta.engageHeavy) {
+  if (ta.suppressionPresence) {
+    situational.push({ id: 3139, name: "Scimitar Merkurego", reason: "JEDYNA możliwość wyjścia z supresji (Malzahar/Warwick/Skarner) — kup zaraz po bucie" });
+    reasoning.push("Supresja na składzie wroga — Scimitar Merkurego to jedyna opcja, Flash nie pomoże.");
+  } else if (ta.heavyCC || ta.engageHeavy) {
     situational.push({ id: 3139, name: "Scimitar Merkurego", reason: "Aktywne usuwanie CC — kluczowe gdy wróg cię zamrozi" });
     reasoning.push("Dużo CC — Scimitar aktywnie usuwa stany.");
   }
@@ -477,6 +488,10 @@ function buildMage(ta: TeamAnalysis, profile: ChampProfile): Omit<BuildResult, "
   }
 
   // SITUACYJNE
+  if (ta.suppressionPresence) {
+    situational.push({ id: 3139, name: "Scimitar Merkurego", reason: "Jedyna ucieczka z supresji (Malzahar/Warwick/Skarner) — priorytet nad wszystkim" });
+    reasoning.push("Supresja w składzie wroga — Scimitar to jedyna opcja, Zhonya nie pomoże.");
+  }
   if (ta.assassinCount >= 1 || ta.adThreat >= 3) {
     situational.push({ id: 3157, name: "Klepsydra Zhonya", reason: "Aktywna nietykalność — ratuje przed assassinem/AD" });
     reasoning.push("Assassin/AD — Klepsydra Zhonya jest absolutnie konieczna.");
@@ -559,6 +574,10 @@ function buildAssassin(ta: TeamAnalysis, profile: ChampProfile): Omit<BuildResul
   }
 
   // SITUACYJNE
+  if (ta.suppressionPresence) {
+    situational.push({ id: 3139, name: "Scimitar Merkurego", reason: "Jedyna ucieczka z supresji przed wskoczeniem na cel — priorytet" });
+    reasoning.push("Supresja — Scimitar pozwala wyjść z supresji i kontynuować burst.");
+  }
   if (ta.tankCount >= 2 && isAP) {
     situational.push({ id: 3135, name: "Laska Próżni", reason: "40% MagPen — niezbędna gdy tanki zbierają MR" });
     reasoning.push("Tanki z MR — Laska Próżni obowiązkowa.");
@@ -648,14 +667,19 @@ function buildFighter(ta: TeamAnalysis, profile: ChampProfile): Omit<BuildResult
   }
 
   // SITUACYJNE
+  if (ta.suppressionPresence) {
+    situational.push({ id: 3139, name: "Scimitar Merkurego", reason: "JEDYNA ucieczka z supresji (Malzahar/Warwick/Skarner) — kup zaraz po bucie" });
+    reasoning.push("Supresja w składzie wroga — Scimitar Merkurego to jedyna możliwość wyjścia z supresji.");
+  }
   if (ta.apThreat >= 2) {
     situational.push({ id: 4401, name: "Siła Natury", reason: "Ogromny MR wzrost w walce — priorytet vs AP" });
     situational.push({ id: 3065, name: "Wisiorek Ducha", reason: "MR + wzmacnia leczenie/tarcze" });
     reasoning.push("AP zagrożenie — Siła Natury lub Wisiorek Ducha dla MR.");
   }
   if (ta.healingPresence && !isAP) {
-    situational.push({ id: 3076, name: "Kolec Brambletu", reason: "Antyheal przez AA — kup wcześnie vs heal comp" });
-    reasoning.push("Leczenie u wrogów — Kolec Brambletu redukuje je przez ataki AA.");
+    situational.push({ id: 3123, name: "Miecz Chempunka", reason: "Grievous Wounds 60% na trafieniu — blokuje leczenie Aatrox/Sylas/itp" });
+    situational.push({ id: 3076, name: "Kolec Brambletu", reason: "Antyheal przez AA — tańsza opcja vs heal comp" });
+    reasoning.push("Leczenie u wrogów — Miecz Chempunka (full item) lub Kolec Brambletu (wczesna rush).");
   }
   if (ta.percentHPThreat) {
     situational.push({ id: 3143, name: "Omen Randuina", reason: "Spowalnia AS + active — vs % HP damage (Vayne, Fiora)" });
