@@ -7,11 +7,11 @@ import { Scene4 } from './video_scenes/Scene4';
 import { Scene5 } from './video_scenes/Scene5';
 
 const SCENE_DURATIONS = {
-  home: 4000,
-  profile: 4500,
-  ai_analysis: 4500,
-  live_game: 4000,
-  build_calculator: 5000,
+  home: 6000,
+  profile: 7000,
+  ai_analysis: 7000,
+  live_game: 7000,
+  build_calculator: 8000,
 };
 
 export default function VideoTemplate() {
