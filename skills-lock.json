@@ -1,6 +1,11 @@
 {
   "version": 1,
   "skills": {
+    "app-store-screenshots": {
+      "source": "skill-zero/s",
+      "sourceType": "github",
+      "computedHash": "073a3f0c6cb31a2205fdf2b9a69f3044ea7b739b0d102c011dd004d08f4218b4"
+    },
     "audit-website": {
       "source": "squirrelscan/skills",
       "sourceType": "github",
@@ -20,6 +25,11 @@
       "source": "antfu/skills",
       "sourceType": "github",
       "computedHash": "318f9fca2441a3e06fedc336e195dd18be5dbe901064e4fa71b76b40b096ab3a"
+    },
+    "remotion-best-practices": {
+      "source": "remotion-dev/skills",
+      "sourceType": "github",
+      "computedHash": "df654933e451556147e384078c3fbdbac997cb0fe4d2f2db7642000c239304c5"
     },
     "seo-audit": {
       "source": "coreyhaines31/marketingskills",

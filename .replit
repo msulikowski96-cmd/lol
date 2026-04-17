@@ -9,6 +9,10 @@ localPort = 8081
 externalPort = 80
 
 [[ports]]
+localPort = 20250
+externalPort = 3002
+
+[[ports]]
 localPort = 22333
 externalPort = 3000
 
@@ -20,7 +24,7 @@ externalPort = 3001
 expertMode = true
 
 [workflows]
-runButton = "run"
+runButton = "Project"
 
 [[workflows.workflow]]
 name = "artifacts/web: web"
