@@ -3,7 +3,7 @@ import { getConsent } from "./CookieConsent";
 
 interface AdBannerProps {
   slot: string;
-  format?: "auto" | "horizontal" | "rectangle" | "vertical";
+  format?: "auto" | "autorelaxed" | "horizontal" | "rectangle" | "vertical";
   className?: string;
   style?: React.CSSProperties;
 }

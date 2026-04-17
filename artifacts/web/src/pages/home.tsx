@@ -413,7 +413,7 @@ export default function Home() {
           ))}
         </motion.div>
 
-        <AdBanner slot="1234567890" format="horizontal" className="w-full mt-10 mb-4" />
+        <AdBanner slot="2167950293" format="auto" className="w-full mt-10 mb-4" />
 
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -467,7 +467,7 @@ export default function Home() {
           </div>
         </motion.section>
 
-        <AdBanner slot="3456789012" format="rectangle" className="w-full mt-6 mb-4" />
+        <AdBanner slot="7172864968" format="autorelaxed" className="w-full mt-6 mb-4" />
 
         <motion.div
           initial={{ opacity: 0 }}

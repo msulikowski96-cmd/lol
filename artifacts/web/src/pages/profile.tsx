@@ -2501,7 +2501,7 @@ export default function Profile() {
                   )}
                 </div>
               )}
-              <AdBanner slot="2345678901" format="rectangle" className="mt-6" />
+              <AdBanner slot="2167950293" format="auto" className="mt-6" />
             </div>
 
             {/* Build Calculator — osobna zakładka */}

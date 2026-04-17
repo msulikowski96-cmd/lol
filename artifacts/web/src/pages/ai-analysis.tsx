@@ -1036,7 +1036,7 @@ function AiAnalysisInner() {
             </button>
           </div>
         )}
-        <AdBanner slot="4567890123" format="horizontal" className="mt-8 mb-4" />
+        <AdBanner slot="7172864968" format="autorelaxed" className="mt-8 mb-4" />
       </div>
     </div>
   );
