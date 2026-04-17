@@ -32,42 +32,42 @@ export function Scene4() {
         transition={{ duration: 0.6 }}
       >
         <div className="bg-red-500 rounded-full p-2 animate-pulse flex-shrink-0">
-          <Radio className="w-5 h-5 text-white" />
+          <Radio style={{ width: '5cqw', height: '5cqw' }} className="text-white" />
         </div>
-        <h2 className="text-[10vw] font-display font-black leading-none uppercase">
+        <h2 className="font-display font-black leading-none uppercase" style={{ fontSize: '10cqw' }}>
           Live <span className="text-primary">Game</span>
         </h2>
       </motion.div>
 
       {/* Blue Team */}
       <motion.div
-        className="w-full mb-4"
+        className="w-full mb-3"
         initial={{ opacity: 0 }}
         animate={phase >= 2 ? { opacity: 1 } : { opacity: 0 }}
         transition={{ duration: 0.4 }}
       >
-        <div className="font-display font-bold text-[4vw] text-primary uppercase tracking-wider mb-2 text-center">
+        <div className="font-display font-bold text-primary uppercase tracking-wider mb-2 text-center" style={{ fontSize: '4cqw' }}>
           Niebieska Drużyna
         </div>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1.5">
           {LANES.map((lane, i) => (
             <motion.div
               key={`b${i}`}
-              className="bg-primary/10 border border-primary/20 rounded-xl px-4 py-2.5 flex items-center justify-between"
+              className="bg-primary/10 border border-primary/20 rounded-xl px-4 py-2 flex items-center justify-between"
               initial={{ opacity: 0, x: -25 }}
               animate={phase >= 3 ? { opacity: 1, x: 0 } : { opacity: 0, x: -25 }}
               transition={{ delay: i * 0.08 }}
             >
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-primary/20 rounded border border-primary/30 flex items-center justify-center font-display font-bold text-[3.5vw] text-primary flex-shrink-0">
+                <div className="bg-primary/20 rounded border border-primary/30 flex items-center justify-center font-display font-bold text-primary flex-shrink-0" style={{ width: '9cqw', height: '9cqw', fontSize: '3.5cqw' }}>
                   {lane[0]}
                 </div>
                 <div>
-                  <div className="font-body text-[3.5vw] text-white/50">{lane}</div>
-                  <div className="font-body text-[4vw]">Gracz {i + 1}</div>
+                  <div className="font-body text-white/50" style={{ fontSize: '3cqw' }}>{lane}</div>
+                  <div className="font-body" style={{ fontSize: '3.8cqw' }}>Gracz {i + 1}</div>
                 </div>
               </div>
-              <div className="text-primary font-display font-bold text-[4vw]">Diamond</div>
+              <div className="text-primary font-display font-bold" style={{ fontSize: '3.8cqw' }}>Diamond</div>
             </motion.div>
           ))}
         </div>
@@ -75,7 +75,8 @@ export function Scene4() {
 
       {/* VS Divider */}
       <motion.div
-        className="font-display font-black text-[10vw] text-white/15 italic my-2"
+        className="font-display font-black text-white/15 italic my-1"
+        style={{ fontSize: '10cqw' }}
         initial={{ opacity: 0, scale: 0 }}
         animate={phase >= 2 ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0 }}
         transition={{ type: 'spring', bounce: 0.5 }}
@@ -90,28 +91,28 @@ export function Scene4() {
         animate={phase >= 2 ? { opacity: 1 } : { opacity: 0 }}
         transition={{ duration: 0.4, delay: 0.1 }}
       >
-        <div className="font-display font-bold text-[4vw] text-red-400 uppercase tracking-wider mb-2 text-center">
+        <div className="font-display font-bold text-red-400 uppercase tracking-wider mb-2 text-center" style={{ fontSize: '4cqw' }}>
           Czerwona Drużyna
         </div>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1.5">
           {LANES.map((lane, i) => (
             <motion.div
               key={`r${i}`}
-              className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2.5 flex items-center justify-between"
+              className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2 flex items-center justify-between"
               initial={{ opacity: 0, x: 25 }}
               animate={phase >= 3 ? { opacity: 1, x: 0 } : { opacity: 0, x: 25 }}
               transition={{ delay: i * 0.08 + 0.1 }}
             >
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-red-500/20 rounded border border-red-500/30 flex items-center justify-center font-display font-bold text-[3.5vw] text-red-400 flex-shrink-0">
+                <div className="bg-red-500/20 rounded border border-red-500/30 flex items-center justify-center font-display font-bold text-red-400 flex-shrink-0" style={{ width: '9cqw', height: '9cqw', fontSize: '3.5cqw' }}>
                   {lane[0]}
                 </div>
                 <div>
-                  <div className="font-body text-[3.5vw] text-white/50">{lane}</div>
-                  <div className="font-body text-[4vw]">Wróg {i + 1}</div>
+                  <div className="font-body text-white/50" style={{ fontSize: '3cqw' }}>{lane}</div>
+                  <div className="font-body" style={{ fontSize: '3.8cqw' }}>Wróg {i + 1}</div>
                 </div>
               </div>
-              <div className="text-red-400 font-display font-bold text-[4vw]">Gold</div>
+              <div className="text-red-400 font-display font-bold" style={{ fontSize: '3.8cqw' }}>Gold</div>
             </motion.div>
           ))}
         </div>

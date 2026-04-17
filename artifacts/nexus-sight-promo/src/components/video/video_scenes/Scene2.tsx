@@ -29,10 +29,10 @@ export function Scene2() {
         animate={phase >= 1 ? { opacity: 1, y: 0 } : { opacity: 0, y: -20 }}
         transition={{ duration: 0.6 }}
       >
-        <h2 className="text-[11vw] font-display font-black leading-none uppercase text-center">
+        <h2 className="font-display font-black leading-none uppercase text-center" style={{ fontSize: '11cqw' }}>
           Profil <span className="text-primary">Gracza</span>
         </h2>
-        <p className="text-[4vw] font-body text-white/50 text-center mt-2">
+        <p className="font-body text-white/50 text-center mt-2" style={{ fontSize: '4cqw' }}>
           Rangi, KDA, historia meczy
         </p>
       </motion.div>
@@ -44,10 +44,10 @@ export function Scene2() {
           animate={phase >= 2 ? { scale: 1, opacity: 1 } : { scale: 0.9, opacity: 0 }}
           transition={{ type: 'spring', stiffness: 300, damping: 25 }}
         >
-          <Trophy className="w-7 h-7 text-yellow-400 mb-3" />
-          <div className="text-[3.2vw] text-white/50 font-body uppercase tracking-wider">Solo/Duo</div>
-          <div className="text-[8vw] font-display font-bold text-white leading-tight">Master</div>
-          <div className="text-primary font-body text-[4vw]">240 LP</div>
+          <Trophy className="text-yellow-400 mb-3" style={{ width: '7cqw', height: '7cqw' }} />
+          <div className="font-body uppercase tracking-wider text-white/50" style={{ fontSize: '3.2cqw' }}>Solo/Duo</div>
+          <div className="font-display font-bold text-white leading-tight" style={{ fontSize: '8cqw' }}>Master</div>
+          <div className="text-primary font-body" style={{ fontSize: '4cqw' }}>240 LP</div>
           <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-yellow-400/20 blur-3xl rounded-full" />
         </motion.div>
 
@@ -57,10 +57,10 @@ export function Scene2() {
           animate={phase >= 2 ? { scale: 1, opacity: 1 } : { scale: 0.9, opacity: 0 }}
           transition={{ type: 'spring', stiffness: 300, damping: 25, delay: 0.1 }}
         >
-          <Activity className="w-7 h-7 text-primary mb-3" />
-          <div className="text-[3.2vw] text-white/50 font-body uppercase tracking-wider">KDA Ratio</div>
-          <div className="text-[8vw] font-display font-bold text-white leading-tight">3.84</div>
-          <div className="text-green-400 font-body text-[4vw]">Wysokie</div>
+          <Activity className="text-primary mb-3" style={{ width: '7cqw', height: '7cqw' }} />
+          <div className="font-body uppercase tracking-wider text-white/50" style={{ fontSize: '3.2cqw' }}>KDA Ratio</div>
+          <div className="font-display font-bold text-white leading-tight" style={{ fontSize: '8cqw' }}>3.84</div>
+          <div className="text-green-400 font-body" style={{ fontSize: '4cqw' }}>Wysokie</div>
           <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-primary/20 blur-3xl rounded-full" />
         </motion.div>
       </div>
@@ -84,19 +84,19 @@ export function Scene2() {
             transition={{ delay: i * 0.12 }}
           >
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 bg-white/10 rounded-lg flex items-center justify-center text-[5vw] font-display font-bold flex-shrink-0">
+              <div className="bg-white/10 rounded-lg flex items-center justify-center font-display font-bold flex-shrink-0" style={{ width: '11cqw', height: '11cqw', fontSize: '5cqw' }}>
                 {match.champ[0]}
               </div>
               <div>
-                <div className={`font-display font-bold text-[4.5vw] ${match.res === 'Victory' ? 'text-primary' : 'text-red-400'}`}>
+                <div className={`font-display font-bold ${match.res === 'Victory' ? 'text-primary' : 'text-red-400'}`} style={{ fontSize: '4.5cqw' }}>
                   {match.res}
                 </div>
-                <div className="font-body text-[3.5vw] text-white/60">{match.champ}</div>
+                <div className="font-body text-white/60" style={{ fontSize: '3.5cqw' }}>{match.champ}</div>
               </div>
             </div>
             <div className="text-right">
-              <div className="font-display font-bold text-[4vw]">{match.kda}</div>
-              <div className="font-body text-[4vw] text-yellow-400 font-bold">{match.score}</div>
+              <div className="font-display font-bold" style={{ fontSize: '4cqw' }}>{match.kda}</div>
+              <div className="font-body text-yellow-400 font-bold" style={{ fontSize: '4cqw' }}>{match.score}</div>
             </div>
           </motion.div>
         ))}

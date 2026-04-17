@@ -27,43 +27,44 @@ export function Scene5() {
       transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
     >
       <motion.div
-        className="w-full text-center mb-8"
+        className="w-full text-center mb-7"
         initial={{ opacity: 0, y: -20 }}
         animate={phase >= 1 ? { opacity: 1, y: 0 } : { opacity: 0, y: -20 }}
         transition={{ duration: 0.6 }}
       >
-        <h2 className="text-[10vw] font-display font-black leading-none uppercase">
+        <h2 className="font-display font-black leading-none uppercase" style={{ fontSize: '10cqw' }}>
           Kalkulator <span className="text-primary">Buildu</span>
         </h2>
-        <p className="text-[4vw] font-body text-white/50 mt-2">
+        <p className="font-body text-white/50 mt-2" style={{ fontSize: '4cqw' }}>
           Optymalny build pod skład wroga
         </p>
       </motion.div>
 
       <motion.div
-        className="w-full bg-white/5 border border-white/10 rounded-3xl p-6 backdrop-blur-md mb-6"
+        className="w-full bg-white/5 border border-white/10 rounded-3xl p-6 backdrop-blur-md mb-5"
         initial={{ opacity: 0, y: 40 }}
         animate={phase >= 2 ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
         transition={{ type: 'spring', bounce: 0.35 }}
       >
-        <div className="flex items-center justify-between mb-6">
-          <div className="text-[3.5vw] font-display font-bold uppercase text-white/40">Twój Bohater</div>
-          <div className="w-14 h-14 bg-primary/20 border-2 border-primary rounded-xl flex items-center justify-center">
-            <Sword className="w-7 h-7 text-primary" />
+        <div className="flex items-center justify-between mb-5">
+          <div className="font-display font-bold uppercase text-white/40" style={{ fontSize: '3.5cqw' }}>Twój Bohater</div>
+          <div className="bg-primary/20 border-2 border-primary rounded-xl flex items-center justify-center" style={{ width: '14cqw', height: '14cqw' }}>
+            <Sword className="text-primary" style={{ width: '7cqw', height: '7cqw' }} />
           </div>
-          <div className="text-[3.5vw] font-display font-bold uppercase text-white/40">vs 5</div>
+          <div className="font-display font-bold uppercase text-white/40" style={{ fontSize: '3.5cqw' }}>vs 5</div>
         </div>
 
-        <div className="grid grid-cols-5 gap-3">
+        <div className="grid grid-cols-5 gap-2">
           {ICONS.map((Icon, i) => (
             <motion.div
               key={i}
-              className="aspect-square bg-white/10 border border-white/20 rounded-xl relative overflow-hidden flex flex-col items-center justify-center p-2"
+              className="bg-white/10 border border-white/20 rounded-xl relative overflow-hidden flex flex-col items-center justify-center"
+              style={{ aspectRatio: '1', padding: '3cqw' }}
               initial={{ scale: 0, opacity: 0 }}
               animate={phase >= 3 ? { scale: 1, opacity: 1 } : { scale: 0, opacity: 0 }}
               transition={{ type: 'spring', delay: i * 0.12 }}
             >
-              <Icon className="w-7 h-7 text-white/50" />
+              <Icon className="text-white/50" style={{ width: '7cqw', height: '7cqw' }} />
               <motion.div
                 className="absolute inset-0 w-[200%] h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -rotate-12 translate-x-[-100%]"
                 animate={phase >= 3 ? { translateX: ['-100%', '100%'] } : {}}
@@ -88,17 +89,18 @@ export function Scene5() {
             animate={phase >= 3 ? { opacity: 1, x: 0 } : { opacity: 0, x: -20 }}
             transition={{ delay: 0.5 + i * 0.12 }}
           >
-            <div className="w-8 h-8 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0">
-              {(() => { const Icon = ICONS[i]; return <Icon className="w-4 h-4 text-primary" />; })()}
+            <div className="bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0" style={{ width: '9cqw', height: '9cqw' }}>
+              {(() => { const Icon = ICONS[i]; return <Icon className="text-primary" style={{ width: '4.5cqw', height: '4.5cqw' }} />; })()}
             </div>
-            <div className="font-body text-[3.8vw] text-white/80">{name}</div>
-            <div className="ml-auto font-display font-bold text-[3.8vw] text-yellow-400">#{i + 1}</div>
+            <div className="font-body text-white/80" style={{ fontSize: '3.8cqw' }}>{name}</div>
+            <div className="ml-auto font-display font-bold text-yellow-400" style={{ fontSize: '3.8cqw' }}>#{i + 1}</div>
           </motion.div>
         ))}
       </motion.div>
 
       <motion.div
-        className="mt-8 text-center font-display font-bold text-[7vw] tracking-[0.3em] uppercase text-white"
+        className="mt-7 text-center font-display font-bold tracking-[0.3em] uppercase text-white"
+        style={{ fontSize: '7cqw' }}
         initial={{ opacity: 0, filter: 'blur(10px)' }}
         animate={phase >= 3 ? { opacity: 1, filter: 'blur(0px)' } : { opacity: 0, filter: 'blur(10px)' }}
         transition={{ delay: 1.2 }}

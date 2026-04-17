@@ -24,7 +24,8 @@ export function Scene1() {
       transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
     >
       <motion.h1
-        className="text-[13vw] font-display font-black leading-none text-center tracking-tighter uppercase mb-4"
+        className="font-display font-black leading-none text-center tracking-tighter uppercase mb-4"
+        style={{ fontSize: '13cqw' }}
         initial={{ opacity: 0, y: 30 }}
         animate={phase >= 1 ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
         transition={{ duration: 0.8, ease: 'easeOut' }}
@@ -34,7 +35,8 @@ export function Scene1() {
       </motion.h1>
 
       <motion.p
-        className="text-[4.5vw] font-body text-white/50 text-center mb-10"
+        className="font-body text-white/50 text-center mb-10"
+        style={{ fontSize: '4.5cqw' }}
         initial={{ opacity: 0 }}
         animate={phase >= 1 ? { opacity: 1 } : { opacity: 0 }}
         transition={{ duration: 0.6, delay: 0.3 }}
@@ -48,12 +50,12 @@ export function Scene1() {
         animate={phase >= 2 ? { opacity: 1, scale: 1, y: 0 } : { opacity: 0, scale: 0.9, y: 20 }}
         transition={{ type: 'spring', stiffness: 300, damping: 25 }}
       >
-        <Search className="w-7 h-7 text-primary ml-1 flex-shrink-0" />
-        <div className="flex-1 font-body text-[5vw] text-white/50 tracking-wide">
+        <Search className="text-primary flex-shrink-0" style={{ width: '7cqw', height: '7cqw' }} />
+        <div className="flex-1 font-body text-white/50 tracking-wide" style={{ fontSize: '5cqw' }}>
           Faker#KR1
         </div>
-        <div className="bg-primary px-5 py-3 rounded-xl flex items-center justify-center flex-shrink-0">
-          <ChevronRight className="w-6 h-6 text-white" />
+        <div className="bg-primary rounded-xl flex items-center justify-center flex-shrink-0" style={{ padding: '3cqw 5cqw' }}>
+          <ChevronRight className="text-white" style={{ width: '6cqw', height: '6cqw' }} />
         </div>
       </motion.div>
 
@@ -64,7 +66,11 @@ export function Scene1() {
         transition={{ duration: 0.5 }}
       >
         {['EUW', 'EUNE', 'NA', 'KR', 'BR'].map((r) => (
-          <div key={r} className={`px-5 py-2 rounded-full border font-body text-[4vw] ${r === 'EUW' ? 'border-primary/40 text-primary/90 bg-primary/10' : 'border-white/10 text-white/40 bg-white/5'}`}>
+          <div
+            key={r}
+            className={`rounded-full border font-body ${r === 'EUW' ? 'border-primary/40 text-primary/90 bg-primary/10' : 'border-white/10 text-white/40 bg-white/5'}`}
+            style={{ padding: '2cqw 5cqw', fontSize: '4cqw' }}
+          >
             {r}
           </div>
         ))}
