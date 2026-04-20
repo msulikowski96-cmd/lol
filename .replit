@@ -149,3 +149,6 @@ outputType = "webview"
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 120000
+
+[deployment]
+deploymentTarget = "cloudrun"
