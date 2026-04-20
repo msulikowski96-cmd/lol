@@ -6,6 +6,7 @@ TypeScript pnpm monorepo, fully in Polish. Users search players by Riot ID acros
 ## Architecture
 - **Frontend**: React + Vite (`artifacts/web`), wouter for routing, TanStack React Query, Framer Motion
 - **Backend**: Express API server (`artifacts/api-server`), connects to Riot Games API
+- **Desktop Overlay**: Electron + React (`artifacts/lol-overlay`) — Windows nakładka na LoL, LCU API integration
 - **Shared**: OpenAPI spec (`lib/api-spec/openapi.yaml`) → codegen to `lib/api-client-react` and `lib/api-zod`
 - **Codegen**: `pnpm --filter @workspace/api-spec run codegen`
 
