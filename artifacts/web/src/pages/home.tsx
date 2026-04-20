@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, ChevronRight, BarChart3, Zap, Shield, Users, Clock, X, Activity, Heart } from "lucide-react";
+import { Search, ChevronRight, BarChart3, Zap, Shield, Users, Clock, X, Activity, Heart, Sparkles } from "lucide-react";
 import { getFavorites, toggleFavorite, type Favorite } from "@/lib/favorites";
 import { usePageTitle } from "@/lib/usePageTitle";
 import AdBanner from "@/components/AdBanner";
@@ -61,6 +61,19 @@ const FEATURES = [
     color: "hsl(258,60%,50%)",
     border: "hsl(258,40%,82%)",
     bg: "hsl(258,50%,97%)",
+  },
+];
+
+const TOOLS = [
+  {
+    href: "/optymalizator",
+    icon: Sparkles,
+    title: "Optymalizator Build & Run",
+    desc: "Wybierz swojego championa + skład wroga → AI generuje runy, sumony i pełny build na ten matchup",
+    badge: "AI",
+    color: "hsl(280,60%,50%)",
+    border: "hsl(280,40%,82%)",
+    bg: "hsl(280,50%,97%)",
   },
 ];
 
@@ -410,6 +423,46 @@ export default function Home() {
                 <p className="text-[10px] text-muted-foreground leading-relaxed">{f.desc}</p>
               </div>
             </motion.div>
+          ))}
+        </motion.div>
+
+        {/* AI Tools section */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.85, duration: 0.5 }}
+          className="w-full mt-6"
+        >
+          {TOOLS.map((t) => (
+            <button
+              key={t.title}
+              onClick={() => setLocation(t.href)}
+              className="group w-full flex items-center gap-4 px-4 py-4 rounded-[10px] text-left transition-all hover:scale-[1.01]"
+              style={{
+                background: t.bg,
+                border: `1px solid ${t.border}`,
+                boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+              }}
+            >
+              <div className="w-12 h-12 rounded-[8px] flex items-center justify-center flex-shrink-0"
+                style={{ background: "white", border: `1px solid ${t.border}` }}>
+                <t.icon className="w-6 h-6" style={{ color: t.color }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <p className="text-sm font-bold tracking-wide"
+                    style={{ fontFamily: "'Rajdhani',sans-serif", color: t.color }}>
+                    {t.title}
+                  </p>
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest"
+                    style={{ background: t.color, color: "white", fontFamily: "'Rajdhani',sans-serif" }}>
+                    NOWE · {t.badge}
+                  </span>
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-snug">{t.desc}</p>
+              </div>
+              <ChevronRight className="w-5 h-5 flex-shrink-0 group-hover:translate-x-0.5 transition-transform" style={{ color: t.color }} />
+            </button>
           ))}
         </motion.div>
 

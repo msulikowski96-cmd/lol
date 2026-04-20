@@ -9,6 +9,7 @@ import {
 
 import { getDDBase, SPELL_IMG, RUNE_STYLE_ICON, TIER_COLOR, TIER_LABEL } from "../lib/constants";
 import { usePageTitle } from "@/lib/usePageTitle";
+import LiveAICoach from "@/components/LiveAICoach";
 
 
 const GAME_MODE_LABEL: Record<string, string> = {
@@ -403,6 +404,13 @@ export default function LiveGame() {
                   <TeamPanel participants={t2} bans={b2} side="red" selfPuuid={puuid} region={region} />
                 </div>
               </div>
+
+              <LiveAICoach
+                gameId={(liveGame as any).gameId}
+                mySide={t1.some((p: any) => p.puuid === puuid) ? "blue" : "red"}
+                gameMode={(liveGame as any).gameMode ?? "CLASSIC"}
+                participants={(liveGame as any).participants ?? []}
+              />
 
               <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[

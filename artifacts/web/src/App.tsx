@@ -18,6 +18,7 @@ const Guide = lazy(() => import("@/pages/guide"));
 const Champion = lazy(() => import("@/pages/champion"));
 const MatchPage = lazy(() => import("@/pages/match"));
 const AiAnalysis = lazy(() => import("@/pages/ai-analysis"));
+const Optimizer = lazy(() => import("@/pages/optimizer"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
 const BASE_URL = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -68,6 +69,7 @@ function Router() {
         <Route path="/champion/:region/:gameName/:tagLine/:championName" component={Champion} />
         <Route path="/match/:region/:gameName/:tagLine/:matchId" component={MatchPage} />
         <Route path="/ai-analysis/:region/:gameName/:tagLine" component={AiAnalysis} />
+        <Route path="/optymalizator" component={Optimizer} />
         <Route path="/live/:region/:gameName/:tagLine" component={LiveGame} />
         <Route path="/privacy" component={Privacy} />
         <Route path="/terms" component={Terms} />
