@@ -2,10 +2,12 @@ import express, { type Express } from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { generalLimit } from "./middlewares/rateLimit";
+import { attachUser } from "./middlewares/auth";
 
 const app: Express = express();
 
@@ -28,12 +30,15 @@ app.use(
     },
   }),
 );
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+app.use(attachUser);
 
 app.use("/api", generalLimit, (_req, res, next) => {
-  res.set("Cache-Control", "public, max-age=60, stale-while-revalidate=120");
+  // Personalized — never share between users
+  res.set("Cache-Control", "private, no-store");
   next();
 }, router);
 

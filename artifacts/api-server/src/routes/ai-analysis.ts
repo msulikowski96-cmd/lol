@@ -3,6 +3,7 @@ import OpenAI from "openai";
 import { riotFetch } from "../lib/riot-fetch";
 import { cache } from "../lib/cache";
 import { getChampionName } from "../lib/ddragon";
+import { requireUsage } from "../middlewares/auth";
 
 const nvidiaClient = new OpenAI({
   baseURL: "https://integrate.api.nvidia.com/v1",
@@ -337,7 +338,7 @@ JSON (KAŻDE pole z konkretnymi liczbami i porównaniami z rangą ${tierPl}):
 coaching_tips: 3, champion_recommendations: 2, improvement_priorities: 3, key_weaknesses_detailed: 2. Radar 0-100, zróżnicowany.`;
 }
 
-router.get("/:puuid/ai-report", async (req, res) => {
+router.get("/:puuid/ai-report", requireUsage("ai_analysis"), async (req, res) => {
   const { puuid } = req.params;
   const { region, gameName } = req.query as { region: string; gameName?: string };
 

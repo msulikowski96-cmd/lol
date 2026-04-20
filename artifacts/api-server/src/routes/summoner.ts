@@ -10,6 +10,7 @@ import { riotFetch, handleRiotError, RiotApiError } from "../lib/riot-fetch";
 import { cache } from "../lib/cache";
 import { getDDVersion, getChampionName, getChampionMap } from "../lib/ddragon";
 import { riotLimit } from "../middlewares/rateLimit";
+import { requireUsage } from "../middlewares/auth";
 
 const router: IRouter = Router();
 
@@ -44,7 +45,7 @@ function computeOpScore(
 }
 
 // GET /api/summoner/search?gameName=&tagLine=&region=
-router.get("/search", async (req, res) => {
+router.get("/search", requireUsage("search"), async (req, res) => {
   const { gameName, tagLine, region } = req.query as {
     gameName: string; tagLine: string; region: string;
   };

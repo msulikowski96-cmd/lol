@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import OpenAI from "openai";
 import { cache } from "../lib/cache";
+import { requireUsage } from "../middlewares/auth";
 
 const nvidiaClient = new OpenAI({
   baseURL: "https://integrate.api.nvidia.com/v1",
@@ -72,7 +73,7 @@ function extractJSON(text: string): any {
 // Body: { myChampion: string, lane: string, allies: string[], enemies: string[] }
 // =========================================================================
 
-router.post("/optimizer", async (req, res) => {
+router.post("/optimizer", requireUsage("optimizer"), async (req, res) => {
   const { myChampion, lane, allies = [], enemies = [] } = req.body ?? {};
 
   if (!myChampion || typeof myChampion !== "string") {
@@ -190,7 +191,7 @@ TYLKO JSON:
 // }
 // =========================================================================
 
-router.post("/live-insights", async (req, res) => {
+router.post("/live-insights", requireUsage("optimizer"), async (req, res) => {
   const { gameId, mySide, gameMode, participants } = req.body ?? {};
 
   if (!gameId || !Array.isArray(participants) || participants.length === 0) {
