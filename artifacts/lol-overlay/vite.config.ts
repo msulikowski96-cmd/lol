@@ -14,12 +14,12 @@ export default defineConfig({
     port,
     strictPort: true,
     host: '0.0.0.0',
-    allowedHosts: 'all',
+    allowedHosts: true,
   },
   preview: {
     port,
     host: '0.0.0.0',
-    allowedHosts: 'all',
+    allowedHosts: true,
   },
   build: {
     outDir: 'dist',
