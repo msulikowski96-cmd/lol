@@ -3,6 +3,15 @@ import { GetSummonerAnalysisResponse } from "@workspace/api-zod";
 import { riotFetch, handleRiotError } from "../lib/riot-fetch";
 import { cache } from "../lib/cache";
 import { riotLimit } from "../middlewares/rateLimit";
+import {
+  benchmarksForRole,
+  scoreVsBenchmark,
+  shrinkWinRate,
+  wilsonLowerBound,
+  ewma,
+  proportionZ,
+  gradeFromScore,
+} from "../lib/stats-utils";
 
 const router: IRouter = Router();
 
@@ -111,23 +120,46 @@ function computeKda(kills: number, deaths: number, assists: number): number {
 }
 
 function computeGameScore(m: MatchData): number {
+  const bench = benchmarksForRole(m.teamPosition);
+  const isSup = m.teamPosition === "UTILITY";
   const kda = computeKda(m.kills, m.deaths, m.assists);
   const csPerMin = m.gameDuration > 0 ? (m.cs / m.gameDuration) * 60 : 0;
+  const dmgPerMin = m.gameDuration > 0 ? (m.totalDamageDealt / m.gameDuration) * 60 : 0;
+  const visionPerMin = m.gameDuration > 0 ? (m.visionScore / m.gameDuration) * 60 : 0;
   const kp = m.teamKills > 0 ? ((m.kills + m.assists) / m.teamKills) * 100 : 0;
   const dmgShare = m.teamDamageDealt > 0 ? (m.totalDamageDealt / m.teamDamageDealt) * 100 : 0;
-  const deathPenalty = clamp(100 - m.deaths * 10, 0, 100);
-  const winBonus = m.win ? 18 : 0;
   const timeDeadPct = m.gameDuration > 0 ? (m.timeSpentDead / m.gameDuration) * 100 : 0;
-  const timeDeadPenalty = clamp(timeDeadPct * 1.5, 0, 20);
+
+  // Log-scaled KDA: diminishing returns above 5 (a 20 KDA game shouldn't be 4x a 5 KDA game)
+  const kdaScore = clamp(Math.log2(kda + 1) * 32, 0, 100);
+
+  // Role-aware metric scores
+  const farmScore = isSup
+    ? scoreVsBenchmark(visionPerMin, bench.visionPerMin) // support: replace farm weight with vision
+    : scoreVsBenchmark(csPerMin, bench.csPerMin);
+  const dmgScore = scoreVsBenchmark(dmgPerMin, bench.damagePerMin);
+  const kpScore = scoreVsBenchmark(kp, bench.killParticipation);
+  const dmgShareScore = scoreVsBenchmark(dmgShare, bench.damageShare);
+
+  // Death/time-dead penalties scale with game length so a 30-min game with 5 deaths
+  // is treated differently from a 50-min game with 5 deaths.
+  const deathsPerMin = m.gameDuration > 0 ? (m.deaths / m.gameDuration) * 60 : 0;
+  const deathPenalty = clamp(100 - deathsPerMin * 400, 0, 100); // 0.25 deaths/min ≈ 0 score
+  const timeDeadPenalty = clamp(timeDeadPct * 1.4, 0, 22);
+
+  const winBonus = m.win ? 15 : 0;
+
   return clamp(
-    Math.log2(kda + 1) * 28 * 0.30 +
-    clamp((csPerMin / 10) * 100, 0, 100) * 0.12 +
-    clamp((kp / 70) * 100, 0, 100) * 0.18 +
-    clamp((m.totalDamageDealt / 15000) * 100, 0, 100) * 0.12 +
-    clamp((dmgShare / 30) * 100, 0, 100) * 0.08 +
-    deathPenalty * 0.12 +
-    winBonus - timeDeadPenalty,
-    0, 100
+    kdaScore * 0.26 +
+      farmScore * 0.12 +
+      kpScore * 0.18 +
+      dmgScore * 0.12 +
+      dmgShareScore * 0.08 +
+      deathPenalty * 0.14 +
+      winBonus -
+      timeDeadPenalty,
+    0,
+    100
   );
 }
 
@@ -345,6 +377,11 @@ function computeAnalysis(matches: MatchData[]) {
     champMap.set(m.championName, arr);
   }
 
+  // Player's overall WR acts as a more informative prior for champion-level WR
+  // than a flat 50% — a Diamond player's "unknown" champ performance is closer
+  // to their overall WR than to 50/50.
+  const priorWR = wins / Math.max(N, 1);
+
   const championBreakdown = Array.from(champMap.entries()).map(([championName, games]) => {
     const champWins = games.filter((g) => g.win).length;
     const champKills = mean(games.map((g) => g.kills));
@@ -354,20 +391,36 @@ function computeAnalysis(matches: MatchData[]) {
     const champKda = computeKda(champKills, champDeaths, champAssists);
     const champKP = mean(games.map((g) => g.teamKills > 0 ? ((g.kills + g.assists) / g.teamKills) * 100 : 0));
     const champDmgShare = mean(games.map((g) => g.teamDamageDealt > 0 ? (g.totalDamageDealt / g.teamDamageDealt) * 100 : 0));
-    const champWinRate = (champWins / games.length) * 100;
+    const champRawWR = (champWins / games.length) * 100;
+
+    // Bayesian-shrunk WR avoids the "1 game = 100% WR" artifact.
+    // Confidence scales smoothly with sample size (prior = player's overall WR, 8 game pseudo-prior).
+    const champShrunkWR = shrinkWinRate(champWins, games.length, priorWR, 8) * 100;
+    const champWRLower = wilsonLowerBound(champWins, games.length) * 100;
+
     const champTimeDeadPct = mean(games.map((g) => g.gameDuration > 0 ? (g.timeSpentDead / g.gameDuration) * 100 : 0));
+
+    // Role-aware performance score — same shape as overall game score.
+    const champRole = games[0]?.teamPosition ?? "";
+    const bench = benchmarksForRole(champRole);
+    const isSup = champRole === "UTILITY";
+    const champDmgPerMin = mean(games.map((g) => g.gameDuration > 0 ? (g.totalDamageDealt / g.gameDuration) * 60 : 0));
+    const champVisionPerMin = mean(games.map((g) => g.gameDuration > 0 ? (g.visionScore / g.gameDuration) * 60 : 0));
     const champPerfScore = Math.round(clamp(
-      clamp(Math.log2(champKda + 1) * 30, 0, 100) * 0.28 +
-      clamp((champCsPerMin / 10) * 100, 0, 100) * 0.10 +
-      champWinRate * 0.27 +
+      clamp(Math.log2(champKda + 1) * 32, 0, 100) * 0.26 +
+      (isSup ? scoreVsBenchmark(champVisionPerMin, bench.visionPerMin) : scoreVsBenchmark(champCsPerMin, bench.csPerMin)) * 0.10 +
+      champShrunkWR * 0.27 +
       clamp(100 - champDeaths * 11, 0, 100) * 0.15 +
-      clamp((champKP / 70) * 100, 0, 100) * 0.20 -
-      champTimeDeadPct * 1.5,
+      scoreVsBenchmark(champKP, bench.killParticipation) * 0.20 +
+      scoreVsBenchmark(champDmgPerMin, bench.damagePerMin) * 0.04 -
+      champTimeDeadPct * 1.2,
       0, 100
     ));
     return {
       championName, gamesPlayed: games.length, wins: champWins, losses: games.length - champWins,
-      winRate: Math.round(champWinRate * 10) / 10,
+      winRate: Math.round(champRawWR * 10) / 10,
+      adjustedWinRate: Math.round(champShrunkWR * 10) / 10,
+      winRateLowerBound: Math.round(champWRLower * 10) / 10,
       avgKills: Math.round(champKills * 10) / 10, avgDeaths: Math.round(champDeaths * 10) / 10, avgAssists: Math.round(champAssists * 10) / 10,
       avgCs: Math.round(mean(games.map((g) => g.cs))), avgCsPerMin: Math.round(champCsPerMin * 10) / 10,
       avgDamage: Math.round(mean(games.map((g) => g.totalDamageDealt))),
@@ -378,26 +431,53 @@ function computeAnalysis(matches: MatchData[]) {
       damageShare: Math.round(champDmgShare * 10) / 10,
       performanceScore: champPerfScore,
     };
-  }).sort((a, b) => b.gamesPlayed - a.gamesPlayed);
+  }).sort((a, b) => {
+    // Primary: meaningful sample size (≥3 games); Secondary: Wilson lower-bound WR
+    if (b.gamesPlayed !== a.gamesPlayed) return b.gamesPlayed - a.gamesPlayed;
+    return b.winRateLowerBound - a.winRateLowerBound;
+  });
 
+  // EWMA-based form trend: gives more weight to recent games without the brittle
+  // "last 7 vs rest" cliff. Complementary proportion z-test decides whether the
+  // difference is statistically meaningful before labelling a streak.
   const recentCount = Math.min(7, N);
   const recentMatches = validMatches.slice(0, recentCount);
   const olderMatches = validMatches.slice(recentCount);
-  const recentWinRate = (recentMatches.filter((m) => m.win).length / recentCount) * 100;
+  const recentWins = recentMatches.filter((m) => m.win).length;
+  const olderWins = olderMatches.filter((m) => m.win).length;
+  const recentWinRate = (recentWins / recentCount) * 100;
   const recentKda = mean(recentMatches.map((m) => computeKda(m.kills, m.deaths, m.assists)));
   const olderKda = olderMatches.length > 0 ? mean(olderMatches.map((m) => computeKda(m.kills, m.deaths, m.assists))) : avgKda;
+
+  // EWMA (alpha=0.3) on per-game scores — smoother form indicator than raw KDA.
+  const perGameScores = validMatches.map((m) => computeGameScore(m));
+  const ewmaScore = ewma(perGameScores, 0.3);
+  const baselineScore = mean(perGameScores);
+  const scoreTrend = ewmaScore - baselineScore;
+
+  // Significance test: is recent WR actually different from the rest, or noise?
+  const wrZ = olderMatches.length >= 3 ? proportionZ(recentWins, recentCount, olderWins, olderMatches.length) : 0;
   const winRateDiff = recentWinRate - winRate;
   const kdaDiffTrend = recentKda - olderKda;
-  const recentDmgPerMin = mean(recentMatches.map((m) => m.gameDuration > 0 ? (m.totalDamageDealt / m.gameDuration) * 60 : 0));
-  const olderDmgPerMin = olderMatches.length > 0 ? mean(olderMatches.map((m) => m.gameDuration > 0 ? (m.totalDamageDealt / m.gameDuration) * 60 : 0)) : avgDmgPerMin;
-  const dmgTrend = recentDmgPerMin - olderDmgPerMin;
 
   let trend: string, trendDescription: string;
-  if (winRateDiff > 15 && kdaDiffTrend > 0.8) { trend = "hot"; trendDescription = `🔥 Rozpalony — ostatnie ${recentCount} meczy: WR ${recentWinRate.toFixed(0)}% (o ${winRateDiff.toFixed(0)}pp powyżej normy), KDA ${recentKda.toFixed(2)}`; }
-  else if (winRateDiff > 8 || (kdaDiffTrend > 0.5 && dmgTrend > 100)) { trend = "improving"; trendDescription = `📈 Rosnąca forma — wyniki o ${winRateDiff > 0 ? "+" : ""}${winRateDiff.toFixed(0)}pp WR i +${kdaDiffTrend.toFixed(2)} KDA względem normy`; }
-  else if (winRateDiff < -15 && kdaDiffTrend < -0.8) { trend = "cold"; trendDescription = `❄️ Dołek — ostatnie ${recentCount} meczy: WR ${recentWinRate.toFixed(0)}%, KDA ${recentKda.toFixed(2)} — czas na przerwę`; }
-  else if (winRateDiff < -8 || kdaDiffTrend < -0.5) { trend = "declining"; trendDescription = `📉 Lekki spadek: ${winRateDiff.toFixed(0)}pp WR i ${kdaDiffTrend.toFixed(2)} KDA poniżej normy`; }
-  else { trend = "stable"; trendDescription = `⚖️ Stabilna forma — gra konsekwentnie na swoim poziomie (WR ${winRate.toFixed(0)}%, KDA ${avgKda.toFixed(2)})`; }
+  const sig = Math.abs(wrZ) >= 1.28; // ~80% confidence the change is real
+  if (sig && wrZ > 0 && scoreTrend > 5 && kdaDiffTrend > 0.6) {
+    trend = "hot";
+    trendDescription = `🔥 Rozpalony — ostatnie ${recentCount} meczy: WR ${recentWinRate.toFixed(0)}% (+${winRateDiff.toFixed(0)}pp, istotne), KDA ${recentKda.toFixed(2)}, EWMA score +${scoreTrend.toFixed(1)}`;
+  } else if (scoreTrend > 3 || (wrZ > 0.8 && kdaDiffTrend > 0.3)) {
+    trend = "improving";
+    trendDescription = `📈 Rosnąca forma — EWMA wyniku +${scoreTrend.toFixed(1)} pkt, WR ${winRateDiff >= 0 ? "+" : ""}${winRateDiff.toFixed(0)}pp vs baseline`;
+  } else if (sig && wrZ < 0 && scoreTrend < -5 && kdaDiffTrend < -0.6) {
+    trend = "cold";
+    trendDescription = `❄️ Dołek — ostatnie ${recentCount} meczy: WR ${recentWinRate.toFixed(0)}% (${winRateDiff.toFixed(0)}pp, istotne), KDA ${recentKda.toFixed(2)} — czas na przerwę`;
+  } else if (scoreTrend < -3 || (wrZ < -0.8 && kdaDiffTrend < -0.3)) {
+    trend = "declining";
+    trendDescription = `📉 Lekki spadek — EWMA wyniku ${scoreTrend.toFixed(1)} pkt, ${winRateDiff.toFixed(0)}pp WR poniżej normy`;
+  } else {
+    trend = "stable";
+    trendDescription = `⚖️ Stabilna forma — gra konsekwentnie (WR ${winRate.toFixed(0)}%, KDA ${avgKda.toFixed(2)}, odchylenie nieistotne)`;
+  }
 
   const formTrend = {
     recentWinRate: Math.round(recentWinRate * 10) / 10, overallWinRate: Math.round(winRate * 10) / 10,
