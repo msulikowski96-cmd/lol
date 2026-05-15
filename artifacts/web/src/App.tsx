@@ -23,6 +23,7 @@ const AiAnalysis = lazy(() => import("@/pages/ai-analysis"));
 const Optimizer = lazy(() => import("@/pages/optimizer"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 const AuthPage = lazy(() => import("@/pages/auth"));
+const AdminPage = lazy(() => import("@/pages/admin"));
 
 const BASE_URL = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -95,6 +96,7 @@ function Router() {
         <Route path="/ai-analysis/:region/:gameName/:tagLine">{() => <Protected component={AiAnalysis} />}</Route>
         <Route path="/optymalizator">{() => <Protected component={Optimizer} />}</Route>
         <Route path="/live/:region/:gameName/:tagLine">{() => <Protected component={LiveGame} />}</Route>
+        <Route path="/admin">{() => <Protected component={AdminPage} />}</Route>
 
         <Route component={NotFound} />
       </Switch>

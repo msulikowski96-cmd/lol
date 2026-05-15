@@ -14,7 +14,9 @@ export default function AuthHeader() {
           NEXUS SIGHT
         </Link>
         {user.isAdmin ? (
-          <span className="hidden sm:inline-block bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded uppercase tracking-wider font-semibold">Admin · Bez limitów</span>
+          <Link href="/admin" className="hidden sm:inline-block bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded uppercase tracking-wider font-semibold hover:bg-yellow-500/30 transition-colors">
+            Admin · Panel
+          </Link>
         ) : usage && (
           <div className="hidden md:flex items-center gap-3 text-slate-400">
             <span>Wyszuk.: <b className={usage.search.used >= usage.search.limit ? "text-red-400" : "text-cyan-300"}>{usage.search.used}/{usage.search.limit}</b></span>
