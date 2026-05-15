@@ -1,13 +1,23 @@
 import { useState } from "react";
 import { Loader2, Download, AlertCircle, ImageIcon, Sparkles } from "lucide-react";
 
+interface RankedEntry {
+  queueType: string;
+  tier: string;
+  rank: string;
+  leaguePoints: number;
+  wins: number;
+  losses: number;
+}
+
 interface CardGeneratorProps {
   gameName: string;
   tagLine: string;
   region: string;
+  rankedEntry?: RankedEntry | null;
 }
 
-export default function CardGenerator({ gameName, tagLine, region }: CardGeneratorProps) {
+export default function CardGenerator({ gameName, tagLine, region, rankedEntry }: CardGeneratorProps) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +31,7 @@ export default function CardGenerator({ gameName, tagLine, region }: CardGenerat
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ gameName, tagLine, region }),
+        body: JSON.stringify({ gameName, tagLine, region, rankedEntry: rankedEntry ?? null }),
       });
       if (!res.ok) {
         let msg = "Błąd generowania karty.";

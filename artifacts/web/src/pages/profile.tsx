@@ -2519,7 +2519,7 @@ export default function Profile() {
               <p className="section-title">
                 <Sparkles className="w-3.5 h-3.5 text-primary" /> Wygeneruj swój profil
               </p>
-              <CardGenerator gameName={gameName} tagLine={tagLine} region={region} />
+              <CardGenerator gameName={gameName} tagLine={tagLine} region={region} rankedEntry={soloQ ?? null} />
             </div>
           </aside>
         </div>
