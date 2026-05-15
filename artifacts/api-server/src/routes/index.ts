@@ -7,6 +7,7 @@ import championRouter from "./champion";
 import matchRouter from "./match";
 import aiAnalysisRouter from "./ai-analysis";
 import aiCoachRouter from "./ai-coach";
+import cardRouter from "./card";
 import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
@@ -23,5 +24,6 @@ router.use("/summoner", championRouter);
 router.use("/summoner", aiAnalysisRouter);
 router.use("/match", matchRouter);
 router.use("/coach", aiCoachRouter);
+router.use("/card", cardRouter);
 
 export default router;

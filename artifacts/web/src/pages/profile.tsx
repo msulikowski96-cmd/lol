@@ -18,6 +18,7 @@ import {
 import { toggleFavorite, isFavorite } from "@/lib/favorites";
 import { addRankSnapshot, getRankHistory } from "@/lib/rankHistory";
 import BuildCalculator from "@/components/BuildCalculator";
+import CardGenerator from "@/components/CardGenerator";
 import { usePageTitle } from "@/lib/usePageTitle";
 import AdBanner from "@/components/AdBanner";
 import {
@@ -2068,13 +2069,14 @@ function AnalysisSection({ data, isLoading, recentMatches, region, gameName, tag
   );
 }
 
-type MobileTab = "analiza" | "rang" | "mecze" | "live" | "kalkulator";
+type MobileTab = "analiza" | "rang" | "mecze" | "live" | "kalkulator" | "karta";
 
 const MOBILE_TABS: { id: MobileTab; label: string; icon: React.ElementType }[] = [
   { id: "analiza", label: "Analiza", icon: BarChart3 },
   { id: "rang", label: "Rang", icon: Trophy },
   { id: "mecze", label: "Mecze", icon: Shield },
   { id: "kalkulator", label: "Build", icon: Swords },
+  { id: "karta", label: "Karta", icon: Sparkles },
   { id: "live", label: "Live", icon: Wifi },
 ];
 
@@ -2331,7 +2333,7 @@ export default function Profile() {
             </Link>
 
             {/* Rang + Predicted */}
-            <div className={(mobileTab === "mecze" || mobileTab === "kalkulator") ? "hidden lg:block" : ""}>
+            <div className={(mobileTab === "mecze" || mobileTab === "kalkulator" || mobileTab === "karta") ? "hidden lg:block" : ""}>
               <p className="section-title">
                 <Trophy className="w-3.5 h-3.5 text-primary" /> Rang
                 <InfoTooltip align="right" text="Twoja liga rankingowa Solo/Duo i Flex. LP (League Points) to punkty do awansu — po 100 LP promujesz do wyższego podziału. WR% = procent wygranych gier w tej kolejce." />
@@ -2376,7 +2378,7 @@ export default function Profile() {
             </div>
 
             {/* Mastery */}
-            <div className={(mobileTab === "mecze" || mobileTab === "kalkulator") ? "hidden lg:block" : ""}>
+            <div className={(mobileTab === "mecze" || mobileTab === "kalkulator" || mobileTab === "karta") ? "hidden lg:block" : ""}>
               <p className="section-title">
                 <Target className="w-3.5 h-3.5 text-primary" /> Mistrzostwo
                 <InfoTooltip align="right" text="Oficjalny system Riot Games pokazujący ile gier zagrałeś danym bohaterem. Lv. 7 = najwyższy poziom mistrzostwa. Liczba po prawej (K) = tysiące punktów mistrzostwa zdobytych łącznie." />
@@ -2421,7 +2423,7 @@ export default function Profile() {
               const poolLabel = champs.length === 1 ? "Mono-main" : champs.length <= 2 ? "Duo-main" : champs.length <= 4 ? "Wąska pula" : champs.length <= 7 ? "Zrównoważona" : "Szeroka pula";
               const poolColor = champs.length <= 2 ? "text-yellow-400" : champs.length <= 5 ? "text-green-400" : "text-blue-400";
               return (
-                <div className={(mobileTab === "mecze" || mobileTab === "kalkulator") ? "hidden lg:block" : ""}>
+                <div className={(mobileTab === "mecze" || mobileTab === "kalkulator" || mobileTab === "karta") ? "hidden lg:block" : ""}>
                   <p className="section-title">
                     <Layers className="w-3.5 h-3.5 text-primary" /> Pula postaci
                     <InfoTooltip align="right" text="Analiza puli bohaterów z ostatnich meczy. Top1% = ile % gier grasz główną postacią. Top3% = ile % pokrywa 3 najpopularniejsze. Mono-main = 1 postać, Szeroka pula = 8+ postaci." />
@@ -2466,7 +2468,7 @@ export default function Profile() {
             })()}
 
             {/* Match History */}
-            <div className={(mobileTab === "rang" || mobileTab === "kalkulator") ? "hidden lg:block" : ""}>
+            <div className={(mobileTab === "rang" || mobileTab === "kalkulator" || mobileTab === "karta") ? "hidden lg:block" : ""}>
               <p className="section-title">
                 <Shield className="w-3.5 h-3.5 text-primary" /> Ostatnie mecze
               </p>
@@ -2510,6 +2512,14 @@ export default function Profile() {
                 <Swords className="w-3.5 h-3.5 text-primary" /> Kalkulator Buildu
               </p>
               <BuildCalculator />
+            </div>
+
+            {/* Card Generator — osobna zakładka */}
+            <div className={mobileTab !== "karta" ? "hidden lg:block" : ""}>
+              <p className="section-title">
+                <Sparkles className="w-3.5 h-3.5 text-primary" /> Wygeneruj swój profil
+              </p>
+              <CardGenerator gameName={gameName} tagLine={tagLine} region={region} />
             </div>
           </aside>
         </div>
