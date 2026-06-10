@@ -11,6 +11,9 @@ import {
   ewma,
   proportionZ,
   gradeFromScore,
+  mean,
+  stdDev,
+  clamp,
 } from "../lib/stats-utils";
 
 const router: IRouter = Router();
@@ -75,26 +78,11 @@ interface MatchData {
   wasAfk: boolean;
 }
 
-function mean(arr: number[]): number {
-  if (arr.length === 0) return 0;
-  return arr.reduce((a, b) => a + b, 0) / arr.length;
-}
-
 function median(arr: number[]): number {
   if (arr.length === 0) return 0;
   const sorted = [...arr].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
   return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-}
-
-function stdDev(arr: number[]): number {
-  if (arr.length < 2) return 0;
-  const avg = mean(arr);
-  return Math.sqrt(arr.reduce((sum, val) => sum + (val - avg) ** 2, 0) / arr.length);
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
 }
 
 function grade(score: number): string {
@@ -1105,19 +1093,24 @@ router.get("/:puuid/analysis", async (req, res) => {
     const matchListRes = await riotFetch(matchListUrl);
     const matchIds = (await matchListRes.json()) as string[];
     const matchDataArr: MatchData[] = [];
-    for (const matchId of matchIds) {
+    const BATCH_SIZE = 5;
+
+    async function fetchMatch(matchId: string): Promise<MatchData | null> {
       try {
         const matchUrl = `https://${cluster}.api.riotgames.com/lol/match/v5/matches/${matchId}`;
         const matchRes = await riotFetch(matchUrl);
         const matchData = (await matchRes.json()) as any;
-        if (matchData.info?.gameMode === "CHERRY") continue;
+        if (matchData.info?.gameMode === "CHERRY") return null;
+
         const participant = matchData.info?.participants?.find((p: any) => p.puuid === puuid);
-        if (!participant) continue;
+        if (!participant) return null;
+
         const teamParticipants = matchData.info.participants.filter((p: any) => p.teamId === participant.teamId);
         const allParticipants = matchData.info.participants;
         const afkTeammate = teamParticipants.some((p: any) => p.puuid !== puuid && p.timePlayed < matchData.info.gameDuration * 0.5);
         const wasAfk = participant.timePlayed < matchData.info.gameDuration * 0.5;
-        matchDataArr.push({
+
+        return {
           matchId, gameMode: matchData.info.gameMode,
           gameDuration: matchData.info.gameDuration, gameEndTimestamp: matchData.info.gameEndTimestamp,
           win: participant.win, championName: participant.championName,
@@ -1156,8 +1149,19 @@ router.get("/:puuid/analysis", async (req, res) => {
           teamObjectivesStolen: allParticipants.filter((p: any) => p.teamId === participant.teamId).reduce((s: number, p: any) => s + (p.objectivesStolen ?? 0), 0),
           hadAfkTeammate: afkTeammate,
           wasAfk,
-        });
-      } catch { continue; }
+        };
+      } catch {
+        return null;
+      }
+    }
+
+    // Parallelize match fetching in batches to reduce total latency while respecting rate limits
+    for (let i = 0; i < matchIds.length; i += BATCH_SIZE) {
+      const batch = matchIds.slice(i, i + BATCH_SIZE);
+      const results = await Promise.all(batch.map(fetchMatch));
+      for (const res of results) {
+        if (res) matchDataArr.push(res);
+      }
     }
     const analysis = computeAnalysis(matchDataArr);
     const validated = GetSummonerAnalysisResponse.parse(analysis);
