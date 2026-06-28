@@ -73,7 +73,8 @@ function Protected({ component: Component }: { component: ComponentType<any> }) 
 
   if (loading) return <PageLoader />;
   if (!user) return null;
-  return <Component />;
+  const ProtectedComponent = Component as unknown as () => JSX.Element;
+  return <ProtectedComponent />;
 }
 
 function Router() {
@@ -81,12 +82,12 @@ function Router() {
     <Suspense fallback={<PageLoader />}>
       <Switch>
         {/* Public auth + info pages */}
-        <Route path="/auth" component={AuthPage} />
-        <Route path="/privacy" component={Privacy} />
-        <Route path="/terms" component={Terms} />
-        <Route path="/about" component={About} />
-        <Route path="/poradnik" component={Guide} />
-        <Route path="/promo" component={Promo} />
+        <Route path="/auth">{() => <AuthPage />}</Route>
+        <Route path="/privacy">{() => <Privacy />}</Route>
+        <Route path="/terms">{() => <Terms />}</Route>
+        <Route path="/about">{() => <About />}</Route>
+        <Route path="/poradnik">{() => <Guide />}</Route>
+        <Route path="/promo">{() => <Promo />}</Route>
 
         {/* Protected app */}
         <Route path="/">{() => <Protected component={Home} />}</Route>
@@ -98,7 +99,7 @@ function Router() {
         <Route path="/live/:region/:gameName/:tagLine">{() => <Protected component={LiveGame} />}</Route>
         <Route path="/admin">{() => <Protected component={AdminPage} />}</Route>
 
-        <Route component={NotFound} />
+        <Route>{() => <NotFound />}</Route>
       </Switch>
     </Suspense>
   );

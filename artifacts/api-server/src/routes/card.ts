@@ -67,6 +67,16 @@ const RANK_COLORS: Record<string, string> = {
   challenger: "#0ea5e9",
 };
 
+interface RiotAccount {
+  puuid: string;
+}
+
+interface RiotSummoner {
+  id: string;
+  summonerLevel: number;
+  profileIconId: number;
+}
+
 interface RankedEntry {
   queueType: string;
   tier: string;
@@ -97,15 +107,15 @@ async function getPlayerData(
     if (accountRes.status === 401 || accountRes.status === 403) throw new Error("Nieprawidłowy klucz Riot API");
     throw new Error(`Błąd Riot API: ${accountRes.status}`);
   }
-  const accountData = await accountRes.json();
-  const puuid: string = accountData.puuid;
+  const accountData = (await accountRes.json()) as RiotAccount;
+  const puuid = accountData.puuid;
 
   const summonerRes = await fetch(
     `https://${platform.toLowerCase()}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${puuid}`,
     { headers: { "X-Riot-Token": apiKey } },
   );
   if (!summonerRes.ok) throw new Error(`Błąd Riot API (summoner): ${summonerRes.status}`);
-  const summonerData = await summonerRes.json();
+  const summonerData = (await summonerRes.json()) as RiotSummoner;
 
   // Use provided ranked data from frontend when available, else fetch
   let soloQ: RankedEntry | undefined = undefined;
@@ -117,7 +127,7 @@ async function getPlayerData(
       `https://${platform.toLowerCase()}.api.riotgames.com/lol/league/v4/entries/by-summoner/${encodeURIComponent(summonerData.id)}`,
       { headers: { "X-Riot-Token": apiKey } },
     );
-    const leagueData = leagueRes.ok ? await leagueRes.json() : [];
+    const leagueData = (leagueRes.ok ? await leagueRes.json() : []) as RankedEntry[];
     soloQ = leagueData.find((q: RankedEntry) => q.queueType === "RANKED_SOLO_5x5");
   }
 
@@ -205,7 +215,7 @@ router.post("/generate", async (req: Request, res: Response) => {
     const fontData = await getFontData();
 
     const svg = await satori(
-      {
+      ({
         type: "div",
         props: {
           style: {
@@ -486,7 +496,7 @@ router.post("/generate", async (req: Request, res: Response) => {
             },
           ],
         },
-      },
+      } as any),
       {
         width: 400,
         height: 600,

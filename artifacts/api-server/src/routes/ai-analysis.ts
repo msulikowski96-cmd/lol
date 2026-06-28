@@ -339,15 +339,22 @@ coaching_tips: 3, champion_recommendations: 2, improvement_priorities: 3, key_we
 }
 
 router.get("/:puuid/ai-report", requireUsage("ai_analysis"), async (req, res) => {
-  const { puuid } = req.params;
-  const { region, gameName } = req.query as { region: string; gameName?: string };
+  const puuid = typeof req.params.puuid === "string" ? req.params.puuid : undefined;
+  const region = typeof req.query.region === "string" ? req.query.region : undefined;
+  const gameName = typeof req.query.gameName === "string" ? req.query.gameName : undefined;
+
+  if (!puuid) {
+    res.status(400).json({ error: "bad_request", message: "puuid is required" });
+    return;
+  }
 
   if (!region) {
     res.status(400).json({ error: "bad_request", message: "region is required" });
     return;
   }
 
-  const cacheKey = `ai-report:${region.toUpperCase()}:${puuid}`;
+  const regionCode = region.toUpperCase();
+  const cacheKey = `ai-report:${regionCode}:${puuid}`;
   const cached = cache.get(cacheKey);
   if (cached) {
     res.json(cached);
@@ -373,11 +380,11 @@ router.get("/:puuid/ai-report", requireUsage("ai_analysis"), async (req, res) =>
 
     const mainPromise = (async (): Promise<{ data: Awaited<ReturnType<typeof fetchInternalData>>; parsed: any }> => {
       const t0 = Date.now();
-      const data = await fetchInternalData(puuid, region.toUpperCase(), controller.signal, isClosed);
+      const data = await fetchInternalData(puuid, regionCode, controller.signal, isClosed);
       if (isClosed()) return { data, parsed: { error: "request_closed" } };
       console.log(`[ai-report] data fetch: ${Date.now() - t0}ms`);
 
-      const prompt = buildPrompt(data, gameName ?? "Gracz");
+      const prompt = buildPrompt(data, typeof gameName === "string" && gameName ? gameName : "Gracz");
 
       const t1 = Date.now();
       const nvidiaParams: any = {
