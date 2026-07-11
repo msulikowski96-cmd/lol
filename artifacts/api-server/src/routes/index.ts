@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import healthRouter from "./health";
 import authRouter from "./auth";
 import summonerRouter from "./summoner";
-import analysisRouter from "./analysis";
+import analysisRouter from "./analysis-v2";
 import championRouter from "./champion";
 import matchRouter from "./match";
 import aiAnalysisRouter from "./ai-analysis";
