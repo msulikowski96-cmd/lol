@@ -62,11 +62,14 @@ catalog:
 
 autoInstallPeers: false
 
-onlyBuiltDependencies:
-  - '@swc/core'
-  - esbuild
-  - msw
-  - unrs-resolver
+strictDepBuilds: true
+allowBuilds:
+  '@swc/core': true
+  esbuild: true
+  msw: true
+  unrs-resolver: true
+  protobufjs: true
+  electron: false
 
 overrides:
   # linux-x64 only — exclude other platforms
