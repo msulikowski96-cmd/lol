@@ -1,0 +1,27 @@
+name: Export repository snapshot
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - .github/workflows/export-repo.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Create snapshot archive
+        run: tar --exclude=.git -czf repo-snapshot.tar.gz .
+      - name: Upload snapshot artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: repo-snapshot
+          path: repo-snapshot.tar.gz
+          retention-days: 1
