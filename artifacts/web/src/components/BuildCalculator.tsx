@@ -341,7 +341,7 @@ function CopyBuildButton({ result, allChampions, myChampId }: {
       ``,
       `✦ Runy: ${result.runes.keystone.name} (${result.runes.primaryPath.name})`,
       ``,
-      `📊 nexus-sight.onrender.com`,
+      `📊 nexus-sight.com.pl`,
     ].join("\n");
 
     navigator.clipboard.writeText(lines).then(() => {
