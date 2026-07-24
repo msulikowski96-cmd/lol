@@ -1,11 +1,12 @@
-name: Temporary issue trigger test
+name: Temporary pull request trigger test
 
 on:
-  issues:
-    types: [opened]
+  pull_request_target:
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: write
+  pull-requests: read
 
 jobs:
   marker:
@@ -13,12 +14,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: master
           fetch-depth: 0
       - name: Write marker
         run: |
-          echo "issue workflow ran" > .issue-workflow-marker.txt
+          echo "pull request workflow ran" > .pr-workflow-marker.txt
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add .issue-workflow-marker.txt
-          git commit -m 'Test issue-triggered workflow'
+          git add .pr-workflow-marker.txt
+          git commit -m 'Test pull-request-triggered workflow'
           git push origin HEAD:master
