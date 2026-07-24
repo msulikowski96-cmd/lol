@@ -23,7 +23,7 @@ export default function Privacy() {
             <h2>1. Informacje ogólne</h2>
             <p>
               Niniejsza Polityka Prywatności określa zasady przetwarzania i ochrony danych osobowych użytkowników serwisu
-              Nexus Sight (dalej: „Serwis"), dostępnego pod adresem <strong>nexus-sight.onrender.com</strong>.
+              Nexus Sight (dalej: „Serwis"), dostępnego pod adresem <strong>nexus-sight.com.pl</strong>.
               Administratorem Serwisu jest zespół Nexus Sight.
             </p>
             <p>
