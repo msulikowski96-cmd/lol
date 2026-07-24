@@ -23,7 +23,7 @@ export default function Terms() {
             <h2>1. Postanowienia ogólne</h2>
             <p>
               Niniejszy Regulamin określa zasady korzystania z serwisu internetowego Nexus Sight (dalej: „Serwis"),
-              dostępnego pod adresem <strong>nexus-sight.onrender.com</strong>.
+              dostępnego pod adresem <strong>nexus-sight.com.pl</strong>.
             </p>
             <p>
               Serwis jest darmowym narzędziem do wyszukiwania i analizy publicznie dostępnych statystyk graczy
