@@ -12,10 +12,14 @@ import {
   generateGroundedAiReport,
 } from "../lib/ai-report-v3";
 
-const nvidiaClient = new OpenAI({
-  baseURL: "https://integrate.api.nvidia.com/v1",
-  apiKey: process.env.NVIDIA_API_KEY ?? "",
-});
+// Lazy helper to get OpenAI client
+function getNvidiaClient(): OpenAI {
+  const apiKey = process.env.NVIDIA_API_KEY || process.env.OPENAI_API_KEY || "dummy_key";
+  return new OpenAI({
+    baseURL: "https://integrate.api.nvidia.com/v1",
+    apiKey,
+  });
+}
 
 const router: IRouter = Router();
 
@@ -296,7 +300,7 @@ router.get("/:puuid/ai-report", requireUsage("ai_analysis"), async (req, res) =>
     req.log?.info?.({ durationMs: Date.now() - fetchStartedAt, matches: source.matches.length }, "AI report source data ready");
 
     const generationStartedAt = Date.now();
-    const generated = await generateGroundedAiReport(nvidiaClient, {
+    const generated = await generateGroundedAiReport(getNvidiaClient(), {
       gameName: gameName?.trim() || "Gracz",
       soloQ: source.soloQ,
       flexQ: source.flexQ,
