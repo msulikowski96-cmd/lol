@@ -4,10 +4,14 @@ import { cache } from "../lib/cache";
 import { requireUsage } from "../middlewares/auth";
 import { shrinkWinRate, sigmoid as logisticFn, stdDev } from "../lib/stats-utils";
 
-const nvidiaClient = new OpenAI({
-  baseURL: "https://integrate.api.nvidia.com/v1",
-  apiKey: process.env.NVIDIA_API_KEY ?? "",
-});
+// Lazy helper to get OpenAI client
+function getNvidiaClient(): OpenAI {
+  const apiKey = process.env.NVIDIA_API_KEY || process.env.OPENAI_API_KEY || "dummy_key";
+  return new OpenAI({
+    baseURL: "https://integrate.api.nvidia.com/v1",
+    apiKey,
+  });
+}
 
 const router: IRouter = Router();
 
@@ -39,7 +43,7 @@ function r1(n: number): number { return Math.round(n * 10) / 10; }
 
 async function callAI(prompt: string, signal?: AbortSignal, maxTokens = 1500): Promise<string> {
   try {
-    const stream = await nvidiaClient.chat.completions.create({
+    const stream = await getNvidiaClient().chat.completions.create({
       model: "meta/llama-3.1-8b-instruct",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.3,
