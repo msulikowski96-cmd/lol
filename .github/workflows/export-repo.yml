@@ -33,3 +33,4 @@ jobs:
           git add -A
           git commit -m 'Generate repository manifest for deployment comparison'
           git push origin HEAD:master
+# Triggered through the GitHub contents API.
