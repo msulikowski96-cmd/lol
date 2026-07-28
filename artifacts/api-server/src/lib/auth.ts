@@ -31,6 +31,7 @@ export interface SessionPayload {
   uid: number;
   email: string;
   isAdmin: boolean;
+  displayName?: string;
   iat?: number;
   exp?: number;
 }

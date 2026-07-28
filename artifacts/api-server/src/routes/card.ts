@@ -97,7 +97,7 @@ async function getPlayerData(
     if (accountRes.status === 401 || accountRes.status === 403) throw new Error("Nieprawidłowy klucz Riot API");
     throw new Error(`Błąd Riot API: ${accountRes.status}`);
   }
-  const accountData = await accountRes.json();
+  const accountData = (await accountRes.json()) as any;
   const puuid: string = accountData.puuid;
 
   const summonerRes = await fetch(
@@ -105,7 +105,7 @@ async function getPlayerData(
     { headers: { "X-Riot-Token": apiKey } },
   );
   if (!summonerRes.ok) throw new Error(`Błąd Riot API (summoner): ${summonerRes.status}`);
-  const summonerData = await summonerRes.json();
+  const summonerData = (await summonerRes.json()) as any;
 
   // Use provided ranked data from frontend when available, else fetch
   let soloQ: RankedEntry | undefined = undefined;
@@ -117,7 +117,7 @@ async function getPlayerData(
       `https://${platform.toLowerCase()}.api.riotgames.com/lol/league/v4/entries/by-summoner/${encodeURIComponent(summonerData.id)}`,
       { headers: { "X-Riot-Token": apiKey } },
     );
-    const leagueData = leagueRes.ok ? await leagueRes.json() : [];
+    const leagueData = leagueRes.ok ? ((await leagueRes.json()) as any) : [];
     soloQ = leagueData.find((q: RankedEntry) => q.queueType === "RANKED_SOLO_5x5");
   }
 
@@ -486,7 +486,7 @@ router.post("/generate", async (req: Request, res: Response) => {
             },
           ],
         },
-      },
+      } as any,
       {
         width: 400,
         height: 600,
