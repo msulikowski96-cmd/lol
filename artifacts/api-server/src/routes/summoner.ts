@@ -45,7 +45,7 @@ function computeOpScore(
 }
 
 // GET /api/summoner/search?gameName=&tagLine=&region=
-router.get("/search", requireUsage("search"), async (req, res) => {
+router.get("/search", async (req, res) => {
   const { gameName, tagLine, region } = req.query as {
     gameName: string; tagLine: string; region: string;
   };

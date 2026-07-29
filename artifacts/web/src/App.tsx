@@ -88,14 +88,16 @@ function Router() {
         <Route path="/poradnik" component={Guide} />
         <Route path="/promo" component={Promo} />
 
-        {/* Protected app */}
-        <Route path="/">{() => <Protected component={Home} />}</Route>
-        <Route path="/profile/:region/:gameName/:tagLine">{() => <Protected component={Profile} />}</Route>
-        <Route path="/champion/:region/:gameName/:tagLine/:championName">{() => <Protected component={Champion} />}</Route>
-        <Route path="/match/:region/:gameName/:tagLine/:matchId">{() => <Protected component={MatchPage} />}</Route>
+        {/* Public app */}
+        <Route path="/" component={Home} />
+        <Route path="/profile/:region/:gameName/:tagLine" component={Profile} />
+        <Route path="/champion/:region/:gameName/:tagLine/:championName" component={Champion} />
+        <Route path="/match/:region/:gameName/:tagLine/:matchId" component={MatchPage} />
+        <Route path="/live/:region/:gameName/:tagLine" component={LiveGame} />
+
+        {/* Protected (requires login) */}
         <Route path="/ai-analysis/:region/:gameName/:tagLine">{() => <Protected component={AiAnalysis} />}</Route>
         <Route path="/optymalizator">{() => <Protected component={Optimizer} />}</Route>
-        <Route path="/live/:region/:gameName/:tagLine">{() => <Protected component={LiveGame} />}</Route>
         <Route path="/admin">{() => <Protected component={AdminPage} />}</Route>
 
         <Route component={NotFound} />
