@@ -54,7 +54,7 @@ stack = "BEST_EFFORT_FALLBACK"
 integrations = ["javascript_gemini_ai_integrations:2.0.0"]
 
 [workflows]
-runButton = "Project"
+runButton = "run"
 
 [[workflows.workflow]]
 name = "artifacts/web: web"
@@ -70,6 +70,7 @@ task = "shell.exec"
 args = "pnpm --filter @workspace/web run dev"
 cwd = "./artifacts/web"
 waitForPort = 22333
+ensurePreviewReachable = "/"
 router = "path"
 
 [workflows.workflow.tasks.env]
@@ -91,6 +92,8 @@ task = "shell.exec"
 args = "pnpm --filter @workspace/mockup-sandbox run dev"
 cwd = "./artifacts/mockup-sandbox"
 waitForPort = 8081
+ensurePreviewReachable = "/"
+router = "path"
 
 [workflows.workflow.tasks.env]
 PORT = "8081"
@@ -110,6 +113,8 @@ task = "shell.exec"
 args = "pnpm --filter @workspace/api-server run dev"
 cwd = "./artifacts/api-server"
 waitForPort = 8080
+ensurePreviewReachable = "/"
+router = "path"
 
 [workflows.workflow.tasks.env]
 PORT = "8080"
@@ -132,15 +137,6 @@ task = "workflow.run"
 args = "artifacts/mockup-sandbox: Component Preview Server"
 
 [[workflows.workflow]]
-name = "Project"
-mode = "parallel"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "artifacts/lol-overlay: LoL Overlay UI Preview"
-
-[[workflows.workflow]]
 name = "artifacts/lol-overlay: LoL Overlay UI Preview"
 author = "agent"
 
@@ -151,6 +147,27 @@ waitForPort = 3001
 
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[[workflows.workflow]]
+name = "artifacts/nexus-sight-promo: web"
+author = "agent"
+mode = "sequential"
+
+[workflows.workflow.metadata]
+outputType = "webview"
+artifactId = "artifacts/nexus-sight-promo"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter @workspace/nexus-sight-promo run dev"
+cwd = "./artifacts/nexus-sight-promo"
+waitForPort = 20250
+ensurePreviewReachable = "/"
+router = "path"
+
+[workflows.workflow.tasks.env]
+PORT = "20250"
+BASE_PATH = "/nexus-sight-promo/"
 
 [postMerge]
 path = "scripts/post-merge.sh"
