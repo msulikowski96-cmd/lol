@@ -348,16 +348,19 @@ router.get("/:puuid/live", async (req, res) => {
       })
     );
 
-    const forbidden = shardResults.find(r => r?.response.status === 403);
-    if (forbidden) {
-      const bodyText = await forbidden.response.text().catch(() => "");
-      console.error("[live] Riot API 403", bodyText.slice(0, 200));
-      res.status(403).json({ error: "riot_key_invalid", message: "Klucz Riot API wygasł lub jest nieprawidłowy" });
-      return;
-    }
-
+    // Check for a found game (200) FIRST — a valid game on one shard must not be
+    // blocked by a 403 from an unrelated shard.
     const found = shardResults.find(r => r?.response.ok);
     if (!found) {
+      const forbidden = shardResults.find(r => r?.response.status === 403);
+      if (forbidden) {
+        const bodyText = await forbidden.response.text().catch(() => "");
+        console.error("[live] Riot API 403", bodyText.slice(0, 200));
+        res.status(403).json({ error: "riot_key_invalid", message: "Klucz Riot API wygasł lub jest nieprawidłowy. Wygeneruj nowy klucz na developer.riotgames.com (klucze developerskie wygasają co 24h)." });
+        return;
+      }
+      const statuses = shardResults.map(r => r?.response.status ?? "null").join(", ");
+      console.info(`[live] not in game — shard statuses: ${statuses}`);
       res.status(404).json({ error: "not_in_game", message: "Gracz nie jest teraz w meczu" });
       return;
     }
