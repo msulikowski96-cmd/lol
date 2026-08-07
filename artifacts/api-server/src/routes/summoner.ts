@@ -305,6 +305,10 @@ router.get("/:puuid/live", async (req, res) => {
     res.status(400).json({ error: "bad_request", message: "region is required" });
     return;
   }
+  if (!summonerId) {
+    res.status(400).json({ error: "bad_request", message: "summonerId is required" });
+    return;
+  }
 
   const cacheKey = `live:${region.toUpperCase()}:${puuid}`;
   const cached = cache.get(cacheKey);
@@ -331,7 +335,8 @@ router.get("/:puuid/live", async (req, res) => {
   const shards = SHARD_GROUPS[regionLower] ?? [regionLower];
 
   try {
-    // Riot Spectator-V5: endpoint nazywa się "by-summoner" ale przyjmuje PUUID.
+    // Riot Spectator-V5: endpoint "by-summoner" wymaga encrypted summoner ID,
+    // nie globalnego PUUID. PUUID pozostaje kluczem profilu i odpowiedzi live.
     // Próbujemy najpierw shard z profilu, potem pozostałe shardy w regionie.
     // Sprawdzamy wszystkie shardy RÓWNOLEGLE — pierwszy który odpowie 200 wygrywa.
     // Dla EU: euw1, eun1, tr1, ru — wszystkie odpytane naraz zamiast kolejno.
@@ -339,7 +344,7 @@ router.get("/:puuid/live", async (req, res) => {
     const shardResults = await Promise.all(
       shards.map(async (shard): Promise<ShardResult | null> => {
         try {
-          const url = `https://${shard}.api.riotgames.com/lol/spectator/v5/active-games/by-summoner/${puuid}`;
+          const url = `https://${shard}.api.riotgames.com/lol/spectator/v5/active-games/by-summoner/${encodeURIComponent(summonerId)}`;
           const r = await fetch(url, { headers: { "X-Riot-Token": RIOT_API_KEY } });
           return { shard, response: r };
         } catch {

@@ -17,9 +17,12 @@ const router: IRouter = Router();
 router.use(healthRouter);
 router.use("/auth", authRouter);
 
+// Public profile and live-game lookups. Usage-gated AI/analysis routes remain
+// protected below, while the public UI can still search and view profiles.
+router.use("/summoner", summonerRouter);
+
 // All other API requires authentication
 router.use(requireAuth);
-router.use("/summoner", summonerRouter);
 router.use("/summoner", analysisRouter);
 router.use("/summoner", championRouter);
 router.use("/summoner", aiAnalysisRouter);

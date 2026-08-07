@@ -295,6 +295,34 @@ function NotInGameView({ gameName, tagLine, region, onRefetch }: { gameName: str
   );
 }
 
+function LiveErrorView({ error, onRefetch }: { error: any; onRefetch?: () => void }) {
+  const status = error?.status;
+  const apiMessage = error?.data?.message;
+  const isUnauthorized = status === 401 || status === 403 || error?.data?.error === "riot_key_invalid";
+  const title = isUnauthorized ? "NIEPRAWIDŁOWY KLUCZ RIOT API" : "NIE MOŻNA SPRAWDZIĆ MECZU";
+  const message = isUnauthorized
+    ? "Klucz developerski Riot API wygasł lub jest nieprawidłowy. Wygeneruj nowy klucz na developer.riotgames.com."
+    : apiMessage ?? "Serwer Riot API chwilowo nie odpowiada. Spróbuj ponownie za chwilę.";
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center justify-center py-20 px-4">
+      <AlertTriangle className="w-10 h-10 text-destructive/60 mb-3" />
+      <h2 className="text-lg font-bold text-foreground/60 mb-1 text-center" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>{title}</h2>
+      <p className="text-sm text-muted-foreground text-center max-w-md mb-6">{message}</p>
+      {onRefetch && (
+        <button
+          onClick={onRefetch}
+          className="text-xs font-bold px-4 py-2 rounded-lg cursor-pointer transition-colors flex items-center gap-1.5"
+          style={{ background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", fontFamily: "'Rajdhani', sans-serif" }}
+        >
+          <RefreshCw className="w-3 h-3" />
+          SPRAWDŹ PONOWNIE
+        </button>
+      )}
+    </motion.div>
+  );
+}
+
 export default function LiveGame() {
   const params = useParams<{ region: string; gameName: string; tagLine: string }>();
   const region = params.region ?? "";
@@ -388,6 +416,8 @@ export default function LiveGame() {
               <RefreshCw className="w-6 h-6 text-primary animate-spin mb-3" />
               <p className="text-sm text-muted-foreground">Szukam meczu...</p>
             </motion.div>
+          ) : liveError ? (
+            <LiveErrorView key="live-error" error={liveError} onRefetch={refetch} />
           ) : !inGame ? (
             <NotInGameView key="not-in-game" gameName={gameName} tagLine={tagLine} region={region} onRefetch={refetch} />
           ) : (
