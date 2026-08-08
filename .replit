@@ -54,7 +54,7 @@ stack = "BEST_EFFORT_FALLBACK"
 integrations = ["javascript_gemini_ai_integrations:2.0.0"]
 
 [workflows]
-runButton = "run"
+runButton = "artifacts/api-server: API Server"
 
 [[workflows.workflow]]
 name = "artifacts/web: web"
