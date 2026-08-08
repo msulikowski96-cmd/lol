@@ -260,14 +260,15 @@ function summarizeMatches(rawMatches: MatchDataV2[]) {
 
 router.get("/:puuid/ai-report", requireUsage("ai_analysis"), async (req, res) => {
   const { puuid } = req.params;
-  const { region, gameName } = req.query as { region?: string; gameName?: string };
+  const { region, gameName } = req.query;
 
-  if (!region) {
+  const regionStr = typeof region === "string" ? region : "";
+  if (!regionStr) {
     res.status(400).json({ error: "bad_request", message: "region is required" });
     return;
   }
 
-  const normalizedRegion = region.toUpperCase();
+  const normalizedRegion = regionStr.toUpperCase();
   const modelKey = PRIMARY_AI_MODEL.replaceAll("/", "_");
   const cacheKey = `ai-report:${AI_REPORT_PIPELINE_VERSION}:${modelKey}:${normalizedRegion}:${puuid}`;
   const cached = cache.get(cacheKey);
@@ -292,7 +293,7 @@ router.get("/:puuid/ai-report", requireUsage("ai_analysis"), async (req, res) =>
 
   try {
     const fetchStartedAt = Date.now();
-    const source = await fetchSourceData(puuid, normalizedRegion, controller.signal, isClosed);
+    const source = await fetchSourceData(puuid as string, normalizedRegion, controller.signal, isClosed);
     if (isClosed()) return;
 
     const stats = summarizeMatches(source.matches);
@@ -300,8 +301,9 @@ router.get("/:puuid/ai-report", requireUsage("ai_analysis"), async (req, res) =>
     req.log?.info?.({ durationMs: Date.now() - fetchStartedAt, matches: source.matches.length }, "AI report source data ready");
 
     const generationStartedAt = Date.now();
+    const gameNameStr = typeof gameName === "string" ? gameName.trim() : "Gracz";
     const generated = await generateGroundedAiReport(getNvidiaClient(), {
-      gameName: gameName?.trim() || "Gracz",
+      gameName: gameNameStr,
       soloQ: source.soloQ,
       flexQ: source.flexQ,
       mastery: source.mastery,

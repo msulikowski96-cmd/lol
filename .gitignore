@@ -2,6 +2,9 @@
 
 # compiled output
 dist
+**/dist/
+**/dist-electron/
+**/release/
 tmp
 out-tsc
 *.tsbuildinfo
