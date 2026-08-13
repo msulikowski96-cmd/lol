@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, ChevronRight, BarChart3, Zap, Shield, Users, Clock, X, Activity, Heart, Sparkles } from "lucide-react";
 import { getFavorites, toggleFavorite, type Favorite } from "@/lib/favorites";
 import { usePageTitle } from "@/lib/usePageTitle";
-import AdBanner from "@/components/AdBanner";
 
 const HISTORY_KEY = "nexus_sight_history";
 const MAX_HISTORY = 8;
@@ -186,13 +185,13 @@ export default function Home() {
               <div className="corner-accent corner-accent-br" />
             </div>
             <div>
-              <h1 className="text-5xl md:text-6xl font-black tracking-[0.08em] leading-none text-gradient-cyan"
+              <h1 className="text-4xl md:text-5xl font-black tracking-[0.06em] leading-none text-gradient-cyan"
                 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900 }}>
-                NEXUS SIGHT
+                STATYSTYKI LEAGUE OF LEGENDS
               </h1>
               <p className="text-[10px] tracking-[0.35em] uppercase text-muted-foreground mt-1"
                 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 600 }}>
-                League of Legends · Analiza Statystyk
+                NEXUS SIGHT · Analiza Statystyk
               </p>
             </div>
           </div>
@@ -320,6 +319,71 @@ export default function Home() {
             )}
           </AnimatePresence>
         </motion.div>
+
+        <section
+          aria-labelledby="seo-intro-heading"
+          className="mt-16 w-full max-w-4xl prose-custom text-left"
+        >
+          <h2 id="seo-intro-heading">Statystyki graczy LoL i analiza gry</h2>
+          <p>
+            Nexus Sight to polskojęzyczne narzędzie dla osób, które chcą lepiej rozumieć
+            swoją grę w League of Legends. Wpisz Riot ID gracza, wybierz region i otrzymaj
+            czytelny profil oparty na danych z oficjalnego API Riot Games. Zamiast przeglądać
+            kilka serwisów, możesz w jednym miejscu sprawdzić rangę, ostatnie wyniki,
+            bohaterów oraz najważniejsze wskaźniki meczu. To szybki sposób na znalezienie
+            powtarzających się mocnych stron i elementów, nad którymi warto pracować.
+          </p>
+
+          <h3>Ranga, KDA i historia meczy</h3>
+          <p>
+            Profil gracza pokazuje aktualną rangę, punkty LP, zwycięstwa i porażki, a także
+            historię rozegranych spotkań. Zobaczysz KDA, wynik OP Score, farmę, udział w
+            zabójstwach i porównanie z przeciwnikiem na alei. Takie zestawienie pomaga
+            ocenić nie tylko wynik pojedynczej gry, ale również kierunek rozwoju w czasie.
+            Więcej informacji o tym, jak czytać te dane, znajdziesz w naszym{" "}
+            <Link href="/poradnik">poradniku analizy statystyk LoL</Link>.
+          </p>
+
+          <h3>Podgląd aktywnej gry na żywo</h3>
+          <p>
+            Funkcja Live Game pozwala sprawdzić, czy wyszukany gracz jest w trakcie meczu.
+            Jeśli dane są dostępne, zobaczysz obie drużyny, wybranych championów, rangi,
+            runy, czary przywoływacza i bany. Dzięki temu możesz szybko przygotować się do
+            spotkania albo przeanalizować sytuację na serwerze bez instalowania dodatkowej
+            aplikacji.
+          </p>
+
+          <h2>Funkcje, które pomagają grać lepiej</h2>
+          <h3>Analiza AI i spersonalizowane wskazówki</h3>
+          <p>
+            Statystyki są najbardziej wartościowe wtedy, gdy prowadzą do konkretnego
+            działania. Nexus Sight łączy dane z wielu meczy z analizą AI, która pomaga
+            rozpoznać styl gry, fazę laningu, kontrolę wizji, teamfighty i powtarzające się
+            zgony. Raport wskazuje priorytety do poprawy oraz praktyczne porady coachingowe.
+            Zalogowani użytkownicy mogą przejść do{" "}
+            <Link href="/optymalizator">narzędzi AI</Link> albo uruchomić analizę z poziomu
+            swojego profilu.
+          </p>
+
+          <h3>Mistrzostwo bohaterów i lepszy build</h3>
+          <p>
+            Sprawdź, na których championach grasz najczęściej i gdzie osiągasz najlepsze
+            wyniki. Historia pozwala porównać role, wybory oraz konsekwencję w kolejnych
+            meczach. Przed następną kolejką możesz też skorzystać z{" "}
+            <Link href="/optymalizator">kalkulatora buildu i run</Link>, aby dopasować
+            przedmioty do składu przeciwnika.
+          </p>
+
+          <h2>Jak zacząć analizę gracza?</h2>
+          <p>
+            Wyszukaj dowolny Riot ID w formularzu powyżej, na przykład nazwę i tag w formacie
+            <strong> Gracz#EUW</strong>. Wybierz serwer, aby otrzymać właściwe dane regionalne.
+            Nie musisz nic instalować. Jeśli chcesz poznać projekt i sposób działania,
+            odwiedź stronę <Link href="/about">o Nexus Sight</Link> albo wróć do{" "}
+            <Link href="/poradnik">poradnika League of Legends</Link>. Nexus Sight jest
+            niezależnym narzędziem społecznościowym i nie jest zatwierdzony przez Riot Games.
+          </p>
+        </section>
 
         <motion.div
           initial={{ opacity: 0 }}

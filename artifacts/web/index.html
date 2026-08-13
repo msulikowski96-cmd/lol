@@ -3,24 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-    <title>Nexus Sight — Statystyki graczy League of Legends</title>
-    <meta name="description" content="Nexus Sight to darmowe narzędzie do analizy statystyk graczy League of Legends. Sprawdź rangi, historię meczy, mistrzostwo bohaterów, analizę AI i live game dowolnego gracza LoL." />
+    <title>Statystyki League of Legends | Nexus Sight</title>
+    <meta name="description" content="Darmowe statystyki League of Legends i analiza graczy LoL. Sprawdź rangę, historię meczy, bohaterów i grę na żywo." />
     <meta name="keywords" content="League of Legends, LoL, statystyki, analiza, rangi, historia meczy, live game, mistrzostwo, Riot Games, Nexus Sight, op.gg, porofessor, u.gg" />
     <meta name="author" content="Nexus Sight" />
     <meta name="robots" content="index, follow" />
     <link rel="canonical" href="https://nexus-sight.com.pl/" />
 
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Nexus Sight — Statystyki graczy League of Legends" />
-    <meta property="og:description" content="Sprawdź statystyki każdego gracza LoL — głęboka analiza AI, historia meczy, live game, szacowana ranga i mistrzostwo bohaterów." />
+    <meta property="og:title" content="Statystyki League of Legends | Nexus Sight" />
+    <meta property="og:description" content="Darmowe statystyki League of Legends i analiza graczy LoL. Ranga, historia meczy, bohaterowie i gra na żywo." />
     <meta property="og:image" content="https://nexus-sight.com.pl/opengraph.jpg" />
     <meta property="og:url" content="https://nexus-sight.com.pl/" />
     <meta property="og:site_name" content="Nexus Sight" />
     <meta property="og:locale" content="pl_PL" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Nexus Sight — Statystyki graczy League of Legends" />
-    <meta name="twitter:description" content="Darmowe narzędzie do analizy statystyk graczy LoL. Rangi, historia meczy, analiza AI, live game." />
+    <meta name="twitter:title" content="Statystyki League of Legends | Nexus Sight" />
+    <meta name="twitter:description" content="Darmowe statystyki League of Legends i analiza graczy LoL. Ranga, historia meczy, bohaterowie i gra na żywo." />
     <meta name="twitter:image" content="https://nexus-sight.com.pl/opengraph.jpg" />
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -46,78 +46,43 @@
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "WebApplication",
-      "name": "Nexus Sight",
-      "url": "https://nexus-sight.com.pl/",
-      "description": "Darmowe, polskojęzyczne narzędzie do analizy statystyk graczy League of Legends. Rangi, historia meczy, mistrzostwo bohaterów, analiza AI, live game i porady coachingowe.",
-      "applicationCategory": "GameApplication",
-      "operatingSystem": "Web",
-      "inLanguage": "pl",
-      "isAccessibleForFree": true,
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "PLN"
-      },
-      "author": {
-        "@type": "Organization",
-        "name": "Nexus Sight"
-      },
-      "about": {
-        "@type": "VideoGame",
-        "name": "League of Legends",
-        "gamePlatform": "PC",
-        "publisher": {
+      "@graph": [
+        {
           "@type": "Organization",
-          "name": "Riot Games"
-        }
-      }
-    }
-    </script>
-
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "FAQPage",
-      "mainEntity": [
+          "@id": "https://nexus-sight.com.pl/#organization",
+          "name": "Nexus Sight",
+          "url": "https://nexus-sight.com.pl/"
+        },
         {
-          "@type": "Question",
-          "name": "Czym jest Nexus Sight?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Nexus Sight to darmowe, polskojęzyczne narzędzie do analizy statystyk graczy League of Legends. Korzysta z oficjalnego API Riot Games i sztucznej inteligencji do generowania głębokich raportów analitycznych."
+          "@type": "WebSite",
+          "@id": "https://nexus-sight.com.pl/#website",
+          "name": "Nexus Sight",
+          "url": "https://nexus-sight.com.pl/",
+          "inLanguage": "pl",
+          "publisher": { "@id": "https://nexus-sight.com.pl/#organization" },
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://nexus-sight.com.pl/profile/EUW1/{search_term_string}",
+            "query-input": "required name=search_term_string"
           }
         },
         {
-          "@type": "Question",
-          "name": "Jakie funkcje oferuje Nexus Sight?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Nexus Sight oferuje: wyszukiwanie graczy po Riot ID, profil z rangą i historią meczy, głęboką analizę AI z oceną stylu gry, śledzenie gry na żywo (live game), mistrzostwo bohaterów, szczegółowe statystyki per champion, porady coachingowe i polecane championy."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "Czy Nexus Sight jest darmowy?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Tak, Nexus Sight jest całkowicie darmowy. Nie wymaga logowania ani rejestracji. Wystarczy wpisać Riot ID gracza (nazwa#tag) i wybrać serwer."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "Jakie regiony obsługuje Nexus Sight?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Nexus Sight obsługuje wszystkie serwery League of Legends: EUW, EUNE, NA, KR, BR, LAN, LAS, OCE, TR, RU, JP oraz serwery azjatyckie (PH, SG, TW, TH, VN)."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "Czym jest analiza AI w Nexus Sight?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Analiza AI to zaawansowany raport generowany przez sztuczną inteligencję. Ocenia styl gry, mocne i słabe strony, umiejętności makro i mikro, fazę laningową, teamfighty, kontrolę wizji, aspekt mentalny, a także podaje wskazówki coachingowe i polecane championy."
+          "@type": "WebApplication",
+          "@id": "https://nexus-sight.com.pl/#application",
+          "name": "Nexus Sight",
+          "url": "https://nexus-sight.com.pl/",
+          "description": "Darmowe statystyki League of Legends i analiza graczy LoL.",
+          "applicationCategory": "GameApplication",
+          "operatingSystem": "Web",
+          "inLanguage": "pl",
+          "isAccessibleForFree": true,
+          "offers": { "@type": "Offer", "price": "0", "priceCurrency": "PLN" },
+          "publisher": { "@id": "https://nexus-sight.com.pl/#organization" },
+          "about": {
+            "@type": "VideoGame",
+            "name": "League of Legends",
+            "gamePlatform": "PC",
+            "publisher": { "@type": "Organization", "name": "Riot Games" }
           }
         }
       ]
