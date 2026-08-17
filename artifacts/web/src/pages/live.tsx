@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Clock, Shield, Swords, Eye, RefreshCw, ChevronRight, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Clock, Shield, Swords, Eye, RefreshCw, ChevronRight, AlertTriangle, Lock, Settings } from "lucide-react";
 import {
   useSearchSummoner,
   useGetLiveGame,
@@ -242,8 +242,10 @@ function TeamPanel({ participants, bans, side, selfPuuid, region }: { participan
   );
 }
 
-function NotInGameView({ gameName, tagLine, region, onRefetch }: { gameName: string; tagLine: string; region: string; onRefetch?: () => void }) {
+function NotInGameView({ gameName, tagLine, region, onRefetch, errorCode, errorHint }: { gameName: string; tagLine: string; region: string; onRefetch?: () => void; errorCode?: string; errorHint?: string }) {
   const [checking, setChecking] = useState(false);
+  const isRiotKeyError = errorCode === "riot_key_invalid";
+  const showPrivacyHint = errorHint === "spectator_privacy" || errorCode === "not_in_game";
 
   const handleRefetch = () => {
     if (!onRefetch) return;
@@ -255,17 +257,46 @@ function NotInGameView({ gameName, tagLine, region, onRefetch }: { gameName: str
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center justify-center py-20 px-4">
       <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-muted border border-border">
-        <Eye className="w-7 h-7 text-muted-foreground" />
+        {isRiotKeyError ? <AlertTriangle className="w-7 h-7 text-amber-500" /> : <Eye className="w-7 h-7 text-muted-foreground" />}
       </div>
       <h2 className="text-lg font-bold text-foreground/60 mb-1" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
-        GRACZ NIE JEST W MECZU
+        {isRiotKeyError ? "BŁĄD KLUCZA RIOT API" : "GRACZ NIE JEST W MECZU"}
       </h2>
       <p className="text-sm text-muted-foreground mb-2">
-        {gameName}#{tagLine} aktualnie nie gra na serwerze {region}
+        {isRiotKeyError
+          ? "Klucz API Riot wygasł lub jest nieprawidłowy."
+          : <>{gameName}#{tagLine} aktualnie nie gra na serwerze {region}</>}
       </p>
-      <p className="text-[10px] text-muted-foreground/50 mb-6">
+      <p className="text-[10px] text-muted-foreground/50 mb-4">
         Dane spectator pojawiają się ~1-3 min po starcie gry
       </p>
+
+      {showPrivacyHint && (
+        <div className="max-w-md w-full mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <div className="flex items-start gap-2.5">
+            <Lock className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-[11px] font-bold text-amber-800 mb-1" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+                NIE WIDZISZ SWOJEJ GRY?
+              </p>
+              <p className="text-[10px] text-amber-700 leading-relaxed mb-2">
+                Jeśli grasz, ale Nexus Sight nie wykrywa meczu — prawdopodobnie masz włączone <strong>ograniczenie danych spectator</strong> w kliencie LoL.
+              </p>
+              <div className="flex items-start gap-2 bg-white/60 rounded-lg px-3 py-2 border border-amber-200/50">
+                <Settings className="w-3.5 h-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
+                <div className="text-[10px] text-amber-800 leading-relaxed">
+                  <strong>Jak naprawić:</strong><br />
+                  1. Otwórz klienta League of Legends<br />
+                  2. Wejdź w <strong>Ustawienia</strong> → <strong>Prywatność</strong><br />
+                  3. Wyłącz opcję <strong>"Ogranicz dostęp do danych spectator"</strong><br />
+                  4. Uruchom nową grę
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center gap-3 mb-6">
         {onRefetch && (
           <button
@@ -359,6 +390,11 @@ export default function LiveGame() {
 
   const inGame = !!liveGame && !liveError;
 
+  // Extract error details from the API error to show appropriate UI
+  const errorData = (liveError as any)?.data as { error?: string; hint?: string } | undefined;
+  const errorCode = errorData?.error;
+  const errorHint = errorData?.hint;
+
   const t1 = useMemo(() => (inGame ? ((liveGame as any).participants ?? []).filter((p: any) => p.teamId === 100) : []), [liveGame, inGame]);
   const t2 = useMemo(() => (inGame ? ((liveGame as any).participants ?? []).filter((p: any) => p.teamId === 200) : []), [liveGame, inGame]);
   const b1 = useMemo(() => (inGame ? ((liveGame as any).bans ?? []).filter((b: any) => b.teamId === 100) : []), [liveGame, inGame]);
@@ -419,7 +455,7 @@ export default function LiveGame() {
           ) : liveError ? (
             <LiveErrorView key="live-error" error={liveError} onRefetch={refetch} />
           ) : !inGame ? (
-            <NotInGameView key="not-in-game" gameName={gameName} tagLine={tagLine} region={region} onRefetch={refetch} />
+            <NotInGameView key="not-in-game" gameName={gameName} tagLine={tagLine} region={region} onRefetch={refetch} errorCode={errorCode} errorHint={errorHint} />
           ) : (
             <motion.div key="game" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
               <div className="overflow-hidden rounded-xl bg-card border border-border shadow-sm">

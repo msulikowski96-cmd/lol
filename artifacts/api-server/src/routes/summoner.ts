@@ -310,6 +310,11 @@ router.get("/:puuid/live", async (req, res) => {
     return;
   }
 
+  if (!puuid || puuid.length < 10) {
+    res.status(400).json({ error: "bad_request", message: "Nieprawidłowy identyfikator gracza (PUUID). Spróbuj wyszukać gracza ponownie." });
+    return;
+  }
+
   const cacheKey = `live:${region.toUpperCase()}:${puuid}`;
   const cached = cache.get(cacheKey);
   if (cached) { res.json(cached); return; }
@@ -365,8 +370,13 @@ router.get("/:puuid/live", async (req, res) => {
         return;
       }
       const statuses = shardResults.map(r => r?.response.status ?? "null").join(", ");
+      const all404 = shardResults.every(r => r?.response.status === 404);
       console.info(`[live] not in game — shard statuses: ${statuses}`);
-      res.status(404).json({ error: "not_in_game", message: "Gracz nie jest teraz w meczu" });
+      res.status(404).json({
+        error: "not_in_game",
+        message: "Gracz nie jest teraz w meczu",
+        hint: all404 ? "spectator_privacy" : undefined,
+      });
       return;
     }
 
