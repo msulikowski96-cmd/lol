@@ -1,0 +1,8 @@
+{
+  "name": "Nexus Sight",
+  "description": "Statystyki i zaawansowana analiza graczy League of Legends, mecze na żywo, optymalizator buildów oraz asystent AI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
