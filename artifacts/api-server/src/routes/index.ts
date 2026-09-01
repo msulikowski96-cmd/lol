@@ -20,10 +20,12 @@ router.use("/auth", authRouter);
 // Public profile and live-game lookups. Usage-gated AI/analysis routes remain
 // protected below, while the public UI can still search and view profiles.
 router.use("/summoner", summonerRouter);
+// Independent statistical analysis only reads Riot match data and is part of
+// the public profile. The AI report remains protected below.
+router.use("/summoner", analysisRouter);
 
 // All other API requires authentication
 router.use(requireAuth);
-router.use("/summoner", analysisRouter);
 router.use("/summoner", championRouter);
 router.use("/summoner", aiAnalysisRouter);
 router.use("/match", matchRouter);
