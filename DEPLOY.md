@@ -38,7 +38,7 @@ git push -u origin main
 | **Region** | Frankfurt (EU Central) lub najbliższy do Ciebie |
 | **Branch** | `main` |
 | **Runtime** | `Node` |
-| **Build Command** | `npm install -g pnpm && pnpm install --frozen-lockfile && BASE_PATH=/ pnpm --filter @workspace/web run build && pnpm --filter @workspace/api-server run build` |
+| **Build Command** | `npm install -g pnpm && pnpm install --frozen-lockfile && NODE_ENV=production pnpm --filter @workspace/db run push && BASE_PATH=/ pnpm --filter @workspace/web run build && pnpm --filter @workspace/api-server run build` |
 | **Start Command** | `NODE_ENV=production PORT=10000 node artifacts/api-server/dist/index.mjs` |
 | **Plan** | Free (lub Starter za $7/mies. bez cold starts) |
 
@@ -50,16 +50,19 @@ W ustawieniach Web Service kliknij **Environment** i dodaj:
 
 | Zmienna | Wartość | Opis |
 |---------|---------|------|
+| `DATABASE_URL` | `postgresql://...` | Pełny **Internal Database URL** z utworzonej bazy Render; nie sam hostname, port ani hasło |
 | `RIOT_API_KEY` | `RGAPI-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` | Klucz API z Riot Developer Portal |
 | `NODE_ENV` | `production` | Tryb produkcyjny |
 | `PORT` | `10000` | Port (Render domyślnie używa 10000) |
+| `SESSION_SECRET` | losowy ciąg znaków | Sekret podpisujący sesje JWT, minimum 16 znaków |
+| `NVIDIA_API_KEY` | klucz NVIDIA | Wymagany tylko dla chronionej analizy AI |
 
 ---
 
 ## Krok 4: Deploy
 
 1. Kliknij **Create Web Service**.
-2. Render automatycznie zainstaluje zależności, zbuduje frontend i API.
+2. Render automatycznie zainstaluje zależności, zastosuje schemat `users`/`usage` do bazy, a następnie zbuduje frontend i API.
 3. Po zakończeniu buildu, aplikacja będzie dostępna pod adresem:
    `https://nexus-sight.onrender.com`
 
