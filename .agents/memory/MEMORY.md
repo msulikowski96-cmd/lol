@@ -1,0 +1,1 @@
+- [Render versus Replit database](render-replit-database.md) — Render cannot automatically use Replit’s managed PostgreSQL; choose Replit Publish or provision/configure a separate Render database.
