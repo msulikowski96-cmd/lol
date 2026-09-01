@@ -1,1 +1,2 @@
 - [Render versus Replit database](render-replit-database.md) — Render cannot automatically use Replit’s managed PostgreSQL; choose Replit Publish or provision/configure a separate Render database.
+- [Vite API proxy](vite-api-proxy.md) — the separate web preview must proxy `/api` to the API workflow; production serves frontend and API from one process.

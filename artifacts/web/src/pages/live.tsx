@@ -371,14 +371,14 @@ export default function LiveGame() {
   const { data: liveGame, error: liveError, refetch, isLoading, isFetching, status } = useGetLiveGame(
     puuid,
     { region, summonerId },
-    { query: { enabled: !!puuid, retry: false, staleTime: 0, gcTime: 30_000 } }
+    { query: { enabled: !!puuid && !!summonerId, retry: false, staleTime: 0, gcTime: 30_000 } }
   );
 
   useEffect(() => {
-    if (!puuid) return;
+    if (!puuid || !summonerId) return;
     const id = setInterval(() => { refetch(); }, 15000);
     return () => clearInterval(id);
-  }, [puuid, refetch]);
+  }, [puuid, summonerId, refetch]);
 
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {

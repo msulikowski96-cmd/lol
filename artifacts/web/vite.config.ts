@@ -5,6 +5,14 @@ import path from "path";
 
 const port = Number(process.env.PORT || 3000);
 const basePath = process.env.BASE_PATH || "/";
+const apiProxyTarget = process.env.API_PROXY_TARGET || "http://127.0.0.1:8080";
+
+const apiProxy = {
+  "/api": {
+    target: apiProxyTarget,
+    changeOrigin: false,
+  },
+};
 
 const stripUseClientDirective = {
   name: "strip-use-client-directive",
@@ -44,6 +52,7 @@ export default defineConfig({
     port,
     host: "0.0.0.0",
     allowedHosts: true,
+    proxy: apiProxy,
     fs: {
       strict: true,
       deny: ["**/.*"],
@@ -53,5 +62,6 @@ export default defineConfig({
     port,
     host: "0.0.0.0",
     allowedHosts: true,
+    proxy: apiProxy,
   },
 });
