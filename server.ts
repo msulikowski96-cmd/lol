@@ -3,10 +3,13 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import app from "./artifacts/api-server/src/app";
 import { logger } from "./artifacts/api-server/src/lib/logger";
+import { initDatabase } from "./lib/db/src";
 
 const PORT = 3000;
 
 async function startServer() {
+  await initDatabase().catch((e) => logger.warn({ err: e }, "Database initialization skipped or failed"));
+
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       configFile: path.resolve(process.cwd(), "artifacts/web/vite.config.ts"),
