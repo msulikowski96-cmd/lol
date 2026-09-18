@@ -1,12 +1,14 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
+import fs from "fs";
+import path from "path";
 import * as schema from "./schema";
 import { usersTable, usageTable, conversations, messages } from "./schema";
 
 const { Pool } = pg;
 
-// In-memory data store fallback
-interface MemoryUser {
+// In-memory data store fallback & persistence interfaces
+export interface MemoryUser {
   id: number;
   email: string;
   passwordHash: string;
@@ -17,7 +19,7 @@ interface MemoryUser {
   lastLoginAt: Date | null;
 }
 
-interface MemoryUsage {
+export interface MemoryUsage {
   id: number;
   userId: number;
   feature: string;
@@ -25,19 +27,21 @@ interface MemoryUsage {
   count: number;
 }
 
-interface MemoryConversation {
+export interface MemoryConversation {
   id: number;
   title: string;
   createdAt: Date;
 }
 
-interface MemoryMessage {
+export interface MemoryMessage {
   id: number;
   conversationId: number;
   role: string;
   content: string;
   createdAt: Date;
 }
+
+const DB_FILE = path.resolve(process.cwd(), ".local", "db.json");
 
 const memoryStore = {
   users: [] as MemoryUser[],
@@ -50,8 +54,68 @@ const memoryStore = {
   nextMsgId: 1,
 };
 
-// Seed default admin user in memory
-const ADMIN_EMAIL = "msulikowski96@gmail.com";
+function saveStoreToDisk(): void {
+  try {
+    fs.mkdirSync(path.dirname(DB_FILE), { recursive: true });
+    fs.writeFileSync(DB_FILE, JSON.stringify(memoryStore, null, 2), "utf8");
+  } catch {
+    // Non-fatal if filesystem is read-only
+  }
+}
+
+function loadStoreFromDisk(): void {
+  try {
+    if (fs.existsSync(DB_FILE)) {
+      const raw = fs.readFileSync(DB_FILE, "utf8");
+      const data = JSON.parse(raw);
+      if (Array.isArray(data.users)) {
+        memoryStore.users = data.users.map((u: any) => ({
+          ...u,
+          createdAt: u.createdAt ? new Date(u.createdAt) : new Date(),
+          lastLoginAt: u.lastLoginAt ? new Date(u.lastLoginAt) : null,
+        }));
+      }
+      if (Array.isArray(data.usage)) memoryStore.usage = data.usage;
+      if (Array.isArray(data.conversations)) {
+        memoryStore.conversations = data.conversations.map((c: any) => ({
+          ...c,
+          createdAt: c.createdAt ? new Date(c.createdAt) : new Date(),
+        }));
+      }
+      if (Array.isArray(data.messages)) {
+        memoryStore.messages = data.messages.map((m: any) => ({
+          ...m,
+          createdAt: m.createdAt ? new Date(m.createdAt) : new Date(),
+        }));
+      }
+      memoryStore.nextUserId = Math.max(1, ...(memoryStore.users.map((u) => u.id) || [0])) + 1;
+      memoryStore.nextUsageId = Math.max(1, ...(memoryStore.usage.map((u) => u.id) || [0])) + 1;
+      memoryStore.nextConvId = Math.max(1, ...(memoryStore.conversations.map((c) => c.id) || [0])) + 1;
+      memoryStore.nextMsgId = Math.max(1, ...(memoryStore.messages.map((m) => m.id) || [0])) + 1;
+    }
+  } catch {
+    // Fall back to empty store
+  }
+
+  // Seed default admin if user store is empty
+  if (memoryStore.users.length === 0) {
+    memoryStore.users.push({
+      id: 1,
+      email: "msulikowski96@gmail.com",
+      passwordHash: "$2b$10$RSaOXDhLm3FFeQT2Eo9MQOZodD27KToV.jfqLBAC52KQVy68p77jm", // "admin123456"
+      displayName: "Admin",
+      isAdmin: true,
+      isActive: true,
+      createdAt: new Date(),
+      lastLoginAt: null,
+    });
+    memoryStore.nextUserId = 2;
+    saveStoreToDisk();
+  }
+}
+
+// Initial load
+loadStoreFromDisk();
 
 let poolInstance: any = null;
 let realDrizzleDb: any = null;
@@ -65,7 +129,7 @@ if (isInternalRenderHost) {
   console.warn(
     "[AI Studio] DATABASE_URL appears to be an internal Render hostname (e.g. dpg-xxx). " +
     "Internal Render hostnames only resolve inside Render's internal network. " +
-    "Nexus Sight will use resilient in-memory storage. " +
+    "Nexus Sight will use resilient local storage. " +
     "To connect directly to Render PostgreSQL, use the 'External Database URL' from your Render dashboard."
   );
 } else if (rawUrl) {
@@ -81,56 +145,140 @@ if (isInternalRenderHost) {
   }
 }
 
-// Memory query runner
+function getTableName(table: any): string {
+  if (!table) return "";
+  if (table === usersTable) return "users";
+  if (table === usageTable) return "usage";
+  if (table === conversations) return "conversations";
+  if (table === messages) return "messages";
+
+  const symName = table[Symbol.for("drizzle:Name")];
+  if (typeof symName === "string") return symName;
+
+  const baseName = table[Symbol.for("drizzle:BaseName")];
+  if (typeof baseName === "string") return baseName;
+
+  if (table._?.name) return table._.name;
+  if (table.name) return table.name;
+  return "";
+}
+
 function getStoreForTable(table: any): any[] {
-  if (table === usersTable || table?._?.name === "users") return memoryStore.users;
-  if (table === usageTable || table?._?.name === "usage") return memoryStore.usage;
-  if (table === conversations || table?._?.name === "conversations") return memoryStore.conversations;
-  if (table === messages || table?._?.name === "messages") return memoryStore.messages;
+  const name = getTableName(table);
+  if (name === "users") return memoryStore.users;
+  if (name === "usage") return memoryStore.usage;
+  if (name === "conversations") return memoryStore.conversations;
+  if (name === "messages") return memoryStore.messages;
   return [];
 }
 
-function matchCondition(item: any, whereClause: any): boolean {
-  if (!whereClause) return true;
+const FIELD_MAP: Record<string, string> = {
+  password_hash: "passwordHash",
+  display_name: "displayName",
+  is_admin: "isAdmin",
+  is_active: "isActive",
+  created_at: "createdAt",
+  last_login_at: "lastLoginAt",
+  user_id: "userId",
+  conversation_id: "conversationId",
+};
 
-  // Handle drizzle eq, and, gte, etc. expressions
-  if (whereClause.operator === "=" || whereClause.name === "eq") {
-    const fieldName = whereClause.left?.name || whereClause.column?.name;
-    const value = whereClause.right?.value !== undefined ? whereClause.right.value : whereClause.value;
+export function matchCondition(item: any, sqlObj: any): boolean {
+  if (!sqlObj) return true;
+  if (!item) return false;
+
+  // Handle Drizzle SQL objects with queryChunks
+  if (sqlObj.queryChunks && Array.isArray(sqlObj.queryChunks)) {
+    const chunks = sqlObj.queryChunks;
+
+    // Handle parentheses wrapping: [ "(", SQL, ")" ]
+    if (chunks.length === 3 && chunks[0]?.value?.[0] === "(" && chunks[2]?.value?.[0] === ")") {
+      return matchCondition(item, chunks[1]);
+    }
+
+    // Handle AND expressions
+    const hasAnd = chunks.some(
+      (c: any) => typeof c?.value?.[0] === "string" && c.value[0].toLowerCase().includes(" and ")
+    );
+    if (hasAnd) {
+      const parts: any[] = [];
+      let current: any[] = [];
+      for (const c of chunks) {
+        if (typeof c?.value?.[0] === "string" && c.value[0].toLowerCase().includes(" and ")) {
+          if (current.length === 1 && current[0].queryChunks) parts.push(current[0]);
+          else parts.push({ queryChunks: current });
+          current = [];
+        } else {
+          current.push(c);
+        }
+      }
+      if (current.length > 0) {
+        if (current.length === 1 && current[0].queryChunks) parts.push(current[0]);
+        else parts.push({ queryChunks: current });
+      }
+      return parts.every((part) => matchCondition(item, part));
+    }
+
+    // Handle single condition: column + operator + param
+    let colName: string | null = null;
+    let op = "=";
+    let paramVal: any = undefined;
+
+    for (const c of chunks) {
+      if (c && typeof c.name === "string") {
+        colName = c.name;
+      } else if (c && c.value && Array.isArray(c.value) && typeof c.value[0] === "string") {
+        const s = c.value[0].trim();
+        if (["=", "!=", "<", "<=", ">", ">=", "<>"].includes(s)) {
+          op = s;
+        }
+      } else if (c && "value" in c && !Array.isArray(c.value)) {
+        paramVal = c.value;
+      }
+    }
+
+    if (colName) {
+      const key = FIELD_MAP[colName] || colName;
+      const actual = item[key];
+
+      if (op === "=") return actual == paramVal;
+      if (op === "!=" || op === "<>") return actual != paramVal;
+      if (op === ">") return actual > paramVal;
+      if (op === ">=") return actual >= paramVal;
+      if (op === "<") return actual < paramVal;
+      if (op === "<=") return actual <= paramVal;
+      return true;
+    }
+  }
+
+  // Handle plain condition objects if passed directly
+  if (sqlObj.operator === "=" || sqlObj.name === "eq") {
+    const fieldName = sqlObj.left?.name || sqlObj.column?.name;
+    const value = sqlObj.right?.value !== undefined ? sqlObj.right.value : sqlObj.value;
     if (fieldName) {
-      const key = fieldName === "password_hash" ? "passwordHash" :
-                  fieldName === "display_name" ? "displayName" :
-                  fieldName === "is_admin" ? "isAdmin" :
-                  fieldName === "is_active" ? "isActive" :
-                  fieldName === "created_at" ? "createdAt" :
-                  fieldName === "last_login_at" ? "lastLoginAt" :
-                  fieldName === "user_id" ? "userId" :
-                  fieldName === "conversation_id" ? "conversationId" : fieldName;
+      const key = FIELD_MAP[fieldName] || fieldName;
       return item[key] == value;
     }
   }
 
-  if (whereClause.operator === "and" || (whereClause.conditions && Array.isArray(whereClause.conditions))) {
-    const conditions = whereClause.conditions || whereClause.children || [];
-    return conditions.every((c: any) => matchCondition(item, c));
-  }
+  return true;
+}
 
-  if (whereClause.operator === ">=" || whereClause.name === "gte") {
-    const fieldName = whereClause.left?.name || whereClause.column?.name;
-    const value = whereClause.right?.value !== undefined ? whereClause.right.value : whereClause.value;
-    if (fieldName) {
-      return (item[fieldName] ?? "") >= (value ?? "");
+function parseOrder(orderClause: any): { key: string; isDesc: boolean } | null {
+  if (!orderClause) return null;
+  const chunks = orderClause.queryChunks || [];
+  let colName: string | null = null;
+  let isDesc = true;
+  for (const c of chunks) {
+    if (c && typeof c.name === "string") colName = c.name;
+    if (c && c.value && Array.isArray(c.value) && typeof c.value[0] === "string") {
+      const s = c.value[0].toLowerCase();
+      if (s.includes("asc")) isDesc = false;
+      if (s.includes("desc")) isDesc = true;
     }
   }
-
-  // Fallback: search values inside object
-  try {
-    const str = JSON.stringify(whereClause);
-    if (item.email && str.includes(JSON.stringify(item.email))) return true;
-    if (item.id && str.includes(`"value":${item.id}`)) return true;
-  } catch {}
-
-  return true;
+  if (!colName) return null;
+  return { key: FIELD_MAP[colName] || colName, isDesc };
 }
 
 const memoryDb: any = {
@@ -138,7 +286,7 @@ const memoryDb: any = {
     let targetTable: any = null;
     let whereCondition: any = null;
     let limitVal: number | null = null;
-    let orderDesc = false;
+    let orderClause: any = null;
 
     const queryBuilder: any = {
       from: (table: any) => {
@@ -154,16 +302,32 @@ const memoryDb: any = {
         return queryBuilder;
       },
       orderBy: (order: any) => {
-        orderDesc = !!order;
+        orderClause = order;
         return queryBuilder;
       },
       then: (resolve: any, reject?: any) => {
         try {
           const store = getStoreForTable(targetTable);
           let filtered = store.filter((item) => matchCondition(item, whereCondition));
-          if (orderDesc) {
-            filtered = [...filtered].reverse();
+
+          if (orderClause) {
+            const parsed = parseOrder(orderClause);
+            if (parsed) {
+              filtered = [...filtered].sort((a: any, b: any) => {
+                const va = a[parsed.key];
+                const vb = b[parsed.key];
+                if (va == null && vb == null) return 0;
+                if (va == null) return parsed.isDesc ? 1 : -1;
+                if (vb == null) return parsed.isDesc ? -1 : 1;
+                if (va < vb) return parsed.isDesc ? 1 : -1;
+                if (va > vb) return parsed.isDesc ? -1 : 1;
+                return 0;
+              });
+            } else {
+              filtered = [...filtered].reverse();
+            }
           }
+
           if (limitVal !== null) {
             filtered = filtered.slice(0, limitVal);
           }
@@ -195,29 +359,36 @@ const memoryDb: any = {
       returning: () => insertBuilder,
       then: (resolve: any, reject?: any) => {
         try {
+          const tableName = getTableName(table);
           const store = getStoreForTable(table);
-          if (table === usersTable || table?._?.name === "users") {
+
+          if (tableName === "users") {
             const id = memoryStore.nextUserId++;
             const user: MemoryUser = {
               id,
               email: insertValues.email,
               passwordHash: insertValues.passwordHash,
               displayName: insertValues.displayName ?? null,
-              isAdmin: insertValues.isAdmin ?? (insertValues.email === ADMIN_EMAIL),
+              isAdmin: insertValues.isAdmin ?? (insertValues.email === "msulikowski96@gmail.com"),
               isActive: insertValues.isActive ?? true,
               createdAt: new Date(),
               lastLoginAt: null,
             };
             store.push(user);
+            saveStoreToDisk();
             return resolve([user]);
           }
 
-          if (table === usageTable || table?._?.name === "usage") {
+          if (tableName === "usage") {
             const existing = memoryStore.usage.find(
-              (u) => u.userId === insertValues.userId && u.feature === insertValues.feature && u.day === insertValues.day
+              (u) =>
+                u.userId === insertValues.userId &&
+                u.feature === insertValues.feature &&
+                u.day === insertValues.day
             );
             if (existing && onConflictAction) {
               existing.count += 1;
+              saveStoreToDisk();
               return resolve([existing]);
             }
             const id = memoryStore.nextUsageId++;
@@ -229,12 +400,14 @@ const memoryDb: any = {
               count: insertValues.count ?? 1,
             };
             store.push(row);
+            saveStoreToDisk();
             return resolve([row]);
           }
 
           const id = Date.now();
           const item = { id, ...insertValues, createdAt: new Date() };
           store.push(item);
+          saveStoreToDisk();
           return resolve([item]);
         } catch (e) {
           if (reject) reject(e);
@@ -270,6 +443,7 @@ const memoryDb: any = {
               updatedItems.push(store[i]);
             }
           }
+          saveStoreToDisk();
           return resolve(updatedItems);
         } catch (e) {
           if (reject) reject(e);
@@ -296,6 +470,7 @@ const memoryDb: any = {
               store.splice(i, 1);
             }
           }
+          saveStoreToDisk();
           return resolve([]);
         } catch (e) {
           if (reject) reject(e);
@@ -309,7 +484,7 @@ const memoryDb: any = {
 };
 
 // Resilient DB wrapper that delegates to real PostgreSQL if available and healthy,
-// or gracefully falls back to the in-memory database if connection fails or drops.
+// or gracefully falls back to local database store if connection fails or drops.
 export const db = new Proxy(
   {},
   {
@@ -319,18 +494,34 @@ export const db = new Proxy(
         if (typeof realFn === "function") {
           return (...args: any[]) => {
             try {
-              const result = realFn.apply(realDrizzleDb, args);
-              // If returned object is a promise or thenable, catch network errors and fallback
-              if (result && typeof result.then === "function") {
-                return result.catch((err: any) => {
-                  console.warn(`[AI Studio] PostgreSQL query failed (${err?.message}). Falling back to memory store.`);
-                  isConnectedToPostgres = false;
-                  return (memoryDb as any)[prop](...args);
+              const builder = realFn.apply(realDrizzleDb, args);
+              if (builder && typeof builder === "object") {
+                return new Proxy(builder, {
+                  get(bTarget, bProp: string) {
+                    if (bProp === "then") {
+                      return (onFulfilled?: any, onRejected?: any) => {
+                        return Promise.resolve(builder)
+                          .catch((err: any) => {
+                            console.warn(
+                              `[AI Studio] PostgreSQL query failed (${err?.message}). Falling back to local database store.`
+                            );
+                            isConnectedToPostgres = false;
+                            const fallback = (memoryDb as any)[prop](...args);
+                            return fallback;
+                          })
+                          .then(onFulfilled, onRejected);
+                      };
+                    }
+                    const val = (bTarget as any)[bProp];
+                    return typeof val === "function" ? val.bind(bTarget) : val;
+                  },
                 });
               }
-              return result;
+              return builder;
             } catch (err: any) {
-              console.warn(`[AI Studio] PostgreSQL call error (${err?.message}). Falling back to memory store.`);
+              console.warn(
+                `[AI Studio] PostgreSQL call error (${err?.message}). Falling back to local database store.`
+              );
               isConnectedToPostgres = false;
               return (memoryDb as any)[prop](...args);
             }
@@ -344,7 +535,7 @@ export const db = new Proxy(
 
 export async function initDatabase() {
   if (!poolInstance || isInternalRenderHost) {
-    console.log("[AI Studio] Using memory database store for session & user persistence");
+    console.log("[AI Studio] Using local database store for session & user persistence");
     return;
   }
   try {
@@ -394,9 +585,10 @@ export async function initDatabase() {
     }
   } catch (err: any) {
     isConnectedToPostgres = false;
-    console.warn("[AI Studio] Database connection check failed (" + err?.message + "). Using in-memory fallback.");
+    console.warn("[AI Studio] Database connection check failed (" + err?.message + "). Using local storage fallback.");
   }
 }
 
 export const pool = poolInstance;
 export * from "./schema";
+

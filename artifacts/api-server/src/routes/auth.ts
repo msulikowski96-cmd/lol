@@ -113,6 +113,63 @@ router.post("/login", authBruteforceLimit, async (req: Request, res: Response) =
   }
 });
 
+// POST /api/auth/firebase
+router.post("/firebase", authBruteforceLimit, async (req: Request, res: Response) => {
+  try {
+    const parsed = z.object({
+      email: emailSchema,
+      displayName: z.string().trim().max(100).optional(),
+    }).safeParse(req.body);
+
+    if (!parsed.success) {
+      res.status(400).json({ error: "validation_error", message: "Nieprawidłowe dane Firebase" });
+      return;
+    }
+
+    const { email, displayName } = parsed.data;
+    let rows = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+    let user = rows[0];
+
+    const isAdmin = ADMIN_EMAILS.has(email);
+
+    if (!user) {
+      const dummyHash = await hashPassword(Math.random().toString(36) + Date.now().toString());
+      const [created] = await db
+        .insert(usersTable)
+        .values({
+          email,
+          passwordHash: dummyHash,
+          displayName: displayName || null,
+          isAdmin,
+          isActive: true,
+        })
+        .returning();
+      user = created;
+    } else {
+      const updates: { lastLoginAt: Date; isAdmin?: boolean; displayName?: string } = { lastLoginAt: new Date() };
+      if (isAdmin && !user.isAdmin) {
+        updates.isAdmin = true;
+        user.isAdmin = true;
+      }
+      if (displayName && !user.displayName) {
+        updates.displayName = displayName;
+        user.displayName = displayName;
+      }
+      await db.update(usersTable).set(updates).where(eq(usersTable.id, user.id));
+    }
+
+    const token = signSession(user!);
+    setSessionCookie(res, token);
+    res.json({
+      user: { id: user!.id, email: user!.email, displayName: user!.displayName, isAdmin: user!.isAdmin },
+      limits: DAILY_LIMITS,
+    });
+  } catch (e: any) {
+    console.error("[auth/firebase]", e);
+    res.status(500).json({ error: "server_error", message: e?.message ?? "Błąd serwera" });
+  }
+});
+
 // POST /api/auth/logout
 router.post("/logout", (_req: Request, res: Response) => {
   clearSessionCookie(res);

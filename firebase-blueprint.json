@@ -1,0 +1,57 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and metadata",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Auth UID" },
+        "email": { "type": "string", "description": "User email address" },
+        "displayName": { "type": "string", "maxLength": 100 },
+        "isAdmin": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "email", "createdAt"]
+    },
+    "FavoriteSummoner": {
+      "title": "FavoriteSummoner",
+      "description": "Saved Summoner profile tracked by user",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner Auth UID" },
+        "gameName": { "type": "string", "maxLength": 50 },
+        "tagLine": { "type": "string", "maxLength": 10 },
+        "region": { "type": "string", "maxLength": 10 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "gameName", "tagLine", "region", "createdAt"]
+    },
+    "SavedBuild": {
+      "title": "SavedBuild",
+      "description": "User saved champion build recommendations or notes",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner Auth UID" },
+        "championName": { "type": "string", "maxLength": 50 },
+        "role": { "type": "string", "maxLength": 20 },
+        "notes": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "championName", "role", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile collection"
+    },
+    "/users/{userId}/favorites/{favoriteId}": {
+      "schema": "FavoriteSummoner",
+      "description": "Favorite summoners subcollection for individual user"
+    },
+    "/users/{userId}/builds/{buildId}": {
+      "schema": "SavedBuild",
+      "description": "Saved builds subcollection for individual user"
+    }
+  }
+}
