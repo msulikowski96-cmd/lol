@@ -3,3 +3,9 @@ packages:
   - 'lib/*'
   - 'lib/integrations/*'
   - 'scripts'
+allowBuilds:
+  '@google/genai': false
+  electron: false
+  electron-winstaller: false
+  esbuild: false
+  protobufjs: false
