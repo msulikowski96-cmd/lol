@@ -10,10 +10,12 @@ import {
 import {
   getFirestore,
   doc,
+  getDoc,
   getDocFromServer,
   collection,
   getDocs,
   setDoc,
+  updateDoc,
   deleteDoc,
   onSnapshot,
 } from "firebase/firestore";
@@ -103,16 +105,25 @@ export async function syncUserDoc(user: FirebaseUser): Promise<void> {
   const userPath = `users/${user.uid}`;
   try {
     const userDocRef = doc(db, "users", user.uid);
-    await setDoc(
-      userDocRef,
-      {
+    const existingSnap = await getDoc(userDocRef);
+    const now = new Date().toISOString();
+
+    if (existingSnap.exists()) {
+      await updateDoc(userDocRef, {
+        displayName: user.displayName || "",
+        photoURL: user.photoURL || "",
+        lastLoginAt: now,
+      });
+    } else {
+      await setDoc(userDocRef, {
         userId: user.uid,
         email: user.email || "",
         displayName: user.displayName || "",
-        createdAt: new Date().toISOString(),
-      },
-      { merge: true }
-    );
+        photoURL: user.photoURL || "",
+        createdAt: now,
+        lastLoginAt: now,
+      });
+    }
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, userPath);
   }
@@ -182,6 +193,8 @@ export {
   onAuthStateChanged,
   type FirebaseUser,
   doc,
+  getDoc,
+  updateDoc,
   collection,
   onSnapshot,
 };

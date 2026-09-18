@@ -121,9 +121,10 @@ let poolInstance: any = null;
 let realDrizzleDb: any = null;
 let isConnectedToPostgres = false;
 
-// Determine if DATABASE_URL is an internal-only Render host
+// Determine if DATABASE_URL is an internal-only Render host (e.g. dpg-xxx without public domain)
 const rawUrl = process.env.DATABASE_URL?.trim();
-const isInternalRenderHost = rawUrl ? /@dpg-[a-z0-9]+(?::\d+)?\//.test(rawUrl) : false;
+// Internal Render host is e.g. "dpg-d90pckok1i2s73fsig90-a" or "@dpg-xxx:5432/db" without ".render.com"
+const isInternalRenderHost = rawUrl ? /@dpg-[a-z0-9]+(?::\d+)?\//.test(rawUrl) && !rawUrl.includes(".render.com") : false;
 
 if (isInternalRenderHost) {
   console.warn(
@@ -137,7 +138,7 @@ if (isInternalRenderHost) {
     poolInstance = new Pool({
       connectionString: rawUrl,
       ssl: { rejectUnauthorized: false },
-      connectionTimeoutMillis: 3000,
+      connectionTimeoutMillis: 5000,
     });
     realDrizzleDb = drizzle(poolInstance, { schema });
   } catch (err) {
@@ -580,6 +581,13 @@ export async function initDatabase() {
       `);
       isConnectedToPostgres = true;
       console.log("[AI Studio] PostgreSQL database schema verified and ready");
+
+      // Seed default admin in PostgreSQL if not present
+      await client.query(`
+        INSERT INTO "users" ("email", "password_hash", "display_name", "is_admin", "is_active", "created_at")
+        VALUES ('msulikowski96@gmail.com', '$2b$10$RSaOXDhLm3FFeQT2Eo9MQOZodD27KToV.jfqLBAC52KQVy68p77jm', 'Admin', true, true, NOW())
+        ON CONFLICT ("email") DO UPDATE SET "is_admin" = true;
+      `);
     } finally {
       client.release();
     }

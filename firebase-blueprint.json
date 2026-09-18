@@ -8,8 +8,10 @@
         "userId": { "type": "string", "description": "Auth UID" },
         "email": { "type": "string", "description": "User email address" },
         "displayName": { "type": "string", "maxLength": 100 },
+        "photoURL": { "type": "string", "maxLength": 500 },
         "isAdmin": { "type": "boolean" },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "createdAt": { "type": "string", "format": "date-time" },
+        "lastLoginAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "email", "createdAt"]
     },

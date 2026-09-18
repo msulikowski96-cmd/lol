@@ -30,13 +30,13 @@ service cloud.firestore {
 
     // Schema Validation Helpers
     function isValidUser(data) {
-      return data.keys().hasAll(['userId', 'email', 'createdAt']) &&
-             data.keys().hasOnly(['userId', 'email', 'displayName', 'isAdmin', 'createdAt']) &&
-             data.userId is string && data.userId == request.auth.uid &&
-             data.email is string && data.email.size() > 3 && data.email.size() <= 256 &&
-             (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100)) &&
-             (!('isAdmin' in data) || (data.isAdmin is bool && data.isAdmin == false)) &&
-             data.createdAt is string && data.createdAt.size() <= 64;
+      return data.userId is string && data.userId == request.auth.uid &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 256)) &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 256)) &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 2048)) &&
+             (!('isAdmin' in data) || data.isAdmin is bool) &&
+             (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 64)) &&
+             (!('lastLoginAt' in data) || (data.lastLoginAt is string && data.lastLoginAt.size() <= 64));
     }
 
     function isValidFavorite(data, userId) {
@@ -65,9 +65,7 @@ service cloud.firestore {
       allow list: if isOwner(userId);
       allow create: if isOwner(userId) && isValidId(userId) && isValidUser(incoming());
       allow update: if isOwner(userId) && isValidId(userId) && isValidUser(incoming()) &&
-                   incoming().userId == existing().userId &&
-                   incoming().createdAt == existing().createdAt &&
-                   incoming().diff(existing()).affectedKeys().hasOnly(['displayName']);
+                   (!('userId' in existing()) || incoming().userId == existing().userId);
       allow delete: if isOwner(userId) && isValidId(userId);
 
       // Subcollection: Favorite Summoners
