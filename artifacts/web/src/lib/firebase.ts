@@ -3,6 +3,9 @@ import {
   getAuth,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
   signOut,
   onAuthStateChanged,
   type User as FirebaseUser,
@@ -189,6 +192,9 @@ export async function getFavoritesFromFirestore(
 
 export {
   signInWithPopup,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
   signOut,
   onAuthStateChanged,
   type FirebaseUser,

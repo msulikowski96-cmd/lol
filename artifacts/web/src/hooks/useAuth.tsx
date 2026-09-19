@@ -4,6 +4,9 @@ import {
   auth as firebaseAuth,
   googleProvider,
   signInWithPopup,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
   signOut as firebaseSignOut,
   syncUserDoc,
   onAuthStateChanged,
@@ -47,8 +50,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (fUser) {
         try {
           await syncUserDoc(fUser);
+          if (fUser.email) {
+            const res = await authApi.loginWithFirebase(
+              fUser.email,
+              fUser.displayName || undefined
+            );
+            setUser(res.user);
+          }
         } catch (e) {
-          console.warn("[Firebase] syncUserDoc error:", e);
+          console.warn("[Firebase] syncUserDoc/loginWithFirebase error:", e);
         }
       }
     });
@@ -64,6 +74,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     const res = await authApi.login(email, password);
     setUser(res.user);
+    try {
+      const fbCred = await signInWithEmailAndPassword(firebaseAuth, email, password);
+      if (fbCred.user) {
+        setFirebaseUser(fbCred.user);
+        await syncUserDoc(fbCred.user);
+      }
+    } catch (fbErr) {
+      console.debug("[Firebase] Optional Email signIn info:", fbErr);
+    }
     await refresh();
   }, [refresh]);
 
@@ -86,6 +105,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(async (email: string, password: string, displayName?: string) => {
     const res = await authApi.register(email, password, displayName);
     setUser(res.user);
+    try {
+      const fbCred = await createUserWithEmailAndPassword(firebaseAuth, email, password);
+      if (fbCred.user) {
+        if (displayName) {
+          await updateProfile(fbCred.user, { displayName });
+        }
+        setFirebaseUser(fbCred.user);
+        await syncUserDoc(fbCred.user);
+      }
+    } catch (fbErr) {
+      console.debug("[Firebase] Optional Email createUser info:", fbErr);
+    }
     await refresh();
   }, [refresh]);
 

@@ -19,6 +19,7 @@ const router: Router = Router();
 
 const ADMIN_EMAILS = new Set<string>([
   "msulikowski96@gmail.com",
+  "sulikowskim96@gmail.com",
 ]);
 
 const authBruteforceLimit = createRateLimit({

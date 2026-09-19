@@ -94,10 +94,10 @@ function Router() {
         <Route path="/champion/:region/:gameName/:tagLine/:championName" component={Champion} />
         <Route path="/match/:region/:gameName/:tagLine/:matchId" component={MatchPage} />
         <Route path="/live/:region/:gameName/:tagLine" component={LiveGame} />
+        <Route path="/ai-analysis/:region/:gameName/:tagLine" component={AiAnalysis} />
+        <Route path="/optymalizator" component={Optimizer} />
 
         {/* Protected (requires login) */}
-        <Route path="/ai-analysis/:region/:gameName/:tagLine">{() => <Protected component={AiAnalysis} />}</Route>
-        <Route path="/optymalizator">{() => <Protected component={Optimizer} />}</Route>
         <Route path="/admin">{() => <Protected component={AdminPage} />}</Route>
 
         <Route component={NotFound} />
