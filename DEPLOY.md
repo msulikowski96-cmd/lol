@@ -38,12 +38,12 @@ git push -u origin main
 | **Region** | Frankfurt (EU Central) lub najbliższy do Ciebie |
 | **Branch** | `main` |
 | **Runtime** | `Node` |
-| **Build Command** | `npm install && NODE_ENV=production npm run push --workspace=@workspace/db && npm run build` |
+| **Build Command** | `npm install --include=dev && (NODE_ENV=production npm run push --workspace=@workspace/db || true) && npm run build` |
 | **Start Command** | `npm start` |
 | **Plan** | Free (lub Starter za $7/mies. bez cold starts) |
 
 *Uwaga dla pnpm:* Jeśli wolisz używać `pnpm`, dzięki dodanemu plikowi `pnpm-workspace.yaml` monorepo buduje się teraz bez błędu 404. Twoja komenda buildu dla pnpm:
-`pnpm install && NODE_ENV=production pnpm --filter @workspace/db run push && npm run build` (a Start Command: `npm start`).
+`pnpm install --prod=false && (NODE_ENV=production pnpm --filter @workspace/db run push || true) && npm run build` (a Start Command: `npm start`).
 
 ---
 
