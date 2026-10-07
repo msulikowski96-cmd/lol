@@ -48,6 +48,25 @@ router.post("/register", authBruteforceLimit, async (req: Request, res: Response
 
     const existing = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
     if (existing.length > 0) {
+      const user = existing[0];
+      const isDefaultHash = user!.passwordHash === "$2b$10$RSaOXDhLm3FFeQT2Eo9MQOZodD27KToV.jfqLBAC52KQVy68p77jm";
+      if (isDefaultHash) {
+        const passwordHash = await hashPassword(password);
+        const [updated] = await db
+          .update(usersTable)
+          .set({ passwordHash, displayName: displayName ?? user!.displayName ?? null })
+          .where(eq(usersTable.id, user!.id))
+          .returning();
+
+        const token = signSession(updated!);
+        setSessionCookie(res, token);
+        res.json({
+          user: { id: updated!.id, email: updated!.email, displayName: updated!.displayName, isAdmin: updated!.isAdmin },
+          limits: DAILY_LIMITS,
+        });
+        return;
+      }
+
       res.status(409).json({ error: "email_taken", message: "Ten email jest już zarejestrowany." });
       return;
     }
