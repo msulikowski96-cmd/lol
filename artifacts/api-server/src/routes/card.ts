@@ -7,7 +7,9 @@ import { fileURLToPath } from "url";
 
 const router: Router = Router();
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const localDirname = typeof __dirname !== "undefined"
+  ? __dirname
+  : path.dirname(fileURLToPath(import.meta.url));
 
 const imageCache = new Map<string, string>();
 
@@ -32,7 +34,7 @@ let _fontData: Buffer | null = null;
 async function getFontData(): Promise<Buffer> {
   if (_fontData) return _fontData;
 
-  const fontPath = path.resolve(__dirname, "..", "..", "font.ttf");
+  const fontPath = path.resolve(localDirname, "..", "..", "font.ttf");
   if (fs.existsSync(fontPath)) {
     _fontData = fs.readFileSync(fontPath);
     return _fontData;
