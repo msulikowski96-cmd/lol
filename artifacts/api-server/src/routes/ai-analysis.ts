@@ -250,7 +250,7 @@ function summarizeMatches(rawMatches: MatchDataV2[]) {
 }
 
 router.get("/:puuid/ai-report", requireUsage("ai_analysis"), async (req, res) => {
-  const { puuid } = req.params;
+  const puuid = String(req.params.puuid);
   const { region, gameName } = req.query as { region?: string; gameName?: string };
 
   if (!region) {

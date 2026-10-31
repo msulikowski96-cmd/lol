@@ -1,4 +1,11 @@
 import type { Request, Response, NextFunction } from "express";
+import crypto from "node:crypto";
+
+function safeEqual(a: string, b: string): boolean {
+  const ab = Buffer.from(a);
+  const bb = Buffer.from(b);
+  return ab.length === bb.length && crypto.timingSafeEqual(ab, bb);
+}
 import {
   readSessionCookie,
   verifySession,
@@ -25,14 +32,15 @@ export function attachUser(req: Request, _res: Response, next: NextFunction): vo
     if (payload) req.user = payload;
   }
 
-  // Support overlay app requests using a shared bypass token
+  // Nakładka desktopowa może używać wspólnego tokenu — tylko gdy ustawiono OVERLAY_TOKEN (min. 24 znaki).
+  // Dawniej był domyślny token wpisany w kod, który dawał każdemu uprawnienia admina.
   const overlayToken = req.headers["x-nexus-overlay-token"];
-  const expectedToken = process.env.OVERLAY_TOKEN || "nexus-overlay-secret-token-2026";
-  if (overlayToken === expectedToken) {
+  const expectedToken = process.env.OVERLAY_TOKEN;
+  if (expectedToken && expectedToken.length >= 24 && typeof overlayToken === "string" && safeEqual(overlayToken, expectedToken)) {
     req.user = {
       uid: 999999,
       email: "overlay@nexussight.local",
-      displayName: "Overlay Bypass",
+      displayName: "Overlay",
       isAdmin: true,
     };
   }

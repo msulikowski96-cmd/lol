@@ -36,14 +36,13 @@ git push -u origin main
 |------|---------|
 | **Name** | `nexus-sight` |
 | **Region** | Frankfurt (EU Central) lub najbliższy do Ciebie |
-| **Branch** | `main` |
+| **Branch** | `master` |
 | **Runtime** | `Node` |
-| **Build Command** | `npm install --include=dev && (NODE_ENV=production npm run push --workspace=@workspace/db || true) && npm run build` |
+| **Build Command** | `npm install --include=dev && npm run build` |
 | **Start Command** | `npm start` |
 | **Plan** | Free (lub Starter za $7/mies. bez cold starts) |
 
-*Uwaga dla pnpm:* Jeśli wolisz używać `pnpm`, dzięki dodanemu plikowi `pnpm-workspace.yaml` monorepo buduje się teraz bez błędu 404. Twoja komenda buildu dla pnpm:
-`pnpm install --prod=false && (NODE_ENV=production pnpm --filter @workspace/db run push || true) && npm run build` (a Start Command: `npm start`).
+Tabele w bazie (`users`, `usage` itd.) serwer tworzy sam przy starcie — osobny krok `db push` nie jest potrzebny. Plik `.npmrc` (`legacy-peer-deps=true`) jest wymagany, bez niego `npm install` kończy się błędem `ERESOLVE`.
 
 ---
 
@@ -53,20 +52,26 @@ W ustawieniach Web Service kliknij **Environment** i dodaj:
 
 | Zmienna | Wartość | Opis |
 |---------|---------|------|
-| `DATABASE_URL` | `postgresql://...` | Pełny **Internal Database URL** z utworzonej bazy Render; nie sam hostname, port ani hasło |
-| `RIOT_API_KEY` | `RGAPI-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` | Klucz API z Riot Developer Portal |
-| `NODE_ENV` | `production` | Tryb produkcyjny |
-| `PORT` | `10000` | Port (Render domyślnie używa 10000) |
-| `SESSION_SECRET` | losowy ciąg znaków | Sekret podpisujący sesje JWT, minimum 16 znaków |
-| `NVIDIA_API_KEY` | klucz NVIDIA | Wymagany tylko dla chronionej analizy AI |
+| `DATABASE_URL` | `postgresql://...` | **Internal Database URL** bazy Render (adres z `dpg-…`). Zewnętrzny URL też działa (SSL włącza się sam). Bez tej zmiennej konta trafiają do pliku tymczasowego i **znikają po restarcie**. |
+| `SESSION_SECRET` | losowy ciąg, min. 16 znaków | **Wymagany.** Bez niego po każdym restarcie wszyscy są wylogowani. |
+| `RIOT_API_KEY` | `RGAPI-…` | Klucz API z Riot Developer Portal |
+| `NVIDIA_API_KEY` | klucz NVIDIA | Analiza AI, trener na żywo, optymalizator |
 | `NVIDIA_MODEL` | `nvidia/nemotron-3-ultra-550b-a55b` | Opcjonalnie. Jeśli masz ustawione `NVIDIA_AI_MODEL=qwen/...` — usuń je, ten model został wycofany |
+| `ADMIN_PASSWORD` | min. 12 znaków | Opcjonalnie. Ustawia hasło admina (pierwszy adres z `ADMIN_EMAILS`). Admin może też logować się przez Google. |
+| `ADMIN_EMAILS` | `a@b.pl,c@d.pl` | Opcjonalnie. Adresy z prawami admina przy logowaniu przez Google (domyślnie msulikowski96@gmail.com, sulikowskim96@gmail.com). |
+| `OVERLAY_TOKEN` | losowy ciąg, min. 24 znaki | Opcjonalnie, tylko dla nakładki desktopowej. |
+| `NODE_ENV` | `production` | Ustawiany też przez `npm start` |
+
+`PORT` ustawia Render — serwer go odczytuje (lokalnie domyślnie 3000).
+
+Stan serwera i bazy: `https://twoja-domena/api/status` — pole `db.ready` mówi, czy baza jest połączona.
 
 ---
 
 ## Krok 4: Deploy
 
 1. Kliknij **Create Web Service**.
-2. Render automatycznie zainstaluje zależności, zastosuje schemat `users`/`usage` do bazy, a następnie zbuduje frontend i API.
+2. Render zainstaluje zależności i zbuduje frontend oraz serwer. Przy starcie serwer połączy się z bazą i utworzy brakujące tabele.
 3. Po zakończeniu buildu, aplikacja będzie dostępna pod adresem:
    `https://nexus-sight.onrender.com`
 
@@ -90,7 +95,7 @@ Przeglądarka  →  Render Web Service
 
 ## Aktualizacja
 
-Każdy `git push` na branch `main` automatycznie uruchamia nowy build na Render.
+Każdy `git push` na branch `master` automatycznie uruchamia nowy build na Render.
 
 ---
 
@@ -103,8 +108,12 @@ Każdy `git push` na branch `main` automatycznie uruchamia nowy build na Render.
 
 ### Aplikacja się nie ładuje
 - Sprawdź logi na Render (zakładka **Logs**)
-- Upewnij się, że `PORT` jest ustawiony na `10000`
+- Otwórz `/api/status`: `db.ready: false` oznacza problem z `DATABASE_URL` (szczegóły w polu `db.error` i w logach `[db]`)
 - Sprawdź czy build przeszedł bez błędów
+
+### Logowanie
+- Konta z czasów przed poprawką bezpieczeństwa, które miały domyślne hasło admina, mają je unieważnione — zaloguj się przez Google albo ustaw `ADMIN_PASSWORD`.
+- Logowanie przez Google wymaga dodania domeny strony w Firebase Console → Authentication → Settings → **Authorized domains**.
 
 ### Cold starts (plan Free)
 - Na darmowym planie Render usypia serwis po 15 min nieaktywności

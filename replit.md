@@ -6,8 +6,8 @@ TypeScript pnpm monorepo, fully in Polish. Users search players by Riot ID acros
 ## Architecture
 - **Frontend**: React + Vite (`artifacts/web`), wouter for routing, TanStack React Query, Framer Motion
 - **Backend**: Express API server (`artifacts/api-server`), connects to Riot Games API
-- **Database**: PostgreSQL + Drizzle ORM (`lib/db`); tables: `users`, `usage`
-- **Auth**: email + bcrypt password, JWT in httpOnly cookie (`SESSION_SECRET` env or auto-generated `.local/session-secret`); admin whitelist by email in `routes/auth.ts`
+- **Database**: PostgreSQL + Drizzle ORM (`lib/db`); tables: `users`, `usage`. Z `DATABASE_URL` zawsze Postgres (także wewnętrzny URL Render), bez niego lokalny plik `.local/db.json` (tylko dev). Tabele tworzy `initDatabase()` przy starcie; stan w `/api/status`.
+- **Auth**: email + bcrypt, JWT w httpOnly cookie (`SESSION_SECRET`). Google/Firebase: frontend wysyła ID token, serwer weryfikuje podpis Google (`lib/firebase-verify.ts`). Admin: logowanie Google na adres z `ADMIN_EMAILS` albo `ADMIN_PASSWORD`; rejestracja hasłem nigdy nie nadaje admina.
 - **Daily limits per user** (admin = unlimited): search 3/day, ai_analysis 1/day, optimizer 2/day (shared with live-insights). Reset by UTC date. Enforced via `requireUsage(feature)` middleware in `middlewares/auth.ts`
 - **Desktop Overlay**: Electron + React (`artifacts/lol-overlay`) — Windows nakładka na LoL, LCU API integration
 - **Shared**: OpenAPI spec (`lib/api-spec/openapi.yaml`) → codegen to `lib/api-client-react` and `lib/api-zod`

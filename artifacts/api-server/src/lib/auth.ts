@@ -11,6 +11,9 @@ import { and, eq, sql } from "drizzle-orm";
 function loadSecret(): string {
   const fromEnv = process.env.SESSION_SECRET;
   if (fromEnv && fromEnv.length >= 16) return fromEnv;
+  if (process.env.NODE_ENV === "production") {
+    console.warn("[auth] Brak SESSION_SECRET (min. 16 znaków) — po każdym restarcie serwera wszyscy zostaną wylogowani.");
+  }
   const file = path.resolve(process.cwd(), ".local", "session-secret");
   try {
     if (fs.existsSync(file)) return fs.readFileSync(file, "utf8").trim();
@@ -31,6 +34,7 @@ export interface SessionPayload {
   uid: number;
   email: string;
   isAdmin: boolean;
+  displayName?: string | null;
   iat?: number;
   exp?: number;
 }
@@ -64,6 +68,55 @@ export function clearSessionCookie(res: any): void {
 
 export function readSessionCookie(req: any): string | null {
   return req.cookies?.[COOKIE_NAME] ?? null;
+}
+
+// ===== ADMIN =====
+/** Adresy, które dostają uprawnienia admina po zalogowaniu przez Google (zweryfikowany email). */
+export const ADMIN_EMAILS = new Set<string>(
+  (process.env.ADMIN_EMAILS ?? "msulikowski96@gmail.com,sulikowskim96@gmail.com")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean),
+);
+
+// Hash hasła "admin123456", które było kiedyś wpisane w kod (publicznie znane).
+const LEAKED_DEFAULT_HASH = "$2b$10$RSaOXDhLm3FFeQT2Eo9MQOZodD27KToV.jfqLBAC52KQVy68p77jm";
+
+/**
+ * Uruchamiane raz przy starcie serwera:
+ * 1. Unieważnia publicznie znane domyślne hasło admina (jeśli wciąż jest w bazie).
+ * 2. Jeśli ustawiono ADMIN_PASSWORD (min. 12 znaków), ustawia je dla pierwszego adresu z ADMIN_EMAILS.
+ */
+export async function bootstrapAuth(): Promise<void> {
+  try {
+    const leaked = await db.select().from(usersTable).where(eq(usersTable.passwordHash, LEAKED_DEFAULT_HASH));
+    for (const u of leaked) {
+      await db
+        .update(usersTable)
+        .set({ passwordHash: await hashPassword(crypto.randomBytes(32).toString("hex")) })
+        .where(eq(usersTable.id, u.id));
+      console.warn(`[auth] Unieważniono domyślne hasło konta ${u.email} — zaloguj się przez Google albo ustaw ADMIN_PASSWORD.`);
+    }
+
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    const adminEmail = [...ADMIN_EMAILS][0];
+    if (adminPassword && adminEmail) {
+      if (adminPassword.length < 12) {
+        console.warn("[auth] ADMIN_PASSWORD jest za krótkie (min. 12 znaków) — pominięto.");
+      } else {
+        const passwordHash = await hashPassword(adminPassword);
+        const rows = await db.select().from(usersTable).where(eq(usersTable.email, adminEmail)).limit(1);
+        if (rows[0]) {
+          await db.update(usersTable).set({ passwordHash, isAdmin: true, isActive: true }).where(eq(usersTable.id, rows[0].id));
+        } else {
+          await db.insert(usersTable).values({ email: adminEmail, passwordHash, displayName: "Admin", isAdmin: true, isActive: true });
+        }
+        console.log(`[auth] Hasło admina (${adminEmail}) ustawione z ADMIN_PASSWORD.`);
+      }
+    }
+  } catch (e: any) {
+    console.error("[auth] bootstrapAuth nieudany:", e?.message ?? e);
+  }
 }
 
 // ===== HASH =====

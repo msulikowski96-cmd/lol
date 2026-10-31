@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from "express";
+import crypto from "node:crypto";
 import { z } from "zod";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
@@ -13,14 +14,11 @@ import {
   DAILY_LIMITS,
 } from "../lib/auth";
 import { requireAuth } from "../middlewares/auth";
+import { verifyFirebaseIdToken, FirebaseTokenError } from "../lib/firebase-verify";
+import { ADMIN_EMAILS } from "../lib/auth";
 import { createRateLimit } from "../middlewares/rateLimit";
 
 const router: Router = Router();
-
-const ADMIN_EMAILS = new Set<string>([
-  "msulikowski96@gmail.com",
-  "sulikowskim96@gmail.com",
-]);
 
 const authBruteforceLimit = createRateLimit({
   windowMs: 60_000,
@@ -48,34 +46,16 @@ router.post("/register", authBruteforceLimit, async (req: Request, res: Response
 
     const existing = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
     if (existing.length > 0) {
-      const user = existing[0];
-      const isDefaultHash = user!.passwordHash === "$2b$10$RSaOXDhLm3FFeQT2Eo9MQOZodD27KToV.jfqLBAC52KQVy68p77jm";
-      if (isDefaultHash) {
-        const passwordHash = await hashPassword(password);
-        const [updated] = await db
-          .update(usersTable)
-          .set({ passwordHash, displayName: displayName ?? user!.displayName ?? null })
-          .where(eq(usersTable.id, user!.id))
-          .returning();
-
-        const token = signSession(updated!);
-        setSessionCookie(res, token);
-        res.json({
-          user: { id: updated!.id, email: updated!.email, displayName: updated!.displayName, isAdmin: updated!.isAdmin },
-          limits: DAILY_LIMITS,
-        });
-        return;
-      }
-
-      res.status(409).json({ error: "email_taken", message: "Ten email jest już zarejestrowany." });
+      res.status(409).json({ error: "email_taken", message: "Ten email jest już zarejestrowany. Zaloguj się albo użyj logowania przez Google." });
       return;
     }
 
     const passwordHash = await hashPassword(password);
-    const isAdmin = ADMIN_EMAILS.has(email);
+    // Rejestracja hasłem nie potwierdza właściciela adresu, więc nigdy nie nadaje uprawnień admina.
+    // Admin: logowanie przez Google na adres z listy ADMIN_EMAILS albo zmienna ADMIN_PASSWORD.
     const [user] = await db
       .insert(usersTable)
-      .values({ email, passwordHash, displayName: displayName ?? null, isAdmin })
+      .values({ email, passwordHash, displayName: displayName ?? null, isAdmin: false })
       .returning();
 
     const token = signSession(user!);
@@ -86,7 +66,7 @@ router.post("/register", authBruteforceLimit, async (req: Request, res: Response
     });
   } catch (e: any) {
     console.error("[auth/register]", e);
-    res.status(500).json({ error: "server_error", message: e?.message ?? "Błąd serwera" });
+    res.status(500).json({ error: "server_error", message: "Błąd serwera. Spróbuj ponownie za chwilę." });
   }
 });
 
@@ -112,14 +92,7 @@ router.post("/login", authBruteforceLimit, async (req: Request, res: Response) =
       return;
     }
 
-    // Auto-promote admin emails (in case row exists from before whitelist update)
-    const shouldBeAdmin = ADMIN_EMAILS.has(user.email);
-    const updates: { lastLoginAt: Date; isAdmin?: boolean } = { lastLoginAt: new Date() };
-    if (shouldBeAdmin && !user.isAdmin) {
-      updates.isAdmin = true;
-      user.isAdmin = true;
-    }
-    await db.update(usersTable).set(updates).where(eq(usersTable.id, user.id));
+    await db.update(usersTable).set({ lastLoginAt: new Date() }).where(eq(usersTable.id, user.id));
 
     const token = signSession(user);
     setSessionCookie(res, token);
@@ -129,43 +102,53 @@ router.post("/login", authBruteforceLimit, async (req: Request, res: Response) =
     });
   } catch (e: any) {
     console.error("[auth/login]", e);
-    res.status(500).json({ error: "server_error", message: e?.message ?? "Błąd serwera" });
+    res.status(500).json({ error: "server_error", message: "Błąd serwera. Spróbuj ponownie za chwilę." });
   }
 });
 
 // POST /api/auth/firebase
+// Body: { idToken } — token z Firebase Auth (user.getIdToken()). Serwer sam weryfikuje podpis
+// Google i bierze email z tokenu; nie ufa emailowi przysłanemu przez przeglądarkę.
 router.post("/firebase", authBruteforceLimit, async (req: Request, res: Response) => {
   try {
-    const parsed = z.object({
-      email: emailSchema,
-      displayName: z.string().trim().max(100).optional(),
-    }).safeParse(req.body);
-
+    const parsed = z.object({ idToken: z.string().min(20).max(5000) }).safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ error: "validation_error", message: "Nieprawidłowe dane Firebase" });
+      res.status(400).json({ error: "validation_error", message: "Brak tokenu logowania Firebase." });
       return;
     }
 
-    const { email, displayName } = parsed.data;
-    let rows = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+    let fb;
+    try {
+      fb = await verifyFirebaseIdToken(parsed.data.idToken);
+    } catch (e: any) {
+      const status = e instanceof FirebaseTokenError ? 401 : 503;
+      res.status(status).json({ error: "invalid_token", message: e?.message ?? "Nie udało się zweryfikować logowania." });
+      return;
+    }
+    if (!fb.emailVerified) {
+      res.status(403).json({ error: "email_not_verified", message: "Potwierdź adres email w Firebase albo zaloguj się przez Google." });
+      return;
+    }
+
+    const email = fb.email;
+    const displayName = fb.name?.trim().slice(0, 100) || undefined;
+    const isAdmin = ADMIN_EMAILS.has(email);
+    const rows = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
     let user = rows[0];
 
-    const isAdmin = ADMIN_EMAILS.has(email);
-
     if (!user) {
-      const dummyHash = await hashPassword(Math.random().toString(36) + Date.now().toString());
+      // Konto bez hasła (logowanie tylko przez Google) — losowy hash, którego nikt nie zna.
+      const unusableHash = await hashPassword(crypto.randomBytes(32).toString("hex"));
       const [created] = await db
         .insert(usersTable)
-        .values({
-          email,
-          passwordHash: dummyHash,
-          displayName: displayName || null,
-          isAdmin,
-          isActive: true,
-        })
+        .values({ email, passwordHash: unusableHash, displayName: displayName ?? null, isAdmin, isActive: true })
         .returning();
       user = created;
     } else {
+      if (!user.isActive) {
+        res.status(403).json({ error: "account_disabled", message: "To konto zostało zablokowane." });
+        return;
+      }
       const updates: { lastLoginAt: Date; isAdmin?: boolean; displayName?: string } = { lastLoginAt: new Date() };
       if (isAdmin && !user.isAdmin) {
         updates.isAdmin = true;
@@ -186,7 +169,7 @@ router.post("/firebase", authBruteforceLimit, async (req: Request, res: Response
     });
   } catch (e: any) {
     console.error("[auth/firebase]", e);
-    res.status(500).json({ error: "server_error", message: e?.message ?? "Błąd serwera" });
+    res.status(500).json({ error: "server_error", message: "Błąd serwera podczas logowania." });
   }
 });
 
@@ -214,7 +197,7 @@ router.get("/me", requireAuth, async (req: Request, res: Response) => {
     });
   } catch (e: any) {
     console.error("[auth/me]", e);
-    res.status(500).json({ error: "server_error", message: e?.message ?? "Błąd serwera" });
+    res.status(500).json({ error: "server_error", message: "Błąd serwera. Spróbuj ponownie za chwilę." });
   }
 });
 
