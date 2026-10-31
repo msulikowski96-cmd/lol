@@ -59,6 +59,7 @@ W ustawieniach Web Service kliknij **Environment** i dodaj:
 | `PORT` | `10000` | Port (Render domyślnie używa 10000) |
 | `SESSION_SECRET` | losowy ciąg znaków | Sekret podpisujący sesje JWT, minimum 16 znaków |
 | `NVIDIA_API_KEY` | klucz NVIDIA | Wymagany tylko dla chronionej analizy AI |
+| `NVIDIA_MODEL` | `nvidia/nemotron-3-ultra-550b-a55b` | Opcjonalnie. Jeśli masz ustawione `NVIDIA_AI_MODEL=qwen/...` — usuń je, ten model został wycofany |
 
 ---
 
