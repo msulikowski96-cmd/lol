@@ -1,32 +1,27 @@
 import path from "node:path";
-import express from "express";
-import { createServer as createViteServer } from "vite";
 import app from "./artifacts/api-server/src/app";
 import { logger } from "./artifacts/api-server/src/lib/logger";
+import { bootstrapAuth } from "./artifacts/api-server/src/lib/auth";
 import { initDatabase } from "./lib/db/src";
 
-const PORT = 3000;
+// Render (i inne hostingi) podają port w zmiennej PORT; lokalnie domyślnie 3000.
+const PORT = Number(process.env.PORT) || 3000;
 
 async function startServer() {
-  await initDatabase().catch((e) => logger.warn({ err: e }, "Database initialization skipped or failed"));
+  await initDatabase();
+  await bootstrapAuth();
 
+  // W produkcji frontend serwuje app.ts (express.static + fallback SPA).
+  // W developmencie podpinamy Vite jako middleware.
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       configFile: path.resolve(process.cwd(), "artifacts/web/vite.config.ts"),
-      server: {
-        middlewareMode: true,
-      },
+      server: { middlewareMode: true },
       appType: "spa",
       root: path.resolve(process.cwd(), "artifacts/web"),
     });
-
     app.use(vite.middlewares);
-  } else {
-    const clientDist = path.resolve(process.cwd(), "artifacts/web/dist/public");
-    app.use(express.static(clientDist));
-    app.get("/{*splat}", (_req, res) => {
-      res.sendFile(path.join(clientDist, "index.html"));
-    });
   }
 
   app.listen(PORT, "0.0.0.0", () => {

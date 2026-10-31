@@ -97,21 +97,6 @@ function loadStoreFromDisk(): void {
     // Fall back to empty store
   }
 
-  // Seed default admin if user store is empty
-  if (memoryStore.users.length === 0) {
-    memoryStore.users.push({
-      id: 1,
-      email: "msulikowski96@gmail.com",
-      passwordHash: "$2b$10$RSaOXDhLm3FFeQT2Eo9MQOZodD27KToV.jfqLBAC52KQVy68p77jm", // "admin123456"
-      displayName: "Admin",
-      isAdmin: true,
-      isActive: true,
-      createdAt: new Date(),
-      lastLoginAt: null,
-    });
-    memoryStore.nextUserId = 2;
-    saveStoreToDisk();
-  }
 }
 
 // Initial load
@@ -119,31 +104,55 @@ loadStoreFromDisk();
 
 let poolInstance: any = null;
 let realDrizzleDb: any = null;
-let isConnectedToPostgres = false;
 
-// Determine if DATABASE_URL is an internal-only Render host (e.g. dpg-xxx without public domain)
-const rawUrl = process.env.DATABASE_URL?.trim();
-// Internal Render host is e.g. "dpg-d90pckok1i2s73fsig90-a" or "@dpg-xxx:5432/db" without ".render.com"
-const isInternalRenderHost = rawUrl ? /@dpg-[a-z0-9]+(?::\d+)?\//.test(rawUrl) && !rawUrl.includes(".render.com") : false;
+/** "postgres" gdy ustawiono DATABASE_URL, w przeciwnym razie lokalny plik (tylko do developmentu). */
+export const dbMode: "postgres" | "local" = process.env.DATABASE_URL?.trim() ? "postgres" : "local";
+let postgresReady = false;
+let lastDbError: string | null = null;
 
-if (isInternalRenderHost) {
-  console.warn(
-    "[AI Studio] DATABASE_URL appears to be an internal Render hostname (e.g. dpg-xxx). " +
-    "Internal Render hostnames only resolve inside Render's internal network. " +
-    "Nexus Sight will use resilient local storage. " +
-    "To connect directly to Render PostgreSQL, use the 'External Database URL' from your Render dashboard."
-  );
-} else if (rawUrl) {
+/**
+ * SSL zależnie od adresu bazy:
+ * - wewnętrzny host Render (np. "dpg-abc123-a", bez kropek) i localhost — bez SSL (sieć wewnętrzna),
+ * - zewnętrzny adres (np. *.render.com, Neon, Supabase) — SSL,
+ * - parametr ?sslmode=… w adresie ma pierwszeństwo.
+ */
+export function sslConfigFor(connectionString: string): false | { rejectUnauthorized: boolean } {
+  let url: URL;
   try {
-    poolInstance = new Pool({
-      connectionString: rawUrl,
-      ssl: { rejectUnauthorized: false },
-      connectionTimeoutMillis: 5000,
-    });
-    realDrizzleDb = drizzle(poolInstance, { schema });
-  } catch (err) {
-    console.warn("[AI Studio] Failed to construct PostgreSQL Pool:", err);
+    url = new URL(connectionString);
+  } catch {
+    return { rejectUnauthorized: false };
   }
+  const mode = url.searchParams.get("sslmode");
+  if (mode === "disable") return false;
+  if (mode) return { rejectUnauthorized: false };
+  const host = url.hostname;
+  if (host === "localhost" || host === "127.0.0.1" || host === "::1") return false;
+  if (!host.includes(".")) return false;
+  return { rejectUnauthorized: false };
+}
+
+if (dbMode === "postgres") {
+  const connectionString = process.env.DATABASE_URL!.trim();
+  // pg nie lubi sslmode w adresie razem z obiektem ssl — usuwamy go, konfigurację ustawiamy sami.
+  const cleaned = connectionString.replace(/([?&])sslmode=[^&]*(&?)/, (_m, a, b) => (b ? a : "")).replace(/[?&]$/, "");
+  poolInstance = new Pool({
+    connectionString: cleaned,
+    ssl: sslConfigFor(connectionString),
+    connectionTimeoutMillis: 8000,
+    max: 10,
+  });
+  poolInstance.on("error", (err: any) => {
+    lastDbError = err?.message ?? String(err);
+    console.error("[db] PostgreSQL pool error:", lastDbError);
+  });
+  realDrizzleDb = drizzle(poolInstance, { schema });
+} else {
+  console.warn("[db] Brak DATABASE_URL — konta zapisują się w lokalnym pliku .local/db.json (tylko do developmentu; na hostingu znikną po restarcie).");
+}
+
+export function dbStatus() {
+  return { mode: dbMode, ready: dbMode === "local" || postgresReady, error: postgresReady ? null : lastDbError };
 }
 
 function getTableName(table: any): string {
@@ -484,117 +493,94 @@ const memoryDb: any = {
   },
 };
 
-// Resilient DB wrapper that delegates to real PostgreSQL if available and healthy,
-// or gracefully falls back to local database store if connection fails or drops.
-export const db = new Proxy(
-  {},
-  {
-    get(_target, prop: string) {
-      if (isConnectedToPostgres && realDrizzleDb && realDrizzleDb[prop]) {
-        const realFn = realDrizzleDb[prop];
-        if (typeof realFn === "function") {
-          return (...args: any[]) => {
-            try {
-              const builder = realFn.apply(realDrizzleDb, args);
-              if (builder && typeof builder === "object") {
-                return new Proxy(builder, {
-                  get(bTarget, bProp: string) {
-                    if (bProp === "then") {
-                      return (onFulfilled?: any, onRejected?: any) => {
-                        return Promise.resolve(builder)
-                          .catch((err: any) => {
-                            console.warn(
-                              `[AI Studio] PostgreSQL query failed (${err?.message}). Falling back to local database store.`
-                            );
-                            isConnectedToPostgres = false;
-                            const fallback = (memoryDb as any)[prop](...args);
-                            return fallback;
-                          })
-                          .then(onFulfilled, onRejected);
-                      };
-                    }
-                    const val = (bTarget as any)[bProp];
-                    return typeof val === "function" ? val.bind(bTarget) : val;
-                  },
-                });
-              }
-              return builder;
-            } catch (err: any) {
-              console.warn(
-                `[AI Studio] PostgreSQL call error (${err?.message}). Falling back to local database store.`
-              );
-              isConnectedToPostgres = false;
-              return (memoryDb as any)[prop](...args);
-            }
-          };
-        }
-      }
-      return (memoryDb as any)[prop];
-    },
-  }
-);
+// Jedno źródło danych na cały czas działania serwera: PostgreSQL (gdy jest DATABASE_URL)
+// albo lokalny plik. Dawniej błąd zapytania po cichu przełączał na plik, co rozdwajało
+// konta (część w bazie, część w pliku znikającym po restarcie).
+export const db: any = dbMode === "postgres" ? realDrizzleDb : memoryDb;
 
-export async function initDatabase() {
-  if (!poolInstance || isInternalRenderHost) {
-    console.log("[AI Studio] Using local database store for session & user persistence");
+const SCHEMA_SQL = `
+  CREATE TABLE IF NOT EXISTS "users" (
+    "id" SERIAL PRIMARY KEY,
+    "email" TEXT NOT NULL,
+    "password_hash" TEXT NOT NULL,
+    "display_name" TEXT,
+    "is_admin" BOOLEAN NOT NULL DEFAULT false,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    "last_login_at" TIMESTAMP WITH TIME ZONE
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS "users_email_unique" ON "users" ("email");
+
+  CREATE TABLE IF NOT EXISTS "usage" (
+    "id" SERIAL PRIMARY KEY,
+    "user_id" INTEGER NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+    "feature" TEXT NOT NULL,
+    "day" TEXT NOT NULL,
+    "count" INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS "usage_user_feature_day_unique" ON "usage" ("user_id", "feature", "day");
+  CREATE INDEX IF NOT EXISTS "usage_user_day_idx" ON "usage" ("user_id", "day");
+
+  CREATE TABLE IF NOT EXISTS "conversations" (
+    "id" SERIAL PRIMARY KEY,
+    "title" TEXT NOT NULL,
+    "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+  );
+
+  CREATE TABLE IF NOT EXISTS "messages" (
+    "id" SERIAL PRIMARY KEY,
+    "conversation_id" INTEGER NOT NULL REFERENCES "conversations"("id") ON DELETE CASCADE,
+    "role" TEXT NOT NULL,
+    "content" TEXT NOT NULL,
+    "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+  );
+`;
+
+async function connectOnce(): Promise<void> {
+  const client = await poolInstance.connect();
+  try {
+    await client.query(SCHEMA_SQL);
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Łączy z PostgreSQL i tworzy tabele. Przy błędzie próbuje ponownie (baza na Render
+ * potrafi wstawać dłużej niż serwer), a potem dalej w tle co 30 s. Do czasu połączenia
+ * zapytania zwracają błąd — nie zapisujemy kont w miejscu, z którego znikną.
+ */
+export async function initDatabase(attempts = 6): Promise<void> {
+  if (dbMode === "local") {
+    console.log("[db] Tryb lokalny (.local/db.json)");
     return;
   }
-  try {
-    const client = await poolInstance.connect();
+  for (let i = 1; i <= attempts; i++) {
     try {
-      await client.query(`
-        CREATE TABLE IF NOT EXISTS "users" (
-          "id" SERIAL PRIMARY KEY,
-          "email" TEXT NOT NULL,
-          "password_hash" TEXT NOT NULL,
-          "display_name" TEXT,
-          "is_admin" BOOLEAN NOT NULL DEFAULT false,
-          "is_active" BOOLEAN NOT NULL DEFAULT true,
-          "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-          "last_login_at" TIMESTAMP WITH TIME ZONE
-        );
-        CREATE UNIQUE INDEX IF NOT EXISTS "users_email_unique" ON "users" ("email");
-
-        CREATE TABLE IF NOT EXISTS "usage" (
-          "id" SERIAL PRIMARY KEY,
-          "user_id" INTEGER NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
-          "feature" TEXT NOT NULL,
-          "day" TEXT NOT NULL,
-          "count" INTEGER NOT NULL DEFAULT 0
-        );
-        CREATE UNIQUE INDEX IF NOT EXISTS "usage_user_feature_day_unique" ON "usage" ("user_id", "feature", "day");
-        CREATE INDEX IF NOT EXISTS "usage_user_day_idx" ON "usage" ("user_id", "day");
-
-        CREATE TABLE IF NOT EXISTS "conversations" (
-          "id" SERIAL PRIMARY KEY,
-          "title" TEXT NOT NULL,
-          "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
-        );
-
-        CREATE TABLE IF NOT EXISTS "messages" (
-          "id" SERIAL PRIMARY KEY,
-          "conversation_id" INTEGER NOT NULL REFERENCES "conversations"("id") ON DELETE CASCADE,
-          "role" TEXT NOT NULL,
-          "content" TEXT NOT NULL,
-          "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
-        );
-      `);
-      isConnectedToPostgres = true;
-      console.log("[AI Studio] PostgreSQL database schema verified and ready");
-
-      // Seed default admin in PostgreSQL if not present
-      await client.query(`
-        INSERT INTO "users" ("email", "password_hash", "display_name", "is_admin", "is_active", "created_at")
-        VALUES ('msulikowski96@gmail.com', '$2b$10$RSaOXDhLm3FFeQT2Eo9MQOZodD27KToV.jfqLBAC52KQVy68p77jm', 'Admin', true, true, NOW())
-        ON CONFLICT ("email") DO UPDATE SET "is_admin" = true;
-      `);
-    } finally {
-      client.release();
+      await connectOnce();
+      postgresReady = true;
+      lastDbError = null;
+      console.log("[db] PostgreSQL połączony, tabele gotowe");
+      return;
+    } catch (err: any) {
+      lastDbError = err?.message ?? String(err);
+      console.error(`[db] Próba ${i}/${attempts} połączenia z PostgreSQL nieudana: ${lastDbError}`);
+      if (i < attempts) await new Promise((r) => setTimeout(r, Math.min(1000 * 2 ** (i - 1), 10_000)));
     }
-  } catch (err: any) {
-    isConnectedToPostgres = false;
-    console.warn("[AI Studio] Database connection check failed (" + err?.message + "). Using local storage fallback.");
   }
+  console.error("[db] Nie udało się połączyć z PostgreSQL. Sprawdź DATABASE_URL (na Render: Internal Database URL). Ponawiam w tle co 30 s.");
+  const timer = setInterval(async () => {
+    try {
+      await connectOnce();
+      postgresReady = true;
+      lastDbError = null;
+      clearInterval(timer);
+      console.log("[db] PostgreSQL połączony (ponowna próba w tle)");
+    } catch (err: any) {
+      lastDbError = err?.message ?? String(err);
+    }
+  }, 30_000);
+  timer.unref?.();
 }
 
 export const pool = poolInstance;

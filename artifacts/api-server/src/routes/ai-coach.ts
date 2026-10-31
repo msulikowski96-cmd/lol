@@ -1,17 +1,9 @@
 import { Router, type IRouter } from "express";
-import OpenAI from "openai";
 import { cache } from "../lib/cache";
 import { requireUsage } from "../middlewares/auth";
 import { shrinkWinRate, sigmoid as logisticFn, stdDev } from "../lib/stats-utils";
 
-// Lazy helper to get OpenAI client
-function getNvidiaClient(): OpenAI {
-  const apiKey = process.env.NVIDIA_API_KEY || process.env.OPENAI_API_KEY || "dummy_key";
-  return new OpenAI({
-    baseURL: "https://integrate.api.nvidia.com/v1",
-    apiKey,
-  });
-}
+import { fastModels, getNvidiaClient, streamChat, stripThinking } from "../lib/nvidia-models";
 
 const router: IRouter = Router();
 
@@ -41,28 +33,26 @@ function sigmoid(x: number): number {
 
 function r1(n: number): number { return Math.round(n * 10) / 10; }
 
-async function callAI(prompt: string, signal?: AbortSignal, maxTokens = 1500): Promise<string> {
-  try {
-    const stream = await getNvidiaClient().chat.completions.create({
-      model: "meta/llama-3.1-8b-instruct",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.3,
-      top_p: 0.7,
-      max_tokens: maxTokens,
-      stream: true,
-    }, { signal }) as any;
-
-    let full = "";
-    for await (const chunk of stream) {
-      if (signal?.aborted) throw new Error("aborted");
-      const c = chunk?.choices?.[0]?.delta?.content;
-      if (c) full += c;
+/** Wywołuje kolejne modele z listy (najpierw szybki), aż któryś odpowie. Zwraca tekst i nazwę modelu. */
+async function callAI(prompt: string, signal?: AbortSignal, maxTokens = 1500): Promise<{ text: string; model: string }> {
+  const errors: string[] = [];
+  for (const model of fastModels()) {
+    try {
+      const text = await streamChat(getNvidiaClient(), model, [{ role: "user", content: prompt }], {
+        maxTokens,
+        temperature: 0.3,
+        topP: 0.7,
+        signal,
+        firstTokenMs: 15_000,
+      });
+      return { text: stripThinking(text), model };
+    } catch (e: any) {
+      if (signal?.aborted) throw e;
+      errors.push(`${model}: ${String(e?.message ?? e).slice(0, 160)}`);
+      console.error("[ai-coach/callAI]", model, e?.message);
     }
-    return full;
-  } catch (e: any) {
-    console.error("[ai-coach/callAI] error:", e?.name, e?.message, e?.cause);
-    throw e;
   }
+  throw new Error(`Żaden model AI nie odpowiedział (${errors.join(" | ")})`);
 }
 
 function extractJSON(text: string): any {
@@ -103,7 +93,7 @@ router.post("/optimizer", requireUsage("optimizer"), async (req, res) => {
 
   const controller = new AbortController();
   let timedOut = false;
-  const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 60_000);
+  const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 180_000);
   const onClose = () => {
     if (req.socket?.destroyed && !res.headersSent) controller.abort();
   };
@@ -168,10 +158,10 @@ TYLKO JSON:
 
   try {
     const t0 = Date.now();
-    const text = await callAI(prompt, controller.signal, 1500);
-    console.log(`[ai-coach/optimizer] ${myChampion} vs [${enemyList}] in ${Date.now() - t0}ms`);
+    const { text, model } = await callAI(prompt, controller.signal, 1500);
+    console.log(`[ai-coach/optimizer] ${myChampion} vs [${enemyList}] in ${Date.now() - t0}ms (${model})`);
     const parsed = extractJSON(text);
-    const result = { ...parsed, generatedAt: Date.now() };
+    const result = { ...parsed, model, generatedAt: Date.now() };
     cache.set(cacheKey, result, 3600); // cache 1h
     res.json(result);
   } catch (err: any) {
@@ -321,7 +311,7 @@ JSON:
 
   const controller = new AbortController();
   let timedOut = false;
-  const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 60_000);
+  const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 180_000);
   const onClose = () => {
     if (req.socket?.destroyed && !res.headersSent) controller.abort();
   };
@@ -329,8 +319,8 @@ JSON:
 
   try {
     const t0 = Date.now();
-    const text = await callAI(prompt, controller.signal, 1200);
-    console.log(`[ai-coach/live-insights] gameId=${gameId} in ${Date.now() - t0}ms`);
+    const { text, model } = await callAI(prompt, controller.signal, 1200);
+    console.log(`[ai-coach/live-insights] gameId=${gameId} in ${Date.now() - t0}ms (${model})`);
     const insights = extractJSON(text);
 
     // Confidence depends on BOTH the prediction margin AND how much evidence we had.
@@ -371,6 +361,7 @@ JSON:
         },
       },
       ai: insights,
+      model,
       generatedAt: Date.now(),
     };
     cache.set(cacheKey, result, 600); // cache 10 min

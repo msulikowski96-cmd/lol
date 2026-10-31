@@ -26,6 +26,7 @@ type LiveInsightsResponse = {
     key_objective: string;
     mvp_pick: string;
   };
+  model?: string;
   generatedAt: number;
 };
 
@@ -276,7 +277,7 @@ export default function LiveAICoach({
       </div>
 
       <p className="text-[9px] text-center text-muted-foreground/60 italic">
-        Analiza AI · model llama-3.1-8b · wygenerowano {new Date(data.generatedAt).toLocaleTimeString("pl-PL")}
+        Analiza AI{data.model ? ` · ${data.model.split("/").pop()}` : ""} · wygenerowano {new Date(data.generatedAt).toLocaleTimeString("pl-PL")}
       </p>
     </motion.div>
   );

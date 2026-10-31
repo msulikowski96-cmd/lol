@@ -2,9 +2,11 @@ import OpenAI from "openai";
 import { z } from "zod";
 
 export const AI_REPORT_PIPELINE_VERSION = "3.0-grounded-v2";
-export const PRIMARY_AI_MODEL = process.env.NVIDIA_AI_MODEL?.trim() || "qwen/qwen3-next-80b-a3b-instruct";
-export const FALLBACK_AI_MODEL = process.env.NVIDIA_AI_FALLBACK_MODEL?.trim() || "meta/llama-3.3-70b-instruct";
-const LEGACY_AI_MODEL = "meta/llama-3.1-8b-instruct";
+import { qualityModels, streamChat, stripThinking } from "./nvidia-models";
+
+// Stare modele (qwen3-next, llama-3.3-70b, llama-3.1-8b) NVIDIA wycofała w lipcu 2026 — patrz nvidia-models.ts.
+export const PRIMARY_AI_MODEL = qualityModels()[0];
+export const FALLBACK_AI_MODEL = qualityModels()[1] ?? qualityModels()[0];
 
 const ratings = ["S+", "S", "A+", "A", "B+", "B", "C+", "C", "D"] as const;
 const forms = ["Świetna forma", "Dobra forma", "Stabilna", "Zmienna", "Słaba forma", "Kryzys"] as const;
@@ -389,22 +391,13 @@ function normalize(draft: z.infer<typeof DraftSchema>, context: AiReportContext)
 }
 
 async function callModel(client: OpenAI, model: string, messages: any[], signal?: AbortSignal): Promise<string> {
-  const completion = await client.chat.completions.create({
-    model,
-    messages,
-    temperature: model.includes("qwen3-next") ? 0.3 : 0.2,
-    top_p: 0.8,
-    max_tokens: 5200,
-    stream: false,
-  }, { signal }) as any;
-  const content = completion?.choices?.[0]?.message?.content;
-  if (typeof content !== "string" || !content.trim()) throw new Error("Model returned an empty response");
-  return content;
+  const content = await streamChat(client, model, messages, { maxTokens: 5200, temperature: 0.3, topP: 0.8, signal });
+  return stripThinking(content);
 }
 
 export async function generateGroundedAiReport(client: OpenAI, context: AiReportContext, signal?: AbortSignal): Promise<AiGenerationResult> {
   const attempts: AiGenerationResult["attempts"] = [];
-  const models = [...new Set([PRIMARY_AI_MODEL, FALLBACK_AI_MODEL, LEGACY_AI_MODEL].filter(Boolean))];
+  const models = qualityModels();
   const messages = buildMessages(context);
 
   if (process.env.NVIDIA_API_KEY) {

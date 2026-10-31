@@ -50,12 +50,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (fUser) {
         try {
           await syncUserDoc(fUser);
-          if (fUser.email) {
-            const res = await authApi.loginWithFirebase(
-              fUser.email,
-              fUser.displayName || undefined
-            );
+          // Konta email/hasło logują się przez /login; tu łączymy tylko konta z potwierdzonym emailem (np. Google).
+          if (fUser.email && fUser.emailVerified) {
+            const res = await authApi.loginWithFirebase(await fUser.getIdToken());
             setUser(res.user);
+            await refresh();
           }
         } catch (e) {
           console.warn("[Firebase] syncUserDoc/loginWithFirebase error:", e);
@@ -91,13 +90,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (cred.user) {
       setFirebaseUser(cred.user);
       await syncUserDoc(cred.user);
-      if (cred.user.email) {
-        const res = await authApi.loginWithFirebase(
-          cred.user.email,
-          cred.user.displayName || undefined
-        );
-        setUser(res.user);
-      }
+      const res = await authApi.loginWithFirebase(await cred.user.getIdToken());
+      setUser(res.user);
       await refresh();
     }
   }, [refresh]);

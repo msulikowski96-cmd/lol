@@ -40,8 +40,9 @@ export const authApi = {
     call<{ user: AuthUser }>("/register", { method: "POST", body: JSON.stringify({ email, password, displayName }) }),
   login: (email: string, password: string) =>
     call<{ user: AuthUser }>("/login", { method: "POST", body: JSON.stringify({ email, password }) }),
-  loginWithFirebase: (email: string, displayName?: string) =>
-    call<{ user: AuthUser }>("/firebase", { method: "POST", body: JSON.stringify({ email, displayName }) }),
+  /** idToken z Firebase (user.getIdToken()) — serwer sam weryfikuje go u Google. */
+  loginWithFirebase: (idToken: string) =>
+    call<{ user: AuthUser }>("/firebase", { method: "POST", body: JSON.stringify({ idToken }) }),
   logout: () => call<{ ok: true }>("/logout", { method: "POST" }),
   me: () => call<MeResponse>("/me"),
 };

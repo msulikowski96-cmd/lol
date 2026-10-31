@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import OpenAI from "openai";
+import { getNvidiaClient } from "../lib/nvidia-models";
 import { riotFetch, handleRiotError } from "../lib/riot-fetch";
 import { cache } from "../lib/cache";
 import { getChampionName } from "../lib/ddragon";
@@ -11,15 +11,6 @@ import {
   PRIMARY_AI_MODEL,
   generateGroundedAiReport,
 } from "../lib/ai-report-v3";
-
-// Lazy helper to get OpenAI client
-function getNvidiaClient(): OpenAI {
-  const apiKey = process.env.NVIDIA_API_KEY || process.env.OPENAI_API_KEY || "dummy_key";
-  return new OpenAI({
-    baseURL: "https://integrate.api.nvidia.com/v1",
-    apiKey,
-  });
-}
 
 const router: IRouter = Router();
 
@@ -259,7 +250,7 @@ function summarizeMatches(rawMatches: MatchDataV2[]) {
 }
 
 router.get("/:puuid/ai-report", requireUsage("ai_analysis"), async (req, res) => {
-  const { puuid } = req.params;
+  const puuid = String(req.params.puuid);
   const { region, gameName } = req.query as { region?: string; gameName?: string };
 
   if (!region) {
@@ -276,7 +267,7 @@ router.get("/:puuid/ai-report", requireUsage("ai_analysis"), async (req, res) =>
     return;
   }
 
-  const timeoutMs = 150_000;
+  const timeoutMs = 240_000; // nemotron-3-ultra potrzebuje do ~2,5 min na pełny raport
   const controller = new AbortController();
   let timedOut = false;
   const isClosed = () => res.headersSent || req.socket?.destroyed;
