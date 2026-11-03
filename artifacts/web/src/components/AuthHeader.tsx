@@ -2,10 +2,41 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function AuthHeader() {
-  const { user, usage, logout } = useAuth();
-  const [, setLocation] = useLocation();
+  const { user, usage, logout, loading } = useAuth();
+  const [location, setLocation] = useLocation();
 
-  if (!user) return null;
+  // Na samej stronie logowania pasek nie jest potrzebny.
+  if (location.startsWith("/auth")) return null;
+
+  // Niezalogowany: pasek z przyciskiem logowania (wcześniej nie było żadnego wejścia do /auth).
+  if (!user) {
+    return (
+      <div className="w-full bg-slate-950/95 border-b border-slate-800 backdrop-blur sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 flex items-center gap-3 text-xs">
+          <Link href="/" className="font-bold text-cyan-400 uppercase tracking-wider text-sm" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+            NEXUS SIGHT
+          </Link>
+          <div className="flex-1" />
+          {!loading && (
+            <>
+              <Link
+                href="/auth?mode=register"
+                className="hidden sm:inline-block text-slate-300 hover:text-white px-2 py-1 uppercase tracking-wider font-semibold"
+              >
+                Załóż konto
+              </Link>
+              <Link
+                href="/auth"
+                className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 px-3 py-1.5 rounded uppercase tracking-wider font-bold"
+              >
+                Zaloguj się
+              </Link>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full bg-slate-950/95 border-b border-slate-800 backdrop-blur sticky top-0 z-40">
@@ -14,7 +45,7 @@ export default function AuthHeader() {
           NEXUS SIGHT
         </Link>
         {user.isAdmin ? (
-          <Link href="/admin" className="hidden sm:inline-block bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded uppercase tracking-wider font-semibold hover:bg-yellow-500/30 transition-colors">
+          <Link href="/admin" className="inline-block bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded uppercase tracking-wider font-semibold hover:bg-yellow-500/30 transition-colors">
             Admin · Panel
           </Link>
         ) : usage && (
