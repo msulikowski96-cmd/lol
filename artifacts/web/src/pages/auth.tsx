@@ -1,11 +1,13 @@
 import { useState, type FormEvent } from "react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function AuthPage() {
   const { login, loginWithGoogle, register, user } = useAuth();
   const [, setLocation] = useLocation();
-  const [mode, setMode] = useState<"login" | "register">("login");
+  const [mode, setMode] = useState<"login" | "register">(() =>
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("mode") === "register" ? "register" : "login",
+  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -168,6 +170,12 @@ export default function AuthPage() {
             Po zalogowaniu otrzymujesz dzienny limit:
             <div className="mt-1 text-slate-400">3 wyszukiwania · 1 analiza AI · 2 optymalizatory</div>
           </div>
+        </div>
+
+        <div className="mt-5 text-center">
+          <Link href="/" className="text-sm text-slate-400 hover:text-cyan-300">
+            ← Wróć na stronę główną
+          </Link>
         </div>
       </div>
     </div>
